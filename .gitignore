@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+
+# Fonts
+*.tff
+
+# Excluded Folders
+Python/
+libs/
+.vs/
+bin-obj/
+bin/
+Fonts/

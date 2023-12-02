@@ -1,0 +1,160 @@
+#pragma once
+
+#include "Basis/Gaussian.h"
+
+#include<vector>
+#include<string_view>
+#include<Eigen/Core>
+#include<utility>
+
+namespace SCESS 
+{
+    constexpr double ANGSTROM_2_BOHR = 1.8897259886;
+
+    class Atom {
+    private:
+        Eigen::Vector3d mPosition;
+        std::string mSymbol;
+        int mCharge;
+    public:
+
+        Atom(const char* atomID) noexcept :mSymbol(mSymbol){}
+        
+        Atom(const Atom& a) : mSymbol(a.mSymbol), 
+            mCharge(a.mCharge),  mPosition(a.mPosition)
+        {
+
+        }
+
+        Atom(Atom&& a) noexcept : mSymbol(a.mSymbol), mCharge(a.mCharge), mPosition(std::move(a.mPosition))
+        {}
+
+        Atom(const char* atomSymbol,
+             const Eigen::Vector3d& pos = { 0., 0., 0. })
+            : mSymbol(atomSymbol), mPosition(pos)
+        {
+
+        }
+
+
+        Atom(const char* atomSymbol,
+            int charge, const Eigen::Vector3d& pos = { 0., 0., 0. })
+            : mSymbol(atomSymbol), mCharge(charge), mPosition(pos)
+        {
+    
+        }
+
+
+        const Eigen::Vector3d GetPos()const
+        {
+            return mPosition;
+        }
+
+        const std::string GetAtomSymbol() const
+        {
+            return mSymbol;
+        }
+
+        void SetCharge(int charge)
+        {
+            mCharge = charge;
+        }
+
+        const int GetCharge() const
+        {
+            return mCharge;
+        }
+    };
+
+    class Molecule
+    {
+    private:
+        std::vector<Atom> mAtoms;
+        std::vector<GaussianCollection> mOrbitals;
+    public:
+
+        Molecule(){}
+        Molecule(const Molecule& m):mAtoms(m.mAtoms), mOrbitals(m.mOrbitals){}
+        Molecule(Molecule&& m) noexcept:mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)) {}
+        Molecule(const std::vector<Atom>& atomsIn) :mAtoms(atomsIn)
+        {}
+        Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn))
+        {}
+
+        void AddAtom(const Atom& a)
+        {
+            mAtoms.emplace_back(a);
+        }
+
+        void MakeOrbitals();
+
+        const Atom& GetAtom(size_t index) const
+        {
+            return mAtoms[index];
+        }
+
+        Atom& GetAtom(size_t index)
+        {
+            return mAtoms[index];
+        }
+
+        const std::vector<Atom>& GetAtoms() const
+        {
+            return mAtoms;
+        }
+
+        std::vector<Atom>& GetAtoms()
+        {
+            return mAtoms;
+        }
+
+        GaussianCollection& GetOrbital(uint32_t i)
+        {
+            return mOrbitals[i];
+        }
+
+        const GaussianCollection& GetOrbital(uint32_t i) const
+        {
+            return mOrbitals[i];
+        }
+
+        std::vector<GaussianCollection>& GetOrbitals()
+        {
+            return mOrbitals;
+        }
+
+        const std::vector<GaussianCollection>& GetOrbitals() const
+        {
+            return mOrbitals;
+        }
+
+        size_t NoOrbitals() const {
+            return mOrbitals.size();
+        }
+    };
+
+    static Molecule GenerateWaterMolecule()
+    {
+        SCESS::Atom H1("H", Eigen::Vector3d{ -0.078963,       1.012042 ,      0.000000 }*ANGSTROM_2_BOHR);
+        SCESS::Atom H2("H", Eigen::Vector3d{ 1.012042, - 0.078963   ,    0.000000 }*ANGSTROM_2_BOHR);
+        SCESS::Atom O("O", Eigen::Vector3d{ 0.066921    ,   0.066921   ,    0.000000 }*ANGSTROM_2_BOHR);
+
+        SCESS::Molecule water({ H1, H2, O });
+        water.MakeOrbitals();
+
+        return water;
+    }
+
+    static Molecule GenerateHydrogenMolecule()
+    {
+        constexpr double hydrogenBondLength = 0.7122300374 * ANGSTROM_2_BOHR;
+
+        SCESS::Atom H1("H", { 0.0,0.0,0.0 });
+        SCESS::Atom H2("H", { hydrogenBondLength,0.0,0.0 });
+
+        SCESS::Molecule hydrogenMol({ H1, H2 });
+        hydrogenMol.MakeOrbitals();
+
+        return hydrogenMol;
+    }
+}

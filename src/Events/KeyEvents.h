@@ -1,0 +1,51 @@
+#pragma once
+#include"Events.h"
+
+namespace SCESS
+{
+	class KeyEvent : public Event
+	{
+	public:
+		KeyEvent(int keyCodeIn) : keyCode(keyCodeIn) {}
+
+		EVENT_CLASS_CATEGORY_FNS(EventCategory::EventCategoryKeyboard | EventCategory::EventCategoryInput)
+
+		const int GetKeyCode() const { return keyCode; }
+	protected:
+		int keyCode;
+	};
+
+	class KeyPressedEvent :public KeyEvent
+	{
+	public:
+		KeyPressedEvent(int keyCode, unsigned int repeatCountIn) : KeyEvent(keyCode), repeatCount(repeatCountIn) {}
+
+		EVENT_CLASS_FUNCTIONS(KeyPressed)
+
+		const unsigned int GetRepeatCount() const { return repeatCount; }
+
+	protected:
+		unsigned int repeatCount;
+	};
+
+	class KeyReleasedEvent : public KeyEvent
+	{
+	public:
+		KeyReleasedEvent(int keyCode) : KeyEvent(keyCode) {}
+
+		EVENT_CLASS_FUNCTIONS(KeyReleased)
+	};
+
+	class KeyTypedEvent : public Event
+	{
+	public:
+		KeyTypedEvent(unsigned int charCodeIn) : charCode(charCodeIn) {}
+
+		EVENT_CLASS_FUNCTIONS(KeyTyped)
+		EVENT_CLASS_CATEGORY_FNS(EventCategory::EventCategoryKeyboard | EventCategory::EventCategoryInput)
+
+		const unsigned int GetCharCode() const { return charCode; }
+	protected:
+		unsigned int charCode;
+	};
+}
