@@ -106,6 +106,7 @@
     <ClInclude Include="src\3D\Buffers.h" />
     <ClInclude Include="src\3D\Framebuffer.h" />
     <ClInclude Include="src\3D\ShaderProgram.h" />
+    <ClInclude Include="src\3D\stb\stb_image.h" />
     <ClInclude Include="src\3D\Texture.h" />
     <ClInclude Include="src\3D\VertexArray.h" />
     <ClInclude Include="src\Application\Application.h" />
@@ -148,6 +149,7 @@
     <ClCompile Include="src\3D\Buffers.cpp" />
     <ClCompile Include="src\3D\Framebuffer.cpp" />
     <ClCompile Include="src\3D\ShaderProgram.cpp" />
+    <ClCompile Include="src\3D\stb\stb_image.cpp" />
     <ClCompile Include="src\3D\Texture.cpp" />
     <ClCompile Include="src\3D\VertexArray.cpp" />
     <ClCompile Include="src\Application\Application.cpp" />
@@ -189,6 +191,9 @@
     <ProjectReference Include="..\..\Libraries\ImGui\ImGui.vcxproj">
       <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

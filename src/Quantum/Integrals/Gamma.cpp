@@ -1,4 +1,4 @@
-#include <qspch.h>
+#include <pch.h>
 /**************************************************************************
  *   This file is part of PyQInt.                                         *
  *                                                                        *

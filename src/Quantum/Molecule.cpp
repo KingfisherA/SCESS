@@ -79,4 +79,58 @@ namespace SCESS
 			}
 		}
 	}
+
+	Molecule GenerateWaterMolecule()
+	{
+		constexpr double waterBondLength = 0.957*ANGSTROM_2_BOHR;
+		constexpr double waterBondAngle = 104.5*std::numbers::pi/180.0;
+		SCESS::Atom H1("H", Eigen::Vector3d{ waterBondLength * std::sin(waterBondAngle * 0.5),waterBondLength*std::cos(waterBondAngle*0.5),0.0});
+		SCESS::Atom H2("H", Eigen::Vector3d{ -waterBondLength * std::sin(waterBondAngle * 0.5),waterBondLength * std::cos(waterBondAngle * 0.5),0.0 });
+		SCESS::Atom O("O", Eigen::Vector3d{ 0.0,0.0, 0.0});
+
+		SCESS::Molecule water({ H1, O, H2 });
+		water.MakeOrbitals();
+
+		return water;
+	}
+
+	Molecule GenerateHydrogenMolecule()
+	{
+		constexpr double hydrogenBondLength = 0.7122300374 * ANGSTROM_2_BOHR;
+
+		SCESS::Atom H1("H", { 0.0,0.0,0.0 });
+		SCESS::Atom H2("H", { hydrogenBondLength,0.0,0.0 });
+
+		SCESS::Molecule hydrogenMol({ H1, H2 });
+		hydrogenMol.MakeOrbitals();
+
+		return hydrogenMol;
+	}
+
+	Molecule GenerateLithiumHydrideMolecule()
+	{
+		constexpr double LiHBondLength = 1.60 * ANGSTROM_2_BOHR;
+
+		SCESS::Atom H("H", { 0.0,0.0,0.0 });
+		SCESS::Atom Li("Li", { LiHBondLength,0.0,0.0 });
+
+		SCESS::Molecule LiHMolecule({ H, Li });
+		LiHMolecule.MakeOrbitals();
+
+		return LiHMolecule;
+	}
+
+
+	Molecule GenerateCOMolecule()
+	{
+		constexpr double COBondLength = 1.128 * ANGSTROM_2_BOHR;
+
+		SCESS::Atom C("C", { 0.0,0.0,0.0 });
+		SCESS::Atom O("O", { COBondLength,0.0,0.0 });
+
+		SCESS::Molecule COMolecule({ C,O });
+		COMolecule.MakeOrbitals();
+
+		return COMolecule;
+	}
 }

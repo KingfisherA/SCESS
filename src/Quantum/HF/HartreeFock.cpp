@@ -47,9 +47,12 @@ namespace SCESS
         Eigen::MatrixXd SValsInvSqrt = SEigenValues.array().rsqrt().matrix().asDiagonal();
         Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt;
 
-        Eigen::MatrixXd Fock, Coeffs;
-        Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(dimensions, dimensions);
+        //eigensolver.compute(TransformMat.transpose()*Hcore*TransformMat);
+        Eigen::MatrixXd Fock;
+        Eigen::MatrixXd Coeffs;// = TransformMat * eigensolver.eigenvectors().real();
+        Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(dimensions, dimensions);// = ConstructDensityRHF(Coeffs, Nelectrons);
         Eigen::VectorXd Energies;
+        Eigen::MatrixXd OldDensity;
 
 
         if (consoleOutput)
@@ -101,18 +104,17 @@ namespace SCESS
 
             //Diagonalise the transformed Fock matrix
             eigensolver.compute(FockPrime);
-            Eigen::MatrixXd CoeffsPrime = eigensolver.eigenvectors().real();
             Energies = eigensolver.eigenvalues().real();
 
             //Transform coefficients back into normal basis
-            Coeffs = TransformMat * CoeffsPrime;
+            Coeffs = TransformMat * eigensolver.eigenvectors().real();
 
             //Recompute the density matrix
-            Eigen::MatrixXd oldDensity(DensityMat);
+            OldDensity = DensityMat;
             DensityMat = ConstructDensityRHF(Coeffs, Nelectrons);
 
-            //Calculate delta change
-            delta = CalculateDelta(oldDensity, DensityMat);
+            //Calculate delta change to the density matrix
+            delta = CalculateDelta(OldDensity, DensityMat);
 
             currentE = CalculateEnergy(DensityMat, Hcore, Fock) + Vnn;
 
@@ -146,7 +148,7 @@ namespace SCESS
                     for (Eigen::DenseIndex l = 0; l < G.rows(); l++)
                     {
                         //F += P*(J-0.5K)
-                        G(i, j) += Density(k, l) * (teiTensor(i, j, l, k) - 0.5*teiTensor(i, k, l, j));
+                        G(i, j) += Density(k, l) * (teiTensor(i, j, l, k) - 0.5 * teiTensor(i, k, l, j));
                     }
                 }
             }
@@ -180,7 +182,7 @@ namespace SCESS
         {
             for (int j = 0; j < density.rows(); j++)
             {
-                delta += std::pow(density(i, j) - oldDensity(i, j), 2);
+                delta += std::pow(density(i, j) - oldDensity(i,j), 2);
             }
         }
 

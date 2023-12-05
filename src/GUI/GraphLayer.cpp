@@ -30,7 +30,6 @@ namespace SCESS
 		return (1.0 / (81 * std::sqrt(6 * std::numbers::pi))) * (3 * z * z - r * r) * std::exp(-r / 3);
 	}
 
-
 		
 	GraphLayer::~GraphLayer()
 	{
@@ -66,7 +65,7 @@ namespace SCESS
 				std::pow(pos.x, g.mAngular[0])
 				* std::pow(pos.y, g.mAngular[1])
 				* std::pow(pos.z, g.mAngular[2])
-				* std::exp(-std::abs(glm::dot(pos, pos)));
+				* std::exp(-g.mExponent*glm::dot(pos,pos));
 		}
 		return result;
 	}
@@ -166,6 +165,10 @@ namespace SCESS
 
 	void GraphLayer::SelectWaterWavefunction(size_t index)
 	{
+		if (mIsosurfaceResolution < 10)
+		{
+			throw std::exception("Resolution must be 10 or greater");
+		}
 		auto waterWavefunction = [coeffs = mHFResult->Coeffs.col(index), water=mWaterMol](float x, float y, float z)->float {
 			float result = 0.0f;
 			for (size_t i = 0; i < water->GetOrbitals().size(); i++)
@@ -175,8 +178,10 @@ namespace SCESS
 			return result;
 			};
 
-		mPosTriSurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, 40, 5.0f, 0.02f));
-		mNegTrisurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, 40, 5.0f, -0.02f));
+		mPosTriSurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, mIsosurfaceResolution, 
+			5.0f, mIsosurfaceVal));
+		mNegTrisurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, mIsosurfaceResolution,
+			5.0f, -mIsosurfaceVal));
 	}
 
 	void GraphLayer::OnImGuiRender()
@@ -193,8 +198,8 @@ namespace SCESS
 		{
 			if (ImGui::Button("Execute Hartree Fock"))
 			{
-				mWaterMol = std::make_shared<Molecule>(GenerateWaterMolecule());
-				mHFResult = std::make_shared<HFResult>(SCESS::HF::ReducedHF(*mWaterMol, 1E-5, 500));
+				mWaterMol = std::make_shared<Molecule>(SCESS::GenerateWaterMolecule());
+				mHFResult = std::make_shared<HFResult>(SCESS::HF::ReducedHF(*mWaterMol));
 				
 				std::unordered_map<double, uint32_t> sortMap;
 				for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
@@ -222,22 +227,30 @@ namespace SCESS
 					labels.push_back(s.c_str());
 				}
 			}
+
 			ImGui::Text("See console for Hartree Fock calculation progress...");
 			
 			if (mHFResult != nullptr)
 			{
-				if (ImGui::CollapsingHeader("Details", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::Text("Total Hartree Fock Energy: %f hartrees", mHFResult->Energy);
-				}
-				if (ImGui::CollapsingHeader("Water Molecular Orbitals", ImGuiTreeNodeFlags_DefaultOpen))
+				ImGui::BulletText("Basis Set: STO-3G");
+				ImGui::BulletText("Total Hartree Fock Energy: %f hartrees", mHFResult->Energy);
+				ImGui::Separator();
+
+				if (ImGui::CollapsingHeader("Water MOs", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::BulletText("Click on an MO to generate its isosurface!");
 					int selectedOption = -1;
-					ImGui::ListBox("", &selectedOption, labels.data(), labels.size());
+					ImGui::ListBox("##listbox1", &selectedOption, labels.data(), labels.size());
 					if (selectedOption != -1)
 					{
 						SelectWaterWavefunction(selectedOption);
+					}
+					if (ImGui::CollapsingHeader("Isosurface Properties", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::Text("Isosurface Value:");
+						ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);
+						ImGui::Text("Isosurface Resolution:");
+						ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
 					}
 				}
 			}

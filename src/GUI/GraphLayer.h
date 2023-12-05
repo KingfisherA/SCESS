@@ -49,6 +49,9 @@ namespace SCESS
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
 		std::vector<std::string> mOrbLabels;
+
+		float mIsosurfaceVal=0.02;
+		int mIsosurfaceResolution = 20;
 	};
 
 }

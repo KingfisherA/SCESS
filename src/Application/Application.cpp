@@ -49,10 +49,10 @@ namespace SCESS
 
 	Application::Application() : m_MouseLastPos(0.0f)
 	{
-
+		std::cout << "Schrodinger's Cat's Electronic System Solver\n Meow!\n";
 		UNI_ASSERT(s_Instance != nullptr, Application::Application, "There can only exist one instantiation of \"Application\"");
 		s_Instance = this;
-		m_Window.reset(Display::Create({ "Quantum Solver", 800, 600 }));
+		m_Window.reset(Display::Create({ "Schrodinger's Cat's Electronic System Solver", 800, 600 }));
 		m_Window->BindEventCallback(BIND_EVENT_FNC(OnEvent));
 
 		glDisable(GL_CULL_FACE);
@@ -81,6 +81,9 @@ namespace SCESS
 			} });
 
 		UpdateProjectionMatrix();
+
+		TextureLoader loader(R"(C:\dev\Chemistry\SCESS\Icon\SCESS Small.png)");
+		mAppIcon = Texture2D::Create(loader);
 	}
 
 	Application::~Application()
@@ -216,6 +219,24 @@ namespace SCESS
 
 	void Application::RenderSceneInformation()
 	{
+		//bool isOpen = true;
+		//ImGui::ShowDemoWindow(&isOpen);
+
+		if (ImGui::Begin("Splash Screen"))
+		{
+			float imgWidth = 400;
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
+			ImGui::Image((ImTextureID)mAppIcon->GetRendererID(), { (float)imgWidth,
+				(float)imgWidth });
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			ImGui::TextCentered("SCESS Version 1");
+			ImGui::PopFont();
+			ImGui::Text("Schrodinger's Cat's Electronic System Solver");
+			ImGui::Text("By Charlie Wheelwright; cspw2");
+			ImGui::Text("(Meow)");
+		}
+		ImGui::End();
+
 		if (!ImGui::Begin("Scene Information"))
 		{
 			ImGui::End();

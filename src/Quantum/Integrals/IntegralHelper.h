@@ -80,7 +80,7 @@ namespace SCESS
     public:
 
         //Helper functions
-        static double Binomial(uint32_t a, uint32_t b);
+        static double Binomial(int a, int b);
         static double PolynomialCoeff(int s, int ia, int ib,
             double xpa, double xpb);
         static Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,

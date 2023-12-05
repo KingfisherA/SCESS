@@ -2,6 +2,11 @@
 #include"Layers/Layer.h"
 #include"Events/Events.h"
 
+namespace ImGui
+{
+	void TextCentered(const char* txt);
+}
+
 namespace SCESS
 {
 	class ImGuiLayer : public Layer

@@ -18,7 +18,7 @@ namespace SCESS
         return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
     }
 
-    double IntegralHelper::Binomial(uint32_t a, uint32_t b)
+    double IntegralHelper::Binomial(int a, int b)
     {
         if ((a < 0) || (b < 0) || (a - b < 0)) {
             return 1.0;
@@ -66,12 +66,12 @@ namespace SCESS
         const Eigen::Vector3i& angular1, const Eigen::Vector3i& angular2,
         const Eigen::Vector3d& pos1, const Eigen::Vector3d& pos2)
     {
-        double rab = (pos1 - pos2).squaredNorm();
+        double rab2 = (pos1 - pos2).squaredNorm();
         // Sum of the two gaussian exponents
         double gamma = exponent1 + exponent2;
         Eigen::Vector3d centre = GaussianCenter(exponent1, exponent2, pos1, pos2);
 
-        double Eab = std::exp(-exponent1 * exponent2 * rab / gamma) * std::pow(std::numbers::pi / gamma, 1.5);
+        double Eab = std::exp(-exponent1 * exponent2 * rab2 / gamma) * std::pow(std::numbers::pi / gamma, 1.5);
         double wx = Overlap1D(gamma, angular1[0], centre[0] - pos1[0],
             angular2[0], centre[0] - pos2[0]);
         double wy = Overlap1D(gamma, angular1[1], centre[1] - pos1[1],
@@ -219,7 +219,7 @@ namespace SCESS
 
         for (size_t i = 0; i < V.rows(); i++)
         {
-            for (size_t j = i; j < V.cols(); j++)
+            for (size_t j = i; j < V.rows(); j++)
             {
                 double result = 0.0;
                 for (const Atom& a : molecule.GetAtoms())
@@ -239,52 +239,71 @@ namespace SCESS
 
     double IntegralHelper::KineticGaussian(const Gaussian& gto1, const Gaussian& gto2)
     {
-        double result = 0.0;
-        Eigen::Vector3i newAngular1;
-        Eigen::Vector3i newAngular2;
+        //double result = 0.0;
+        //Eigen::Vector3i newAngular1;
+        //Eigen::Vector3i newAngular2;
 
-        //Loop for x, y and z
-        for (unsigned char i = 0; i < 3; i++)
-        {
-            newAngular1 = gto1.mAngular;
-            newAngular2 = gto2.mAngular;
+        ////Loop for x, y and z
+        //for (unsigned char i = 0; i < 3; i++)
+        //{
+        //    newAngular1 = gto1.mAngular;
+        //    newAngular2 = gto2.mAngular;
 
-            newAngular1[i] += -1;
-            newAngular2[i] += -1;
+        //    newAngular1[i] += -1;
+        //    newAngular2[i] += -1;
 
-            result += 0.5 * gto1.mAngular[i] * gto2.mAngular[i] * OverlapGaussianParam(
-                gto1.mExponent, gto2.mExponent,
-                newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
+        //    result += 0.5 * gto1.mAngular[i] * gto2.mAngular[i] * OverlapGaussianParam(
+        //        gto1.mExponent, gto2.mExponent,
+        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
 
-            newAngular1 = gto1.mAngular;
-            newAngular2 = gto2.mAngular;
-            newAngular1[i] += 1;
-            newAngular2[i] += 1;
+        //    newAngular1 = gto1.mAngular;
+        //    newAngular2 = gto2.mAngular;
+        //    newAngular1[i] += 1;
+        //    newAngular2[i] += 1;
 
-            result += 2 * gto1.mExponent * gto2.mExponent * OverlapGaussianParam(
-                gto1.mExponent, gto2.mExponent,
-                newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
+        //    result += 2 * gto1.mExponent * gto2.mExponent * OverlapGaussianParam(
+        //        gto1.mExponent, gto2.mExponent,
+        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
 
-            newAngular1 = gto1.mAngular;
-            newAngular2 = gto2.mAngular;
-            newAngular1[i] += 1;
-            newAngular2[i] += -1;
+        //    newAngular1 = gto1.mAngular;
+        //    newAngular2 = gto2.mAngular;
+        //    newAngular1[i] += 1;
+        //    newAngular2[i] += -1;
 
-            result -= gto1.mExponent * gto2.mAngular[i] * OverlapGaussianParam(
-                gto1.mExponent, gto2.mExponent,
-                newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
+        //    result -= gto1.mExponent * gto2.mAngular[i] * OverlapGaussianParam(
+        //        gto1.mExponent, gto2.mExponent,
+        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
 
-            newAngular1 = gto1.mAngular;
-            newAngular2 = gto2.mAngular;
-            newAngular1[i] += -1;
-            newAngular2[i] += 1;
+        //    newAngular1 = gto1.mAngular;
+        //    newAngular2 = gto2.mAngular;
+        //    newAngular1[i] += -1;
+        //    newAngular2[i] += 1;
 
-            result -= gto2.mExponent * gto1.mAngular[i] * OverlapGaussianParam(
-                gto1.mExponent, gto2.mExponent,
-                newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
-        }
+        //    result -= gto2.mExponent * gto1.mAngular[i] * OverlapGaussianParam(
+        //        gto1.mExponent, gto2.mExponent,
+        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
+        //}
 
-        return result;
+        //return result;
+
+        double term0 = gto2.mExponent *
+            (2.0 * (gto2.mAngular[0] + gto2.mAngular[1] + gto2.mAngular[2]) + 3.0) *
+            OverlapGaussian(gto1, gto2);
+
+        double term1 = -2.0 * std::pow(gto2.mExponent, 2.0) * (
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular + Eigen::Vector3i(2, 0, 0), gto1.mPosition, gto2.mPosition) +
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular + Eigen::Vector3i(0, 2, 0), gto1.mPosition, gto2.mPosition) +
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular + Eigen::Vector3i(0, 0, 2), gto1.mPosition, gto2.mPosition)
+            );
+        double term2 = -0.5 * (gto2.mAngular[0] * (gto2.mAngular[0] - 1) *
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular - Eigen::Vector3i(2, 0, 0), gto1.mPosition, gto2.mPosition) +
+            gto2.mAngular[1] * (gto2.mAngular[1] - 1) *
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular - Eigen::Vector3i(0, 2, 0), gto1.mPosition, gto2.mPosition) +
+            gto2.mAngular[2] * (gto2.mAngular[2] - 1) *
+            OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular, gto2.mAngular - Eigen::Vector3i(0, 0, 2), gto1.mPosition, gto2.mPosition));
+
+        return term0 + term1 + term2;
+
     }
 
     double IntegralHelper::EvaluateKinetic(const GaussianCollection& c1, const GaussianCollection& c2)

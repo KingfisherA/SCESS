@@ -11,6 +11,18 @@
 #include"Events/KeyEvents.h"
 #include"Events/MouseEvents.h"
 
+namespace ImGui
+{
+	void TextCentered(const char* txt) 
+	{
+		auto windowWidth = ImGui::GetWindowSize().x;
+		auto textWidth = ImGui::CalcTextSize(txt).x;
+
+		ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+		ImGui::Text(txt);
+	}
+}
+
 namespace SCESS
 {
 	ImGuiLayer::ImGuiLayer() : Layer("ImGui Layer")
@@ -36,7 +48,7 @@ namespace SCESS
 		
 		//..\..\..\assets\fonts\ubuntu\Ubuntu - R.ttf
 		io.FontDefault = io.Fonts->AddFontFromFileTTF(R"(C:\dev\Chemistry\SCESS\Fonts\Ubuntu-Light.ttf)", 18.0f);
-
+		io.Fonts->AddFontFromFileTTF(R"(C:\dev\Chemistry\SCESS\Fonts\Ubuntu-Light.ttf)", 48.0f);
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
 

@@ -72,7 +72,7 @@ namespace SCESS
 				return GL_RGB;
 
 			case SCESS::PixelFormat::RGBA8:
-				return GL_RGB8;
+				return GL_RGBA;
 				
 			case SCESS::PixelFormat::RG:
 				return GL_RG;

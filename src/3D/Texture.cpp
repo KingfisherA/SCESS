@@ -5,7 +5,7 @@
 
 #include"Texture.h"
 #include"Platform/OpenGL/OpenGLTexture.h"
-//#include"stb_image/stb_image.h"
+#include"stb/stb_image.h"
 
 //
 //
@@ -17,7 +17,7 @@ namespace SCESS
 
 	TextureLoader::TextureLoader(const std::string_view filePath)
 	{
-		/*stbi_set_flip_vertically_on_load(0);
+		stbi_set_flip_vertically_on_load(0);
 		int width, height, channels;
 		m_Data = (byte*)stbi_load(filePath.data(), &width, &height, &channels, 0);
 
@@ -40,7 +40,7 @@ namespace SCESS
 			case 4:
 				return PixelFormat::RGBA8;
 			}
-		}();*/
+		}();
 
 	}
 

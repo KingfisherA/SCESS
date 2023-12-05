@@ -21,6 +21,8 @@ namespace SCESS
 
 	class Framebuffer;
 
+	class Texture2D;
+
 	class Application
 	{
 	public:
@@ -81,5 +83,7 @@ namespace SCESS
 
 		static Application* s_Instance;
 		static glm::mat4 projectionMatrix;
+
+		sRef<Texture2D> mAppIcon;
 	};
 }

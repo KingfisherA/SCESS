@@ -133,28 +133,11 @@ namespace SCESS
         }
     };
 
-    static Molecule GenerateWaterMolecule()
-    {
-        SCESS::Atom H1("H", Eigen::Vector3d{ -0.078963,       1.012042 ,      0.000000 }*ANGSTROM_2_BOHR);
-        SCESS::Atom H2("H", Eigen::Vector3d{ 1.012042, - 0.078963   ,    0.000000 }*ANGSTROM_2_BOHR);
-        SCESS::Atom O("O", Eigen::Vector3d{ 0.066921    ,   0.066921   ,    0.000000 }*ANGSTROM_2_BOHR);
+    Molecule GenerateWaterMolecule();
 
-        SCESS::Molecule water({ H1, H2, O });
-        water.MakeOrbitals();
+    Molecule GenerateHydrogenMolecule();
 
-        return water;
-    }
+    Molecule GenerateLithiumHydrideMolecule();
 
-    static Molecule GenerateHydrogenMolecule()
-    {
-        constexpr double hydrogenBondLength = 0.7122300374 * ANGSTROM_2_BOHR;
-
-        SCESS::Atom H1("H", { 0.0,0.0,0.0 });
-        SCESS::Atom H2("H", { hydrogenBondLength,0.0,0.0 });
-
-        SCESS::Molecule hydrogenMol({ H1, H2 });
-        hydrogenMol.MakeOrbitals();
-
-        return hydrogenMol;
-    }
+    Molecule GenerateCOMolecule();
 }
