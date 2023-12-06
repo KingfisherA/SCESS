@@ -8,10 +8,8 @@ namespace SCESS
 	public:
 		Camera();
 		//
-		void UpdateMouse(float mouseDX, float mouseDY, int buttonClicked);
+		void UpdateMouse(float mouseDX, float mouseDY, int buttonClicked, int modKeys = 0);
 		//
-		void UpdatePitch(float mouseDY, int buttonClicked);
-		void UpdateYaw(float mouseDX, int buttonClicked);
 		void UpdateZoom(double mouseWheelD);
 		//
 		void MoveTo(const glm::vec3& newPosition, const float targetZoomIn);

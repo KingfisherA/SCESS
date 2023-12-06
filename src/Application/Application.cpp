@@ -198,6 +198,7 @@ namespace SCESS
 				mCam.SetZoom(newZoom);
 
 			ImGui::Text("Camera Actual Position: X=%.2f, Y=%.2f, Z=%.2f", actualPos.x, actualPos.y, actualPos.z);
+			ImGui::Text("Pitch=%.2f, Yaw=%.2f, Roll=%.2f", mCam.GetPitch(), mCam.GetYaw(), mCam.GetRoll());
 			ImGui::Unindent();
 		}
 
@@ -298,16 +299,13 @@ namespace SCESS
 			dispatcher.Dispatch<MouseScrollEvent>(BIND_EVENT_FNC(OnMouseScroll));
 		};
 
-		if (m_isViewportFocused) DispatchApplicationEvents();
-
+		DispatchApplicationEvents();
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 		{
 			if (e.IsHandled())
 				break;
 			(*it)->OnEvent(e);
 		}
-
-		if (!m_isViewportFocused) DispatchApplicationEvents();
 	}
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
@@ -319,12 +317,14 @@ namespace SCESS
 	bool Application::OnKeyPressed(KeyPressedEvent& e)
 	{
 		m_KeyDown = e.GetKeyCode();
+		m_KeyMods = e.GetModifiers();
 		return false;
 	}
 
 	bool Application::OnKeyReleased(KeyReleasedEvent& e)
 	{
 		m_KeyDown = -1;
+		m_KeyMods = 0;
 		return false;
 	}
 
@@ -342,21 +342,18 @@ namespace SCESS
 
 	bool Application::OnMouseMove(MouseMoveEvent& e)
 	{
-		glm::vec2 mousePos((float)e.GetMousePos().x, (float)e.GetMousePos().y);
-		mCam.UpdateMouse(mousePos.x - m_MouseLastPos.x, mousePos.y - m_MouseLastPos.y, m_MouseButtonDown);
+		const glm::dvec2& mousePos = e.GetMousePos();
+		glm::dvec2 deltaMouse(mousePos.x - m_MouseLastPos.x, mousePos.y - m_MouseLastPos.y);
+		if(m_isViewportFocused) mCam.UpdateMouse((float)deltaMouse.x, (float)deltaMouse.y, m_MouseButtonDown, m_KeyMods);
 		m_MouseLastPos = mousePos;
 		return true;
 	}
 
 	bool Application::OnMouseScroll(MouseScrollEvent& e)
 	{
-		static double lastScrollTime = 0.0;
 		double currentScrollTime = m_Window->GetTime();
-		double deltaScroll = currentScrollTime - lastScrollTime;
-		lastScrollTime = currentScrollTime;
-
-		deltaScroll *= e.GetYOffset();
-		deltaScroll *= 50.0;
+		double deltaScroll = glm::max(1.0/(currentScrollTime - mLastScrollTime),1.0) * glm::sign(e.GetYOffset());
+		mLastScrollTime = currentScrollTime;
 
 		mCam.UpdateZoom(deltaScroll);
 		return false;

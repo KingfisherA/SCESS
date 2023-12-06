@@ -75,9 +75,12 @@ namespace SCESS
 
 		double m_Time = 0.0;
 		double m_DeltaTime = 0.0;
-		glm::vec2 m_MouseLastPos;
+		glm::dvec2 m_MouseLastPos;
 		int m_MouseButtonDown = -1;
 		int m_KeyDown = -1;
+		int m_KeyMods = 0;
+
+		double mLastScrollTime = 0.0;
 
 		Camera mCam;
 

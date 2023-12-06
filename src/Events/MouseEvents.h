@@ -48,16 +48,16 @@ namespace SCESS
 	class MouseMoveEvent : public Event
 	{
 	public:
-		MouseMoveEvent(glm::vec2 pos) : mousePos(pos) {}
+		MouseMoveEvent(glm::dvec2 pos) : mMousePos(pos) {}
 
 		EVENT_CLASS_FUNCTIONS(MouseMove)
 		EVENT_CLASS_CATEGORY_FNS(EventCategory::EventCategoryInput | EventCategory::EventCategoryMouse)
 
 		//MouseButton GetMouseButtonPressed() const { return buttonPressed; }
-		svec2 GetMousePos() const { return mousePos; }
+		glm::dvec2 GetMousePos() const { return mMousePos; }
 
 	protected:
-		glm::vec2 mousePos = { 0,0 };
+		glm::dvec2 mMousePos;
 		//MouseButton buttonPressed;
 	};
 

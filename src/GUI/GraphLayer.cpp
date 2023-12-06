@@ -124,6 +124,8 @@ namespace SCESS
 		mDiffuseProg->Bind();
 		mDiffuseProg->UploadVecF("uLightPos", {0.0f, 10.0f, 0.0f});
 		mDiffuseProg->Unbind();
+
+		mPosTriSurf = VertexArray::Create(Geometry::CreateTorus(0.5, 1.0f, 0.5f, 40, 40));
 	}
 
 	void GraphLayer::OnDetach()
@@ -133,10 +135,10 @@ namespace SCESS
 	void GraphLayer::OnUpdate(const sRef<SCESS::Framebuffer>& screenBuffer, const Camera& cam,
 		const glm::mat4& projectionMatrix, const glm::vec2& nearFarPlanes)
 	{
-		if (mPosTriSurf == nullptr || mNegTrisurf == nullptr)
-		{
-			return;
-		}
+		//if (mPosTriSurf == nullptr || mNegTrisurf == nullptr)
+		//{
+		//	return;
+		//}
 
 		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
 		glDisable(GL_CULL_FACE);
@@ -147,14 +149,21 @@ namespace SCESS
 		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
 
 		mDiffuseProg->UploadVecF("uColour", { 1.0f, 0.0f, 0.0f });
-		mPosTriSurf->Bind();
-		mPosTriSurf->SubmitArrays();
-		mPosTriSurf->Unbind();
+
+		if (mPosTriSurf != nullptr)
+		{
+			mPosTriSurf->Bind();
+			mPosTriSurf->SubmitArrays();
+			mPosTriSurf->Unbind();
+		}
 
 		mDiffuseProg->UploadVecF("uColour", { 0.0f, 0.0f, 1.0f });
-		mNegTrisurf->Bind();
-		mNegTrisurf->SubmitArrays();
-		mNegTrisurf->Unbind();
+		if (mNegTrisurf != nullptr)
+		{
+			mNegTrisurf->Bind();
+			mNegTrisurf->SubmitArrays();
+			mNegTrisurf->Unbind();
+		}
 
 		mDiffuseProg->Unbind();
 

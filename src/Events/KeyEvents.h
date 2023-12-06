@@ -6,19 +6,21 @@ namespace SCESS
 	class KeyEvent : public Event
 	{
 	public:
-		KeyEvent(int keyCodeIn) : keyCode(keyCodeIn) {}
+		KeyEvent(int keyCodeIn, int modsIn) : mKeyCode(keyCodeIn), mMods(modsIn) {}
 
 		EVENT_CLASS_CATEGORY_FNS(EventCategory::EventCategoryKeyboard | EventCategory::EventCategoryInput)
 
-		const int GetKeyCode() const { return keyCode; }
+		const int GetKeyCode() const { return mKeyCode; }
+
+		const int GetModifiers() const { return mMods; }
 	protected:
-		int keyCode;
+		int mKeyCode, mMods;
 	};
 
 	class KeyPressedEvent :public KeyEvent
 	{
 	public:
-		KeyPressedEvent(int keyCode, unsigned int repeatCountIn) : KeyEvent(keyCode), repeatCount(repeatCountIn) {}
+		KeyPressedEvent(int keyCode, int mods, unsigned int repeatCountIn) : KeyEvent(keyCode, mods), repeatCount(repeatCountIn) {}
 
 		EVENT_CLASS_FUNCTIONS(KeyPressed)
 
@@ -31,7 +33,7 @@ namespace SCESS
 	class KeyReleasedEvent : public KeyEvent
 	{
 	public:
-		KeyReleasedEvent(int keyCode) : KeyEvent(keyCode) {}
+		KeyReleasedEvent(int keyCode, int mods) : KeyEvent(keyCode, mods) {}
 
 		EVENT_CLASS_FUNCTIONS(KeyReleased)
 	};

@@ -17,18 +17,38 @@ namespace SCESS
 	constexpr float PITCH_MAX_ACCELERATION = 10.0f;
 	constexpr float PITCH_ACCELERATION_FACTOR = 0.6f;
 	//
-	constexpr float ZOOM_MAX_ACCELERATION = 100.0f;
-	constexpr float ZOOM_ACCELERATION_FACTOR = 0.1f;
+	constexpr float ZOOM_MAX_ACCELERATION = 500.0f;
+	constexpr float ZOOM_ACCELERATION_FACTOR = 2.0f;
 	//
 	Camera::Camera() : viewMatrix(1.0f), centrePosition(0.0f), targetPosition(0.0f), posVelocity(0.0f)
 	{
 		RecalculateActualPos();
 	}
 	//
-	void Camera::UpdateMouse(float mouseDX, float mouseDY, int buttonClicked)
+	void Camera::UpdateMouse(float mouseDX, float mouseDY, int buttonClicked, int modKeys)
 	{
-		UpdatePitch(mouseDY, buttonClicked);
-		UpdateYaw(mouseDX, buttonClicked);
+		if (isFollowingPath)
+			StopPath();
+
+		if (buttonClicked != -1 && (modKeys & GLFW_MOD_SHIFT))
+		{
+			zoomVelocity += glm::length(glm::vec2(mouseDX, mouseDY)) * glm::sign(mouseDY) * 2.0f;
+		}
+		else if (buttonClicked == GLFW_MOUSE_BUTTON_RIGHT)
+		{
+			posVelocity -= glm::vec3(this->GetInverseViewMatrix() * glm::vec4(mouseDX, mouseDY, 0.0f, 0.0f)) * 0.5f;
+		}
+		else if (buttonClicked == GLFW_MOUSE_BUTTON_LEFT)
+		{
+			
+			pitchAcceleration += PITCH_ACCELERATION_FACTOR;
+			pitchAcceleration = glm::clamp(pitchAcceleration, -PITCH_MAX_ACCELERATION, PITCH_MAX_ACCELERATION);
+			pitchVelocity -= mouseDY * pitchAcceleration;
+
+			yawAcceleration += ANGLE_AROUND_ACCELERATION_FACTOR;
+			yawAcceleration = glm::clamp(yawAcceleration, -ANGLE_AROUND_MAX_ACCELERATION, ANGLE_AROUND_MAX_ACCELERATION);
+			yawVelocity += mouseDX * yawAcceleration;
+		}
 	}
 	void Camera::UpdateKeyboard(int key)
 	{
@@ -69,24 +89,6 @@ namespace SCESS
 		posVelocity += deltaVec;
 
 		posAcceleration = glm::min(posAcceleration, POS_MAX_ACCELERATION);
-	}
-	void Camera::UpdatePitch(float mouseDY, int buttonClicked)
-	{
-		if (buttonClicked == GLFW_MOUSE_BUTTON_RIGHT)
-		{
-			pitchAcceleration += PITCH_ACCELERATION_FACTOR;
-			pitchAcceleration = glm::clamp(pitchAcceleration, -PITCH_MAX_ACCELERATION, PITCH_MAX_ACCELERATION);
-			pitchVelocity += -mouseDY * pitchAcceleration;
-		}
-	}
-	void Camera::UpdateYaw(float mouseDX, int buttonClicked)
-	{
-		if (buttonClicked == GLFW_MOUSE_BUTTON_LEFT)
-		{
-			yawAcceleration += ANGLE_AROUND_ACCELERATION_FACTOR;
-			yawAcceleration = glm::clamp(yawAcceleration, -ANGLE_AROUND_MAX_ACCELERATION, ANGLE_AROUND_MAX_ACCELERATION);
-			yawVelocity += mouseDX * yawAcceleration;
-		}
 	}
 	void Camera::UpdateZoom(double mouseWheelD)
 	{
@@ -144,12 +146,13 @@ namespace SCESS
 			posVelocity *= 0.99;
 
 			zoomAcceleration *= 0.92f;
-			zoomVelocity *= 0.99f;
+			zoomVelocity *= 0.97f;
 		}
 
 		yaw += yawVelocity * deltaTime;
 		pitch += pitchVelocity * deltaTime;
 		zoom += zoomVelocity * deltaTime;
+		zoom = std::abs(zoom);
 
 		pitchVelocity *= 0.99f;
 		pitchAcceleration *= 0.99f;
