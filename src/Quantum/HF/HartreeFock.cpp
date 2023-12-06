@@ -39,13 +39,14 @@ namespace SCESS
 
         Eigen::MatrixXd Hcore = T + V;
 
-        Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
+        Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver;
         eigensolver.compute(S);
-        Eigen::VectorXd SEigenValues = eigensolver.eigenvalues().real();
-        Eigen::MatrixXd SEigenVects = eigensolver.eigenvectors().real();
+        const Eigen::VectorXd& SEigenValues = eigensolver.eigenvalues().real();
+        const Eigen::MatrixXd& SEigenVects = eigensolver.eigenvectors().real();
 
-        Eigen::MatrixXd SValsInvSqrt = SEigenValues.array().rsqrt().matrix().asDiagonal();
-        Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt;
+        Eigen::MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
+        Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
+        TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
 
         //eigensolver.compute(TransformMat.transpose()*Hcore*TransformMat);
         Eigen::MatrixXd Fock;
@@ -99,22 +100,26 @@ namespace SCESS
             scfCount++;
             //Generate the Fock matrix
             Fock = Hcore + ConstructG(DensityMat, twoElectronTensor);
+            Fock = (Fock + Fock.transpose()) * 0.5;
             //Transform the Fock matrix in the orthonormal basis set
             Eigen::MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
 
             //Diagonalise the transformed Fock matrix
-            eigensolver.compute(FockPrime);
-            Energies = eigensolver.eigenvalues().real();
+            Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver2(Fock);
+            //eigensolver2.compute(FockPrime);
+            Energies = eigensolver2.eigenvalues().real();
 
             //Transform coefficients back into normal basis
-            Coeffs = TransformMat * eigensolver.eigenvectors().real();
+            const Eigen::MatrixXd& CPrime = eigensolver2.eigenvectors().real();
+            Coeffs = TransformMat * CPrime;
 
             //Recompute the density matrix
             OldDensity = DensityMat;
             DensityMat = ConstructDensityRHF(Coeffs, Nelectrons);
 
             //Calculate delta change to the density matrix
-            delta = CalculateDelta(OldDensity, DensityMat);
+            const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
+            delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
 
             currentE = CalculateEnergy(DensityMat, Hcore, Fock) + Vnn;
 
@@ -147,8 +152,9 @@ namespace SCESS
                 {
                     for (Eigen::DenseIndex l = 0; l < G.rows(); l++)
                     {
-                        //F += P*(J-0.5K)
-                        G(i, j) += Density(k, l) * (teiTensor(i, j, l, k) - 0.5 * teiTensor(i, k, l, j));
+                        double J = teiTensor(i, j, k, l);
+                        double K = teiTensor(i, l, k, j);
+                        G(i, j) += Density(k, l) * (J-0.5*K);
                     }
                 }
             }
@@ -167,7 +173,7 @@ namespace SCESS
             {
                 for (int k = 0; k < (Nelecs / 2); k++)
                 {
-                    Density(i, j) += 2 * Coeffs(i, k) * Coeffs(j, k);
+                    Density(i, j) += 2.0 * Coeffs(i, k) * Coeffs(j, k);
                 }
             }
         }
