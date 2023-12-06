@@ -14,6 +14,9 @@
 
 #include"Application/Application.h"
 
+#include "GUI/ImSpinner.h"
+
+
 namespace SCESS
 {
 	static float OrbitalPZ(float x, float y, float z, const glm::vec3& pos) {
@@ -30,14 +33,14 @@ namespace SCESS
 		return (1.0 / (81 * std::sqrt(6 * std::numbers::pi))) * (3 * z * z - r * r) * std::exp(-r / 3);
 	}
 
-		
+
 	GraphLayer::~GraphLayer()
 	{
 	}
 
 	std::function<float(float, float, float)> GraphLayer::GenerateGaussianFunction(const GaussianCollection& gc)
 	{
-		auto returnFunc = [gc](float x, float y, float z) ->float 
+		auto returnFunc = [gc](float x, float y, float z) ->float
 			{
 				float result = 0.0f;
 				for (const Gaussian& g : gc.GetGaussians())
@@ -45,9 +48,9 @@ namespace SCESS
 					glm::vec3 pos = { x - g.mPosition.x(), y - g.mPosition.y(), z - g.mPosition.z() };
 					result += g.mNorm * g.mCoeff *
 						std::pow(pos.x, g.mAngular[0])
-						*std::pow(pos.y, g.mAngular[1])
+						* std::pow(pos.y, g.mAngular[1])
 						* std::pow(pos.z, g.mAngular[2])
-						* std::exp(-std::abs(glm::dot(pos,pos)));
+						* std::exp(-std::abs(glm::dot(pos, pos)));
 				}
 				return result;
 			};
@@ -65,7 +68,7 @@ namespace SCESS
 				std::pow(pos.x, g.mAngular[0])
 				* std::pow(pos.y, g.mAngular[1])
 				* std::pow(pos.z, g.mAngular[2])
-				* std::exp(-g.mExponent*glm::dot(pos,pos));
+				* std::exp(-g.mExponent * glm::dot(pos, pos));
 		}
 		return result;
 	}
@@ -109,23 +112,28 @@ namespace SCESS
 		return surface;
 	}
 
-	sRef<VertexArray> GraphLayer::TriSurfaceToVertexArray(const TriSurf& tri)
+	void GraphLayer::UploadTriSurface(VertexArray& vArray, const TriSurf& tri)
 	{
-		sRef<VertexArray> vArray = VertexArray::Create();
-		vArray->AddVertexBuffer(VertexBuffer::Create((const float*)(tri.triangles.data()),
-			tri.triangles.size() * 3 * 3));
-
-		return vArray;
+		if (vArray.GetNoOfVBuffers() != 0)
+		{
+			const sRef<VertexBuffer>& vBuffer = vArray.GetVBuffer(0);
+			vBuffer->StoreData((const float*)(tri.triangles.data()),
+				tri.triangles.size() * 3 * 3);
+			vArray.UpdateElementLength(tri.triangles.size() * 3);
+		}
 	}
 
 	void GraphLayer::OnAttach()
 	{
 		mDiffuseProg = ShaderProgram::CreateFromFile(R"(C:\dev\Chemistry\SCESS\Shaders\ColourDiffuse.glsl)");
 		mDiffuseProg->Bind();
-		mDiffuseProg->UploadVecF("uLightPos", {0.0f, 10.0f, 0.0f});
+		mDiffuseProg->UploadVecF("uLightPos", { 0.0f, 10.0f, 0.0f });
 		mDiffuseProg->Unbind();
 
-		mPosTriSurf = VertexArray::Create(Geometry::CreateTorus(0.5, 1.0f, 0.5f, 40, 40));
+		mPosTriSurf = VertexArray::Create();
+		mPosTriSurf->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
+		mNegTrisurf = VertexArray::Create();
+		mNegTrisurf->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 	}
 
 	void GraphLayer::OnDetach()
@@ -135,11 +143,6 @@ namespace SCESS
 	void GraphLayer::OnUpdate(const sRef<SCESS::Framebuffer>& screenBuffer, const Camera& cam,
 		const glm::mat4& projectionMatrix, const glm::vec2& nearFarPlanes)
 	{
-		//if (mPosTriSurf == nullptr || mNegTrisurf == nullptr)
-		//{
-		//	return;
-		//}
-
 		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
 		glDisable(GL_CULL_FACE);
 
@@ -149,47 +152,38 @@ namespace SCESS
 		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
 
 		mDiffuseProg->UploadVecF("uColour", { 1.0f, 0.0f, 0.0f });
-
-		if (mPosTriSurf != nullptr)
-		{
-			mPosTriSurf->Bind();
-			mPosTriSurf->SubmitArrays();
-			mPosTriSurf->Unbind();
-		}
+		mPosTriSurf->Bind();
+		mPosTriSurf->SubmitArrays();
+		mPosTriSurf->Unbind();
 
 		mDiffuseProg->UploadVecF("uColour", { 0.0f, 0.0f, 1.0f });
-		if (mNegTrisurf != nullptr)
-		{
-			mNegTrisurf->Bind();
-			mNegTrisurf->SubmitArrays();
-			mNegTrisurf->Unbind();
-		}
+		mNegTrisurf->Bind();
+		mNegTrisurf->SubmitArrays();
+		mNegTrisurf->Unbind();
+
 
 		mDiffuseProg->Unbind();
 
 		glEnable(GL_CULL_FACE);
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	void GraphLayer::SelectWaterWavefunction(size_t index)
+	void GraphLayer::SelectMO(size_t index)
 	{
-		if (mIsosurfaceResolution < 10)
-		{
-			throw std::exception("Resolution must be 10 or greater");
-		}
-		auto waterWavefunction = [coeffs = mHFResult->Coeffs.col(index), water=mWaterMol](float x, float y, float z)->float {
-			float result = 0.0f;
-			for (size_t i = 0; i < water->GetOrbitals().size(); i++)
+		auto molecularWavefunction = [coeffs = mHFResult->Coeffs.col(index),
+			&molecule = static_cast<const Molecule&>(*mMolecule)](float x, float y, float z) -> float
 			{
-				result += coeffs[i] * EvaluateGaussianFunction(water->GetOrbital(i), x, y, z);
-			}
-			return result;
+				float result = 0.0f;
+				for (size_t i = 0; i < molecule.GetOrbitals().size(); i++)
+				{
+					result += coeffs[i] * EvaluateGaussianFunction(molecule.GetOrbital(i), x, y, z);
+				}
+				return result;
 			};
 
-		mPosTriSurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, mIsosurfaceResolution, 
+		std::lock_guard<std::mutex> lock(mTrisurfMutex);
+		mPosSurfaceTri = std::move(GenerateIsosurface(molecularWavefunction, mIsosurfaceResolution,
 			5.0f, mIsosurfaceVal));
-		mNegTrisurf = TriSurfaceToVertexArray(GenerateIsosurface(waterWavefunction, mIsosurfaceResolution,
+		mNegSurfaceTri = std::move(GenerateIsosurface(molecularWavefunction, mIsosurfaceResolution,
 			5.0f, -mIsosurfaceVal));
 	}
 
@@ -197,64 +191,102 @@ namespace SCESS
 	{
 		static std::vector<const char*> labels;
 
-		if (!ImGui::Begin("Water Quantum Calc."))
+		if (!ImGui::Begin("Hartree Fock"))
 		{
 			ImGui::End();
 			return;
 		}
-
-		if (ImGui::CollapsingHeader("Hartree Fock", ImGuiTreeNodeFlags_DefaultOpen))
+		ImGui::BulletText("Selected Molecule: Water");
+		ImGui::Separator();
+		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
+		if (ImGui::Button("Run RHF", { 100,0 }))
 		{
-			if (ImGui::Button("Execute Hartree Fock"))
+			mMolecule = std::make_shared<Molecule>(SCESS::GenerateWaterMolecule());
+			mHFResult = std::make_shared<HFResult>(SCESS::HF::ReducedHF(*mMolecule));
+
+			std::unordered_map<double, uint32_t> sortMap;
+			for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
 			{
-				mWaterMol = std::make_shared<Molecule>(SCESS::GenerateWaterMolecule());
-				mHFResult = std::make_shared<HFResult>(SCESS::HF::ReducedHF(*mWaterMol));
-				
-				std::unordered_map<double, uint32_t> sortMap;
-				for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
-				{
-					sortMap.insert({ mHFResult->Energies[i], i});
-				}
-				std::sort(mHFResult->Energies.begin(), mHFResult->Energies.end());
-				mHFResult->Energies.reverseInPlace();
-
-				Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(mHFResult->Coeffs.rows(), mHFResult->Coeffs.rows());
-				for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
-				{
-					uint32_t index = sortMap.at(mHFResult->Energies[i]);
-					sortedCoeffs.col(i) = mHFResult->Coeffs.col(index);
-
-					std::stringstream ss;
-					ss <<"MO "<< mHFResult->Energies.rows()-i << "; E=" << mHFResult->Energies[i] << " hartrees";
-					mOrbLabels.push_back(ss.str());
-				}
-				mHFResult->Coeffs = sortedCoeffs;
-
-				labels.clear();
-				for (std::string& s : mOrbLabels)
-				{
-					labels.push_back(s.c_str());
-				}
+				sortMap.insert({ mHFResult->Energies[i], i });
 			}
+			std::sort(mHFResult->Energies.begin(), mHFResult->Energies.end());
+			mHFResult->Energies.reverseInPlace();
 
-			ImGui::Text("See console for Hartree Fock calculation progress...");
-			
-			if (mHFResult != nullptr)
+			Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(mHFResult->Coeffs.rows(), mHFResult->Coeffs.rows());
+			for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
+			{
+				uint32_t index = sortMap.at(mHFResult->Energies[i]);
+				sortedCoeffs.col(i) = mHFResult->Coeffs.col(index);
+
+				std::stringstream ss;
+				ss << "MO " << mHFResult->Energies.rows() - i << "; E=" << mHFResult->Energies[i] << " hartrees";
+				mOrbLabels.push_back(ss.str());
+			}
+			mHFResult->Coeffs = sortedCoeffs;
+
+			labels.clear();
+			for (std::string& s : mOrbLabels)
+			{
+				labels.push_back(s.c_str());
+			}
+		}
+
+		if (mHFResult != nullptr)
+		{
+			if (ImGui::CollapsingHeader("Result", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				ImGui::BulletText("Basis Set: STO-3G");
 				ImGui::BulletText("Total Hartree Fock Energy: %f hartrees", mHFResult->Energy);
-				ImGui::Separator();
 
-				if (ImGui::CollapsingHeader("Water MOs", ImGuiTreeNodeFlags_DefaultOpen))
+				ImGui::Indent();
+				if (ImGui::CollapsingHeader("Orbitals", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					ImGui::BulletText("Click on an MO to generate its isosurface!");
 					int selectedOption = -1;
-					ImGui::ListBox("##listbox1", &selectedOption, labels.data(), labels.size());
-					if (selectedOption != -1)
+					if (mTrisurfThread == nullptr)
 					{
-						SelectWaterWavefunction(selectedOption);
+						ImGui::Text("Select an MO to generate an isosurface");
+						ImGui::ListBox("##listbox1", &selectedOption, labels.data(), labels.size());
 					}
-					if (ImGui::CollapsingHeader("Isosurface Properties", ImGuiTreeNodeFlags_DefaultOpen))
+
+					//if (mIsosurfaceResolution < 10)
+					//	ImGui::Text("Please select a resolution greater than or equal to 10");
+
+					if (selectedOption != -1 && mTrisurfThread == nullptr)
+					{
+						mTrisurfCalculated = false;
+						mTrisurfThread = std::make_unique<std::jthread>(
+							std::bind(&GraphLayer::SelectMO, this, selectedOption));
+					}
+
+					if (mPosSurfaceTri.triangles.size() > 0 || mNegSurfaceTri.triangles.size() > 0)
+					{
+						if (mTrisurfMutex.try_lock())
+						{
+							UploadTriSurface(*mPosTriSurf, mPosSurfaceTri);
+							UploadTriSurface(*mNegTrisurf, mNegSurfaceTri);
+							mPosSurfaceTri.triangles.clear();
+							mNegSurfaceTri.triangles.clear();
+							mTrisurfMutex.unlock();
+							mTrisurfThread = nullptr;
+							mTrisurfCalculated = true;
+						}
+					}
+
+					if (mTrisurfThread != nullptr)
+					{
+						ImSpinner::SpinnerTwinBall("spinner1", 16.0, 16.0f, 3.0, 6.0, { 1.0f, 0.0f, 0.0f, 1.0f }, ImSpinner::white, 3.0f, 1);
+						ImGui::SameLine();
+						ImGui::Text("Generating isosurface...");
+					}
+					else if (mTrisurfCalculated)
+						ImGui::Text("Isosurface generated.");
+
+
+
+					ImGui::Indent();
+
+					ImGui::Indent();
+					if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::Text("Isosurface Value:");
 						ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);

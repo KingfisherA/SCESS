@@ -20,8 +20,8 @@ project "SCESS"
      objdir ("bin-obj/" .. outputdir)
      debugdir ("bin/" .. outputdir)
 
-     pchheader ("pch.h")
-     pchsource ("%{wks.location}pch.cpp")
+	 pchheader("pch.h")
+	 pchsource("%{wks.location}/src/pch.cpp")
 
      --postbuildcommands  {
        -- ("call xcopy.exe \"%{prj.location}shaders\\\" \"%{wks.location}bin\\%{prj.name}\\Debug-x64\\assets\\\" /s /y /i /d")

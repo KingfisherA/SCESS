@@ -18,6 +18,9 @@
 
 #include"Utilities/IO.h"
 
+//#define IMSPINNER_DEMO
+//#include "GUI/ImSpinner.h"
+
 
 #pragma region Entry Point
 
@@ -126,6 +129,8 @@ namespace SCESS
 			mainFramebuffer->Unbind();
 
 			m_ImGuiLayer->Begin();
+			RenderMenuBar();
+			RenderSplashScreen();
 
 			for (Layer* layer : m_LayerStack)
 				layer->OnImGuiRender();
@@ -142,10 +147,50 @@ namespace SCESS
 		return 0;
 	}
 
+	void Application::RenderMenuBar()
+	{
+		if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("About"))
+			{
+				ImGui::MenuItem("Splash Screen", nullptr, &mSplashScreenOpen);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		}
+	}
+
+	void Application::RenderSplashScreen()
+	{
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, 0, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize({ 600,600 });
+		if (ImGui::BeginPopup("splashScreenPopup"))
+		{
+			constexpr float imgWidth = 350;
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
+			ImGui::Image((ImTextureID)mAppIcon->GetRendererID(), { (float)imgWidth,
+				(float)imgWidth });
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			ImGui::TextCentered("SCESS Version 1");
+			ImGui::PopFont();
+			ImGui::Text("Schrodinger's Cat's Electronic System Solver");
+			ImGui::Text("By Charlie Wheelwright; cspw2");
+			ImGui::Text("(Meow)");	
+			ImGui::EndPopup();
+		}
+
+		if (mSplashScreenOpen)
+		{
+			ImGui::OpenPopup("splashScreenPopup");
+			mSplashScreenOpen = false;
+		}
+	}
+
 	void Application::RenderViewport()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0,0 });
-		if (ImGui::Begin("Molecule Viewport", nullptr))
+		if (ImGui::Begin("3D Viewport", nullptr))
 		{
 			m_isViewportFocused = ImGui::IsWindowFocused();
 			m_viewPortPanelSize = ImGui::GetContentRegionAvail();
@@ -220,24 +265,6 @@ namespace SCESS
 
 	void Application::RenderSceneInformation()
 	{
-		//bool isOpen = true;
-		//ImGui::ShowDemoWindow(&isOpen);
-
-		if (ImGui::Begin("Splash Screen"))
-		{
-			float imgWidth = 400;
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
-			ImGui::Image((ImTextureID)mAppIcon->GetRendererID(), { (float)imgWidth,
-				(float)imgWidth });
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			ImGui::TextCentered("SCESS Version 1");
-			ImGui::PopFont();
-			ImGui::Text("Schrodinger's Cat's Electronic System Solver");
-			ImGui::Text("By Charlie Wheelwright; cspw2");
-			ImGui::Text("(Meow)");
-		}
-		ImGui::End();
-
 		if (!ImGui::Begin("Scene Information"))
 		{
 			ImGui::End();

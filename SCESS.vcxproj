@@ -106,9 +106,9 @@
     <ClInclude Include="src\3D\Buffers.h" />
     <ClInclude Include="src\3D\Framebuffer.h" />
     <ClInclude Include="src\3D\ShaderProgram.h" />
-    <ClInclude Include="src\3D\stb\stb_image.h" />
     <ClInclude Include="src\3D\Texture.h" />
     <ClInclude Include="src\3D\VertexArray.h" />
+    <ClInclude Include="src\3D\stb\stb_image.h" />
     <ClInclude Include="src\Application\Application.h" />
     <ClInclude Include="src\Display.h" />
     <ClInclude Include="src\Events\AppEvents.h" />
@@ -118,6 +118,7 @@
     <ClInclude Include="src\Events\WindowEvents.h" />
     <ClInclude Include="src\GUI\GraphLayer.h" />
     <ClInclude Include="src\GUI\ImGuiLayer.h" />
+    <ClInclude Include="src\GUI\ImSpinner.h" />
     <ClInclude Include="src\Layers\Layer.h" />
     <ClInclude Include="src\Layers\LayerStack.h" />
     <ClInclude Include="src\Maths\Geometry.hpp" />
@@ -149,9 +150,9 @@
     <ClCompile Include="src\3D\Buffers.cpp" />
     <ClCompile Include="src\3D\Framebuffer.cpp" />
     <ClCompile Include="src\3D\ShaderProgram.cpp" />
-    <ClCompile Include="src\3D\stb\stb_image.cpp" />
     <ClCompile Include="src\3D\Texture.cpp" />
     <ClCompile Include="src\3D\VertexArray.cpp" />
+    <ClCompile Include="src\3D\stb\stb_image.cpp" />
     <ClCompile Include="src\Application\Application.cpp" />
     <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\GUI\GraphLayer.cpp" />
@@ -181,19 +182,13 @@
     <ClCompile Include="src\Utilities\IO.cpp" />
     <ClCompile Include="src\Utilities\StringOperations.cpp" />
     <ClCompile Include="src\pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\ImGui\ImGui.vcxproj">
       <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

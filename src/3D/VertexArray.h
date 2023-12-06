@@ -40,7 +40,15 @@ namespace SCESS
 		virtual sRef<IndexBuffer> GetIBuffer() = 0;
 		virtual bool IsIndexed() const = 0;
 
-		virtual size_t GetArrayElementLength() = 0;
-		virtual size_t GetArrayByteLength() = 0;
+		virtual size_t GetNoOfVBuffers() const = 0;
+
+		void UpdateElementLength(const size_t newEleLength)
+		{
+			m_elementLength = newEleLength;
+		}
+		size_t GetArrayElementLength() const { return m_elementLength; }
+
+	protected:
+		size_t m_elementLength = 0;
 	};
 }

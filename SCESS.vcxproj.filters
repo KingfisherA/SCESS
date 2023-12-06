@@ -4,6 +4,9 @@
     <Filter Include="3D">
       <UniqueIdentifier>{1C715900-08FD-870B-71AB-880B5D56880B}</UniqueIdentifier>
     </Filter>
+    <Filter Include="3D\stb">
+      <UniqueIdentifier>{745DC083-60FF-EA59-49BA-FEAD35FB71AA}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Application">
       <UniqueIdentifier>{D9DE78AF-4594-F1A4-CE88-EB7B3A3DE8A8}</UniqueIdentifier>
     </Filter>
@@ -60,8 +63,14 @@
     <ClInclude Include="src\3D\ShaderProgram.h">
       <Filter>3D</Filter>
     </ClInclude>
+    <ClInclude Include="src\3D\Texture.h">
+      <Filter>3D</Filter>
+    </ClInclude>
     <ClInclude Include="src\3D\VertexArray.h">
       <Filter>3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3D\stb\stb_image.h">
+      <Filter>3D\stb</Filter>
     </ClInclude>
     <ClInclude Include="src\Application\Application.h">
       <Filter>Application</Filter>
@@ -86,6 +95,9 @@
       <Filter>GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\GUI\ImGuiLayer.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GUI\ImSpinner.h">
       <Filter>GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\Layers\Layer.h">
@@ -164,8 +176,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\3D\Texture.h" />
-    <ClInclude Include="src\3D\stb\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -177,8 +187,14 @@
     <ClCompile Include="src\3D\ShaderProgram.cpp">
       <Filter>3D</Filter>
     </ClCompile>
+    <ClCompile Include="src\3D\Texture.cpp">
+      <Filter>3D</Filter>
+    </ClCompile>
     <ClCompile Include="src\3D\VertexArray.cpp">
       <Filter>3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\3D\stb\stb_image.cpp">
+      <Filter>3D\stb</Filter>
     </ClCompile>
     <ClCompile Include="src\Application\Application.cpp">
       <Filter>Application</Filter>
@@ -263,10 +279,5 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\3D\Texture.cpp" />
-    <ClCompile Include="src\3D\stb\stb_image.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
 </Project>

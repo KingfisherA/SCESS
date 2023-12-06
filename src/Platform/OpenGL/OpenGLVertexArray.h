@@ -1,7 +1,7 @@
 #pragma once
 #include<pch.h>
 
-#include<map>
+#include<unordered_map>
 
 #include"3D/VertexArray.h"
 #include"OpenGLBuffers.h"
@@ -28,16 +28,18 @@ namespace SCESS
 		virtual sRef<IndexBuffer> GetIBuffer() override;
 		virtual bool IsIndexed() const override;
 
-		virtual size_t GetArrayElementLength() override { return m_elementLength; }
-		virtual size_t GetArrayByteLength() override { return m_elementLength * sizeof(float); }
+		virtual size_t GetNoOfVBuffers() const override
+		{
+			return m_Buffers.size();
+		}
 
 		const inline GLid GetGLID() const { return m_VAOId; }
 
 	private:
 		GLid m_VAOId = 0;
-		std::map<unsigned char, sRef<OpenGLVertexBuffer>> m_Buffers;
+		std::unordered_map<Index, sRef<OpenGLVertexBuffer>> m_Buffers;
 		sRef<OpenGLIndexBuffer> m_IndexBuffer;
 
-		size_t m_elementLength = 0;
+		
 	};
 }

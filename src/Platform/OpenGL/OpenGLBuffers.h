@@ -11,6 +11,7 @@ namespace SCESS
 		virtual ~OpenGLVertexBuffer();
 		//
 		virtual void StoreData(const float* data, size_t floatCount) override;
+		virtual void UpdateData(const float* data, const size_t offset, const size_t floatCount) override;
 		virtual void Bind() override;
 		virtual void Unbind() override;
 		virtual size_t GetBufferSize() const override;
@@ -22,7 +23,6 @@ namespace SCESS
 		GLid m_VBOID = 0;
 		size_t m_BufferFloatSize = 0;
 		BufferUsage m_Usage;
-		bool m_DataStored = false;
 	};
 
 

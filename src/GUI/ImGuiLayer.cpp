@@ -4,8 +4,9 @@
 #include"imgui.h"
 
 #define IMGUI_IMPL_API
-#include"examples/imgui_impl_glfw.h"
-#include"examples/imgui_impl_opengl3.h"
+#define IMGUI_IMPL_OPENGL_LOADER_GLEW
+#include"backends/imgui_impl_opengl3.h"
+#include"backends/imgui_impl_glfw.h"
 
 #include"Application/Application.h"
 #include"Events/KeyEvents.h"
@@ -14,11 +15,8 @@
 namespace ImGui
 {
 	void TextCentered(const char* txt) 
-	{
-		auto windowWidth = ImGui::GetWindowSize().x;
-		auto textWidth = ImGui::CalcTextSize(txt).x;
-
-		ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+	{	
+		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(txt).x) * 0.5f);
 		ImGui::Text(txt);
 	}
 }
@@ -45,6 +43,7 @@ namespace SCESS
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 	    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
+		io.ConfigWindowsMoveFromTitleBarOnly = true;
 		
 		//..\..\..\assets\fonts\ubuntu\Ubuntu - R.ttf
 		io.FontDefault = io.Fonts->AddFontFromFileTTF(R"(C:\dev\Chemistry\SCESS\Fonts\Ubuntu-Light.ttf)", 18.0f);
@@ -102,8 +101,8 @@ namespace SCESS
 		if (opt_fullscreen)
 		{
 			ImGuiViewport* viewport = ImGui::GetMainViewport();
-			ImGui::SetNextWindowPos(viewport->GetWorkPos());
-			ImGui::SetNextWindowSize(viewport->GetWorkSize());
+			ImGui::SetNextWindowPos(viewport->WorkPos);
+			ImGui::SetNextWindowSize(viewport->WorkSize);
 			ImGui::SetNextWindowViewport(viewport->ID);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -127,7 +126,7 @@ namespace SCESS
 		// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
 		if (!opt_padding)
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+		ImGui::Begin("SCESS Dockspace", nullptr, window_flags);
 		if (!opt_padding)
 			ImGui::PopStyleVar();
 
@@ -140,15 +139,6 @@ namespace SCESS
 		{
 			ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-		}
-
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("About"))
-			{
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenuBar();
 		}
 	}
 

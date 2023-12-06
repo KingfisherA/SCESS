@@ -41,20 +41,17 @@ namespace SCESS
 	void OpenGLVertexBuffer::StoreData(const float* data, size_t floatCount)
 	{
 		m_BufferFloatSize = floatCount;
-		if (!m_DataStored)
-		{
-			m_DataStored = true;
+		glBindBuffer(GL_ARRAY_BUFFER, m_VBOID);
+		glBufferData(GL_ARRAY_BUFFER, floatCount * sizeof(float), (const void*)data, UsageToGLenum(m_Usage));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-			glBindBuffer(GL_ARRAY_BUFFER, m_VBOID);
-			glBufferData(GL_ARRAY_BUFFER, floatCount * sizeof(float), (const void*)data, UsageToGLenum(m_Usage));
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-		}
-		else
-		{
-			glBindBuffer(GL_ARRAY_BUFFER, m_VBOID);
-			glBufferSubData(GL_ARRAY_BUFFER, 0, floatCount * sizeof(float), data);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-		}
+	}
+
+	void OpenGLVertexBuffer::UpdateData(const float* data, const size_t offset, const size_t floatCount)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, m_VBOID);
+		glBufferSubData(GL_ARRAY_BUFFER, offset, floatCount * sizeof(float), data);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
 	void OpenGLVertexBuffer::Bind()
@@ -86,7 +83,7 @@ namespace SCESS
 		glGenBuffers(1, &m_VBOID);
 	}
 
-	OpenGLIndexBuffer::OpenGLIndexBuffer(BufferUsage usageIn, const unsigned int* data, 
+	OpenGLIndexBuffer::OpenGLIndexBuffer(BufferUsage usageIn, const unsigned int* data,
 		size_t intCount) : m_Usage(usageIn)
 	{
 		glGenBuffers(1, &m_VBOID);

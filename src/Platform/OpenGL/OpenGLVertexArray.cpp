@@ -52,7 +52,7 @@ namespace SCESS
 
 		m_Buffers.insert({ attribArray, glBuffer });
 
-		if (m_elementLength == 0) m_elementLength = glBuffer->GetBufferSize();
+		if (m_elementLength == 0) m_elementLength = glBuffer->GetBufferSize() / spec.vertexSize;
 
 		glBindVertexArray(m_VAOId);
 		glBindBuffer(GL_ARRAY_BUFFER, glBuffer->GetGLId());

@@ -57,6 +57,8 @@ namespace SCESS
 		bool OnMouseScroll(MouseScrollEvent& e);
 		bool m_isViewportFocused = false;
 
+		void RenderMenuBar();
+		void RenderSplashScreen();
 		void RenderViewport();
 		void RenderCameraPanel();
 		void RenderSceneInformation();
@@ -88,5 +90,7 @@ namespace SCESS
 		static glm::mat4 projectionMatrix;
 
 		sRef<Texture2D> mAppIcon;
+
+		bool mSplashScreenOpen = true;
 	};
 }

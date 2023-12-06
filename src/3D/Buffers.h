@@ -20,7 +20,8 @@ namespace SCESS
 	public:
 		virtual ~VertexBuffer() {}
 		//
-		virtual void StoreData(const float* data, size_t floatCount) = 0;
+		virtual void StoreData(const float* data, const size_t floatCount) = 0;
+		virtual void UpdateData(const float* data, const size_t offset, const size_t floatCount) = 0;
 		virtual void Bind() = 0;
 		virtual void Unbind() = 0;
 		virtual size_t GetBufferSize() const = 0;
