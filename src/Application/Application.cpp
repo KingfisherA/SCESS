@@ -382,7 +382,7 @@ namespace SCESS
 		double deltaScroll = glm::max(1.0/(currentScrollTime - mLastScrollTime),1.0) * glm::sign(e.GetYOffset());
 		mLastScrollTime = currentScrollTime;
 
-		mCam.UpdateZoom(deltaScroll);
+		if (m_isViewportFocused) mCam.UpdateZoom(deltaScroll);
 		return false;
 	}
 

@@ -140,4 +140,8 @@ namespace SCESS
     Molecule GenerateLithiumHydrideMolecule();
 
     Molecule GenerateCOMolecule();
+
+    Molecule GenerateMethaneMolecule();
+
+    Molecule GenerateEtheneMolecule();
 }

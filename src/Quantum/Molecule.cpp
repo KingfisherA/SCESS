@@ -120,7 +120,6 @@ namespace SCESS
 		return LiHMolecule;
 	}
 
-
 	Molecule GenerateCOMolecule()
 	{
 		constexpr double COBondLength = 1.128 * ANGSTROM_2_BOHR;
@@ -132,5 +131,34 @@ namespace SCESS
 		COMolecule.MakeOrbitals();
 
 		return COMolecule;
+	}
+
+	Molecule GenerateMethaneMolecule()
+	{
+		SCESS::Atom H1("H", Eigen::Vector3d{ -9.3880270305,   1.9905798101, -0.0000169136 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H2("H", Eigen::Vector3d{ -8.3050312953 ,  1.9905766754 ,  0.0000244554 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H3("H", Eigen::Vector3d{ -9.7489816731,   2.8099628719 ,  0.6092400251 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H4("H", Eigen::Vector3d{ -9.7489800239 ,  1.0532708184 ,  0.4049933956 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom C("C", Eigen::Vector3d{ -9.3880270305,   1.9905798101, -0.0000169136 }*SCESS::ANGSTROM_2_BOHR);
+
+		SCESS::Molecule methane({ H1, H2, H3, H4, C });
+		methane.MakeOrbitals();
+
+		return methane;
+	}
+
+	Molecule GenerateEtheneMolecule()
+	{
+		SCESS::Atom C1("C", Eigen::Vector3d{ -0.6530176758, 0.0000000000, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom C2("C", Eigen::Vector3d{ 0.6530176758, 0.0000000000, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H1("H", Eigen::Vector3d{ -1.2288875372, -0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H2("H", Eigen::Vector3d{ -1.2288875372, 0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H3("H", Eigen::Vector3d{ 1.2288875372, 0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H4("H", Eigen::Vector3d{ 1.2288875372, -0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+
+		SCESS::Molecule ethene({ C1,C2,H1,H2,H3,H4 });
+		ethene.MakeOrbitals();
+
+		return ethene;
 	}
 }

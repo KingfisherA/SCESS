@@ -73,8 +73,8 @@ namespace SCESS
 		return result;
 	}
 
-	TriSurf GraphLayer::GenerateIsosurface(const std::function<float(float, float, float)>& func,
-		size_t resolution, float axis, float isosurfaceVal)
+	void GraphLayer::GenerateIsosurface(const std::function<float(float, float, float)>& func,
+		TriSurf* outSurface, size_t resolution, bool* threadShouldTerminate, float axis, float isosurfaceVal)
 	{
 		std::unique_ptr<MarchingCubes> marchingCubes = std::make_unique<MarchingCubes>();
 
@@ -84,6 +84,8 @@ namespace SCESS
 
 		for (size_t i = 0; i < resolution; i++)
 		{
+			if (threadShouldTerminate != nullptr && *threadShouldTerminate)
+				return;
 			for (size_t j = 0; j < resolution; j++)
 			{
 				for (size_t k = 0; k < resolution; k++)
@@ -97,19 +99,16 @@ namespace SCESS
 			}
 		}
 
-		TriSurf surface;
-		marchingCubes->TriangulateField(scalarField, isosurfaceVal, &surface.triangles);
+		marchingCubes->TriangulateField(scalarField, isosurfaceVal, &outSurface->triangles, threadShouldTerminate);
 
 		//Rescale vertices
-		for (size_t i = 0; i < surface.triangles.size(); i++)
+		for (size_t i = 0; i < outSurface->triangles.size(); i++)
 		{
 			for (uint8_t j = 0; j < 3; j++)
 			{
-				surface.triangles[i][j] = ((surface.triangles[i][j] * 2.0f / float(resolution)) - 1.0f) * axis;
+				outSurface->triangles[i][j] = ((outSurface->triangles[i][j] * 2.0f / float(resolution)) - 1.0f) * axis;
 			}
 		}
-
-		return surface;
 	}
 
 	void GraphLayer::UploadTriSurface(VertexArray& vArray, const TriSurf& tri)
@@ -180,59 +179,123 @@ namespace SCESS
 				return result;
 			};
 
-		std::lock_guard<std::mutex> lock(mTrisurfMutex);
-		mPosSurfaceTri = std::move(GenerateIsosurface(molecularWavefunction, mIsosurfaceResolution,
-			5.0f, mIsosurfaceVal));
-		mNegSurfaceTri = std::move(GenerateIsosurface(molecularWavefunction, mIsosurfaceResolution,
-			5.0f, -mIsosurfaceVal));
+		GenerateIsosurface(molecularWavefunction, &mPosSurfaceTri, mIsosurfaceResolution,
+			&mTrisurfShouldTerminate, 10.0f, mIsosurfaceVal);
+		GenerateIsosurface(molecularWavefunction, &mNegSurfaceTri, mIsosurfaceResolution,
+			&mTrisurfShouldTerminate, 10.0f, -mIsosurfaceVal);
+		mTrisurfFinished = true;
+	}
+
+	constexpr const char* PROG_SCREEN_NAME = "HF Progress";
+
+	void GraphLayer::RunHF()
+	{
+		if (mTrisurfThread != nullptr)
+		{
+			mTrisurfShouldTerminate = true;
+			mTrisurfThread = nullptr;
+		}
+
+		if (mHFThread != nullptr)
+			mHFThread->join();
+
+		mMolecule = std::make_shared<Molecule>(SCESS::GenerateCOMolecule());
+		mHFThreadFinished = false;
+		mHFConsoleOutput.str(std::string());
+		mHFThread = std::make_unique<std::jthread>([this]() {
+			mHFResult = std::make_shared<HFResult>(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mHFConsoleOutput));
+			mHFThreadFinished = true;
+		});
+	}
+
+	void GraphLayer::DrawProgressScreen()
+	{
+		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize({ 600,300 }, ImGuiCond_Once);
+		if (ImGui::BeginPopupModal(PROG_SCREEN_NAME))
+		{
+			ImSpinner::SpinnerAtom("##atomSpinner", 20.0, 2.5);
+			ImGui::SameLine();
+			ImGui::Text("Running RHF single-point energy. Please wait...");
+
+			const std::string& consoleStr = mHFConsoleOutput.str();
+			ImGui::InputTextMultiline("##hfConsoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
+				{ 0,0 }, ImGuiInputTextFlags_ReadOnly);
+
+			if (mHFThreadFinished)
+				ImGui::CloseCurrentPopup();
+
+			ImGui::EndPopup();
+		}
+	}
+
+	void GraphLayer::SortMOLabels(std::vector<const char*>& moLabels)
+	{
+		std::unordered_map<double, uint32_t> sortMap;
+		for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
+		{
+			sortMap.insert({ mHFResult->Energies[i], i });
+		}
+		std::sort(mHFResult->Energies.begin(), mHFResult->Energies.end());
+		mHFResult->Energies.reverseInPlace();
+
+		Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(mHFResult->Coeffs.rows(), mHFResult->Coeffs.rows());
+		mOrbLabels.clear();
+		mOrbLabels.reserve(mHFResult->Energies.rows());
+		for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
+		{
+			uint32_t index = sortMap.at(mHFResult->Energies[i]);
+			sortedCoeffs.col(i) = mHFResult->Coeffs.col(index);
+
+			std::stringstream ss;
+			ss << "MO " << mHFResult->Energies.rows() - i << "; E=" << mHFResult->Energies[i] << " hartrees";
+			mOrbLabels.push_back(ss.str());
+		}
+		mHFResult->Coeffs = sortedCoeffs;
+
+		moLabels.clear();
+		moLabels.reserve(mOrbLabels.size());
+		for (std::string& s : mOrbLabels)
+		{
+			moLabels.push_back(s.c_str());
+		}
 	}
 
 	void GraphLayer::OnImGuiRender()
 	{
-		static std::vector<const char*> labels;
+		static std::vector<const char*> moLabels;
+
+		DrawProgressScreen();
+		if (mHFThread != nullptr && !mHFThreadFinished)
+			ImGui::OpenPopup(PROG_SCREEN_NAME);
 
 		if (!ImGui::Begin("Hartree Fock"))
 		{
 			ImGui::End();
 			return;
 		}
-		ImGui::BulletText("Selected Molecule: Water");
+
+		ImGui::BulletText("Selected Molecule: Carbon Monoxide");
 		ImGui::Separator();
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
 		if (ImGui::Button("Run RHF", { 100,0 }))
+			RunHF();
+
+		if (mHFThreadFinished)
 		{
-			mMolecule = std::make_shared<Molecule>(SCESS::GenerateWaterMolecule());
-			mHFResult = std::make_shared<HFResult>(SCESS::HF::ReducedHF(*mMolecule));
-
-			std::unordered_map<double, uint32_t> sortMap;
-			for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
+			if (mHFThread != nullptr)
 			{
-				sortMap.insert({ mHFResult->Energies[i], i });
+				SortMOLabels(moLabels);
+				mHFThread = nullptr;
 			}
-			std::sort(mHFResult->Energies.begin(), mHFResult->Energies.end());
-			mHFResult->Energies.reverseInPlace();
-
-			Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(mHFResult->Coeffs.rows(), mHFResult->Coeffs.rows());
-			for (size_t i = 0; i < mHFResult->Energies.rows(); i++)
+			
+			if (ImGui::CollapsingHeader("Hartree Fock Console", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				uint32_t index = sortMap.at(mHFResult->Energies[i]);
-				sortedCoeffs.col(i) = mHFResult->Coeffs.col(index);
-
-				std::stringstream ss;
-				ss << "MO " << mHFResult->Energies.rows() - i << "; E=" << mHFResult->Energies[i] << " hartrees";
-				mOrbLabels.push_back(ss.str());
+				const std::string& consoleStr = mHFConsoleOutput.str();
+				ImGui::InputTextMultiline("##hfConsoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
+					{ 0,0 }, ImGuiInputTextFlags_ReadOnly);
 			}
-			mHFResult->Coeffs = sortedCoeffs;
 
-			labels.clear();
-			for (std::string& s : mOrbLabels)
-			{
-				labels.push_back(s.c_str());
-			}
-		}
-
-		if (mHFResult != nullptr)
-		{
 			if (ImGui::CollapsingHeader("Result", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				ImGui::BulletText("Basis Set: STO-3G");
@@ -245,30 +308,27 @@ namespace SCESS
 					if (mTrisurfThread == nullptr)
 					{
 						ImGui::Text("Select an MO to generate an isosurface");
-						ImGui::ListBox("##listbox1", &selectedOption, labels.data(), labels.size());
+						ImGui::ListBox("##listbox1", &selectedOption, moLabels.data(), moLabels.size());
 					}
-
-					//if (mIsosurfaceResolution < 10)
-					//	ImGui::Text("Please select a resolution greater than or equal to 10");
 
 					if (selectedOption != -1 && mTrisurfThread == nullptr)
 					{
-						mTrisurfCalculated = false;
+						mTrisurfShouldTerminate = false;
+						mTrisurfFinished = false;
 						mTrisurfThread = std::make_unique<std::jthread>(
 							std::bind(&GraphLayer::SelectMO, this, selectedOption));
 					}
 
-					if (mPosSurfaceTri.triangles.size() > 0 || mNegSurfaceTri.triangles.size() > 0)
+					if (mTrisurfFinished)
 					{
-						if (mTrisurfMutex.try_lock())
+						if (mPosSurfaceTri.triangles.size() != 0
+							|| mNegSurfaceTri.triangles.size() != 0)
 						{
+							mTrisurfThread = nullptr;
 							UploadTriSurface(*mPosTriSurf, mPosSurfaceTri);
 							UploadTriSurface(*mNegTrisurf, mNegSurfaceTri);
 							mPosSurfaceTri.triangles.clear();
 							mNegSurfaceTri.triangles.clear();
-							mTrisurfMutex.unlock();
-							mTrisurfThread = nullptr;
-							mTrisurfCalculated = true;
 						}
 					}
 
@@ -277,22 +337,26 @@ namespace SCESS
 						ImSpinner::SpinnerTwinBall("spinner1", 16.0, 16.0f, 3.0, 6.0, { 1.0f, 0.0f, 0.0f, 1.0f }, ImSpinner::white, 3.0f, 1);
 						ImGui::SameLine();
 						ImGui::Text("Generating isosurface...");
+						if (ImGui::Button("Cancel", { 100,0 }))
+						{
+							mTrisurfShouldTerminate = true;
+							mTrisurfThread = nullptr;
+						}
 					}
-					else if (mTrisurfCalculated)
-						ImGui::Text("Isosurface generated.");
-
-
-
-					ImGui::Indent();
-
-					ImGui::Indent();
-					if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen))
+					else
 					{
-						ImGui::Text("Isosurface Value:");
-						ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);
-						ImGui::Text("Isosurface Resolution:");
-						ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
+						if (mTrisurfFinished)
+							ImGui::TextColored({ 0.0f,1.0f,0.0f,1.0f }, "Isosurface generated.");
+
+						if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen))
+						{
+							ImGui::Text("Isosurface Value:");
+							ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);
+							ImGui::Text("Isosurface Resolution:");
+							ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
+						}
 					}
+
 				}
 			}
 		}

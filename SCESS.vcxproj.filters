@@ -266,9 +266,6 @@
     <ClCompile Include="src\Quantum\Molecule.cpp">
       <Filter>Quantum</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Tests.cpp">
-      <Filter>Quantum</Filter>
-    </ClCompile>
     <ClCompile Include="src\Scene\Camera.cpp">
       <Filter>Scene</Filter>
     </ClCompile>

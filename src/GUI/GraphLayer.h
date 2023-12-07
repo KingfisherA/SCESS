@@ -54,8 +54,8 @@ namespace SCESS
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
-		static TriSurf GenerateIsosurface(const std::function<float(float, float, float)>& func,
-			size_t resolution, float axis = 10.0f, float isosurfaceVal = 0.01f);
+		static void GenerateIsosurface(const std::function<float(float, float, float)>& func, TriSurf* outSurface, 
+			size_t resolution, bool* threadShouldTerminate=nullptr, float axis = 10.0f, float isosurfaceVal = 0.01f);
 
 
 	private:
@@ -63,13 +63,20 @@ namespace SCESS
 		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
 		void SelectMO(size_t index);
 
+		void RunHF();
+		void DrawProgressScreen();
+		void SortMOLabels(std::vector<const char*>& moLabels);
+
 		sRef<VertexArray> mPosTriSurf, mNegTrisurf;
-		std::mutex mTrisurfMutex;
 		std::unique_ptr<std::jthread> mTrisurfThread;
-		bool mTrisurfCalculated = false;
+		bool mTrisurfShouldTerminate, mTrisurfFinished = false;
 		TriSurf mPosSurfaceTri, mNegSurfaceTri;
 
 		sRef<ShaderProgram> mDiffuseProg;
+
+		std::stringstream mHFConsoleOutput;
+		std::unique_ptr<std::jthread> mHFThread;
+		bool mHFThreadFinished = false;
 		sRef<HFResult> mHFResult;
 		sRef<Molecule> mMolecule;
 

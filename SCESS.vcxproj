@@ -177,7 +177,6 @@
     <ClCompile Include="src\Quantum\Integrals\Gamma.cpp" />
     <ClCompile Include="src\Quantum\Integrals\IntegralHelper.cpp" />
     <ClCompile Include="src\Quantum\Molecule.cpp" />
-    <ClCompile Include="src\Quantum\Tests.cpp" />
     <ClCompile Include="src\Scene\Camera.cpp" />
     <ClCompile Include="src\Utilities\IO.cpp" />
     <ClCompile Include="src\Utilities\StringOperations.cpp" />

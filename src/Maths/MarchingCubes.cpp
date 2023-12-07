@@ -102,7 +102,7 @@ namespace SCESS
 
     void MarchingCubes::TriangulateField(
         const std::vector<std::vector<std::vector<float>>>& scalarFunction,
-        float isovalue, std::vector<Triangle>* trianglesOut)
+        float isovalue, std::vector<Triangle>* trianglesOut, bool* threadShouldTerminate)
     {
 
         if (trianglesOut == nullptr)
@@ -116,6 +116,8 @@ namespace SCESS
         {
             for (size_t j = 0; j + 1 < max; j++)
             {
+                if (threadShouldTerminate != nullptr && *threadShouldTerminate)
+                    return;
                 for (size_t k = 0; k + 1 < max; k++)
                 {
                     float x = i, y = j, z = k;

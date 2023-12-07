@@ -361,7 +361,7 @@ namespace SCESS
         /// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
         void TriangulateField(
             const std::vector<std::vector<std::vector<float>>>& scalarFunction, 
-            float isovalue, std::vector<Triangle>* trianglesOut);
+            float isovalue, std::vector<Triangle>* trianglesOut, bool* threadShouldTerminate=nullptr);
 	};
 }
 
