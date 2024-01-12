@@ -60,7 +60,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries\glm;libs\json-develop\include;libs\eigen-3.4.0;..\..\Libraries\boost_1_83_0;..\..\Libraries\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\C++\glew-2.1.0\include;..\..\Libraries\C++\glfw-3.3.2\include;..\..\Libraries\C++\glm;..\..\Libraries\C++\json-develop\include;..\..\Libraries\C++\eigen-3.4.0;..\..\Libraries\C++\boost_1_83_0;..\..\Libraries\C++\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -71,8 +71,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32sd.lib;glfw3_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Debug\x64;..\..\Libraries\glfw-3.3.2\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\C++\glew-2.1.0\lib\Debug\x64;..\..\Libraries\C++\glfw-3.3.2\lib\x64;..\..\Libraries\C++\boost_1_83_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -82,7 +82,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries\glm;libs\json-develop\include;libs\eigen-3.4.0;..\..\Libraries\boost_1_83_0;..\..\Libraries\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\C++\glew-2.1.0\include;..\..\Libraries\C++\glfw-3.3.2\include;..\..\Libraries\C++\glm;..\..\Libraries\C++\json-develop\include;..\..\Libraries\C++\eigen-3.4.0;..\..\Libraries\C++\boost_1_83_0;..\..\Libraries\C++\ImGui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -97,8 +97,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glew32s.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Release\x64;..\..\Libraries\glfw-3.3.2\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\C++\glew-2.1.0\lib\Release\x64;..\..\Libraries\C++\glfw-3.3.2\lib\x64;..\..\Libraries\C++\boost_1_83_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -143,6 +143,7 @@
     <ClInclude Include="src\Utilities\Assert.h" />
     <ClInclude Include="src\Utilities\IO.h" />
     <ClInclude Include="src\Utilities\Memory.h" />
+    <ClInclude Include="src\Utilities\PathUtils.h" />
     <ClInclude Include="src\Utilities\StringOperations.h" />
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
@@ -185,9 +186,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\ImGui\ImGui.vcxproj">
+    <ProjectReference Include="..\..\Libraries\C++\ImGui\ImGui.vcxproj">
       <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

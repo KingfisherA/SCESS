@@ -8,7 +8,7 @@ workspace "SCESS"
     }
 
 outputdir = "%{prj.name}/%{cfg.buildcfg}-x64/"
-publicLibDir = "C:/dev/Libraries/"
+publicLibDir = "C:/dev/Libraries/C++/"
 libDir = "%{wks.location}/libs/"
 
 project "SCESS"
@@ -40,8 +40,8 @@ project "SCESS"
         publicLibDir .. "glew-2.1.0/include/",
         publicLibDir .. "glfw-3.3.2/include/",
         publicLibDir .. "glm/",
-		libDir .. "json-develop/include",
-		libDir .. "eigen-3.4.0",
+		publicLibDir .. "json-develop/include",
+		publicLibDir .. "eigen-3.4.0",
 		publicLibDir .. "boost_1_83_0/",
         publicLibDir .. "ImGui/"
      }
@@ -70,8 +70,9 @@ project "SCESS"
         defines {"CONFIG_DEBUG", "_DEBUG"}
         symbols "On"
         libdirs {publicLibDir .. "glew-2.1.0/lib/Debug/x64/",
-         publicLibDir .. "glfw-3.3.2/lib/x64/"}
-      links {"glew32sd", "glfw3_debug"}
+         publicLibDir .. "glfw-3.3.2/lib/x64/",
+		 publicLibDir .. "boost_1_83_0/stage/lib/"}
+      links {"glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib"}
       staticruntime "off"
       buildoptions "/MDd"
 
@@ -79,8 +80,9 @@ project "SCESS"
         defines "CONFIG_RELEASE"
         optimize "On"
         libdirs {publicLibDir .. "glew-2.1.0/lib/Release/x64/",
-        publicLibDir .. "glfw-3.3.2/lib/x64/"}
-        links {"glew32s", "glfw3"}
+        publicLibDir .. "glfw-3.3.2/lib/x64/",
+		publicLibDir .. "boost_1_83_0/stage/lib/"}
+        links {"glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib"}
         staticruntime "off"
         buildoptions "/MD"
 --

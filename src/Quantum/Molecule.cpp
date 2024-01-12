@@ -3,6 +3,7 @@
 #include"Molecule.h"
 #include"Basis/BasisUtils.h"
 #include"Basis/Gaussian.h"
+#include "Utilities/PathUtils.h"
 
 //
 //
@@ -10,7 +11,7 @@ namespace SCESS
 {
 	void Molecule::MakeOrbitals()
 	{
-		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(R"(C:\dev\Chemistry\SCESS\Data\sto-3g.json)");
+		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath(R"(Basis\sto-3g.json)").string());
 		if (!basisSetOpt.has_value())
 		{
 			throw std::exception("Basis set could not be loaded succesfully");
@@ -22,13 +23,14 @@ namespace SCESS
 		{
 			nlohmann::json& atomBasis = basisSet[a.GetAtomSymbol()];
 			a.SetCharge(atomBasis["atomic_number"].get<int>());
+			mNoElectrons += a.GetCharge();
 			nlohmann::json& cgfs = atomBasis["cgfs"];
 			for (size_t i = 0; i < cgfs.size(); i++)
 			{
 				nlohmann::json& AO = cgfs[i];
 				std::string AOType;
 				AO["type"].get_to(AOType);
-				
+
 				std::vector<SCESS::OrbitalType> types;
 				if (AOType == "S")
 				{
@@ -69,7 +71,7 @@ namespace SCESS
 					GaussianCollection collection(a.GetPos());
 					for (nlohmann::json& gto : gtos)
 					{
-						double exponent, coeff=0.0;
+						double exponent, coeff = 0.0;
 						gto["alpha"].get_to(exponent);
 						gto["coeff"].get_to(coeff);
 						collection.Add(type, Gaussian(exponent, coeff));
@@ -82,11 +84,11 @@ namespace SCESS
 
 	Molecule GenerateWaterMolecule()
 	{
-		constexpr double waterBondLength = 0.957*ANGSTROM_2_BOHR;
-		constexpr double waterBondAngle = 104.5*std::numbers::pi/180.0;
-		SCESS::Atom H1("H", Eigen::Vector3d{ waterBondLength * std::sin(waterBondAngle * 0.5),waterBondLength*std::cos(waterBondAngle*0.5),0.0});
+		constexpr double waterBondLength = 0.957 * ANGSTROM_2_BOHR;
+		constexpr double waterBondAngle = 104.5 * std::numbers::pi / 180.0;
+		SCESS::Atom H1("H", Eigen::Vector3d{ waterBondLength * std::sin(waterBondAngle * 0.5),waterBondLength * std::cos(waterBondAngle * 0.5),0.0 });
 		SCESS::Atom H2("H", Eigen::Vector3d{ -waterBondLength * std::sin(waterBondAngle * 0.5),waterBondLength * std::cos(waterBondAngle * 0.5),0.0 });
-		SCESS::Atom O("O", Eigen::Vector3d{ 0.0,0.0, 0.0});
+		SCESS::Atom O("O", Eigen::Vector3d{ 0.0,0.0, 0.0 });
 
 		SCESS::Molecule water({ H1, O, H2 });
 		water.MakeOrbitals();
@@ -135,11 +137,11 @@ namespace SCESS
 
 	Molecule GenerateMethaneMolecule()
 	{
-		SCESS::Atom H1("H", Eigen::Vector3d{ -9.3880270305,   1.9905798101, -0.0000169136 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H2("H", Eigen::Vector3d{ -8.3050312953 ,  1.9905766754 ,  0.0000244554 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H3("H", Eigen::Vector3d{ -9.7489816731,   2.8099628719 ,  0.6092400251 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H4("H", Eigen::Vector3d{ -9.7489800239 ,  1.0532708184 ,  0.4049933956 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom C("C", Eigen::Vector3d{ -9.3880270305,   1.9905798101, -0.0000169136 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H1("H", { -1.183771681898, -1.183771681898 ,  1.183771681898 });
+		SCESS::Atom H2("H", { -1.183771681898 ,  1.183771681898, -1.183771681898 });
+		SCESS::Atom H3("H", { 1.183771681898,   1.183771681898,   1.183771681898 });
+		SCESS::Atom H4("H", { 1.183771681898 ,-1.183771681898, -1.183771681898 });
+		SCESS::Atom C("C", { 0,0,0 });
 
 		SCESS::Molecule methane({ H1, H2, H3, H4, C });
 		methane.MakeOrbitals();
@@ -160,5 +162,20 @@ namespace SCESS
 		ethene.MakeOrbitals();
 
 		return ethene;
+	}
+
+	Molecule GenerateAmmoniaMolecule()
+	{
+		Eigen::Vector3d NPos{ -6.6842683864,   1.9896777361, -0.0017590331 };
+		NPos*=ANGSTROM_2_BOHR;
+		Atom N("N", {0,0,0});
+		Atom H1("H", Eigen::Vector3d{ -5.6844990792,   1.9942938061 ,  0.0072441956 }*ANGSTROM_2_BOHR - NPos);
+		Atom H2("H", Eigen::Vector3d{ -7.0127564806 ,  2.9323453345 ,  0.0540465122 }*ANGSTROM_2_BOHR - NPos);
+		Atom H3("H", Eigen::Vector3d{ -7.0127560539 ,  1.4847331233  , 0.7962183253 }*ANGSTROM_2_BOHR - NPos);
+
+		Molecule NH3({ N,H1,H2,H3 });
+		NH3.MakeOrbitals();
+
+		return NH3;
 	}
 }

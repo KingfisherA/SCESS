@@ -18,6 +18,43 @@ namespace SCESS
         return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
     }
 
+    ConfigIntegrals IntegralHelper::CalculateConfiguration(const Molecule& molecule)
+    {
+        Eigen::MatrixXd S = 
+            Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+        Eigen::MatrixXd T =
+            Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+        Eigen::MatrixXd V =
+            Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+        TETensor tei;
+
+        for (size_t i = 0; i < molecule.NoOrbitals(); i++)
+        {
+            for (size_t j = i; j < molecule.NoOrbitals(); j++)
+            {
+                const GaussianCollection& c1 = molecule.GetOrbital(i);
+                const GaussianCollection& c2 = molecule.GetOrbital(j);
+                
+                //Overlap Evaluation
+                S(i, j) = S(j, i) = EvaluateOverlap(c1, c2);
+
+                //Kinetic Evaluation
+                T(i, j) = T(j, i) = EvaluateKinetic(c1, c2);
+
+                double Vn = 0.0;
+                for (const Atom& a : molecule.GetAtoms())
+                {
+                    Vn += EvaluateNuclear(c1, c2, a.GetPos(), a.GetCharge());
+                }
+                V(i, j) = V(j, i) = Vn;
+            }
+        }
+
+        tei = CalculateTwoElectronTensor(molecule);
+
+        return ConfigIntegrals{S,T,V,tei};
+    }
+
     double IntegralHelper::Binomial(int a, int b)
     {
         if ((a < 0) || (b < 0) || (a - b < 0)) {
@@ -125,7 +162,7 @@ namespace SCESS
 #pragma endregion
 
 #pragma region Nuclear
-
+    
     double IntegralHelper::AFactor(const int i, const int r, const int u, const int ang1, const int ang2, const double posA_P, double posB_P, double posNuc_P, double gamma)
     {
         double numerator = std::pow(-1, i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * std::pow(-1, u) *

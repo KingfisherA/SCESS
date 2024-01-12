@@ -16,6 +16,9 @@ namespace SCESS
 		static HFResult RestrictedHF(const Molecule& molecule, const double convergeLimit=1E-5, 
 			const size_t scfMaxIterations=100, std::stringstream* consoleStream = nullptr);
 
+		static HFResult UnrestrictedHF(const Molecule& molecule, const double convergeLimit = 1E-5,
+			const size_t scfMaxIterations = 100, std::stringstream* consoleStream = nullptr);
+
 		static double CalculateEnergy(const Eigen::MatrixXd& Density,
 			const Eigen::MatrixXd& Hcore, const Eigen::MatrixXd& Fock);
 

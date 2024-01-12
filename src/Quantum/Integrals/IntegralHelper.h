@@ -75,6 +75,14 @@ namespace SCESS
         }
     };
 
+    struct ConfigIntegrals
+    {
+        // S = Overlap, T = Kinetic, V = Nuclear
+        Eigen::MatrixXd S, T, V;
+        //Two-electron tensor
+        TETensor tei;
+    };
+
     class IntegralHelper
     {
     public:
@@ -85,6 +93,8 @@ namespace SCESS
             double xpa, double xpb);
         static Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,
             const Eigen::Vector3d& pos1, const Eigen::Vector3d& pos2);
+
+        static ConfigIntegrals CalculateConfiguration(const Molecule& molecule);
 
         //Overlap Integrals
         static double Overlap1D(double gamma,

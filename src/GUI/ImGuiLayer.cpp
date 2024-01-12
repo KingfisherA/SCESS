@@ -11,6 +11,7 @@
 #include"Application/Application.h"
 #include"Events/KeyEvents.h"
 #include"Events/MouseEvents.h"
+#include "Utilities/PathUtils.h"
 
 namespace ImGui
 {
@@ -46,8 +47,9 @@ namespace SCESS
 		io.ConfigWindowsMoveFromTitleBarOnly = true;
 		
 		//..\..\..\assets\fonts\ubuntu\Ubuntu - R.ttf
-		io.FontDefault = io.Fonts->AddFontFromFileTTF(R"(C:\dev\Chemistry\SCESS\Fonts\Ubuntu-Light.ttf)", 18.0f);
-		io.Fonts->AddFontFromFileTTF(R"(C:\dev\Chemistry\SCESS\Fonts\Ubuntu-Light.ttf)", 48.0f);
+		std::string fontPath = PathUtils::GetAssetPath(R"(Fonts\Ubuntu-Light.ttf)").string();
+		io.FontDefault = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 18.0f);
+		io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 48.0f);
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
 

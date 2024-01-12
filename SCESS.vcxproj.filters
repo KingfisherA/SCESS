@@ -176,6 +176,7 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Utilities\PathUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -276,5 +277,8 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
 </Project>

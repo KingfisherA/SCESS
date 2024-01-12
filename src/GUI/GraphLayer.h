@@ -55,37 +55,47 @@ namespace SCESS
 		virtual void OnEvent(Event& e) override;
 
 		static void GenerateIsosurface(const std::function<float(float, float, float)>& func, TriSurf* outSurface, 
-			size_t resolution, bool* threadShouldTerminate=nullptr, float axis = 10.0f, float isosurfaceVal = 0.01f);
+			size_t resolution, bool* threadShouldTerminate=nullptr, float isosurfaceVol = 10.0f, float isosurfaceVal = 0.01f);
 
 
 	private:
 
 		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
-		void SelectMO(size_t index);
+		void RenderMOIsosurface();
 
 		void RunHF();
 		void DrawProgressScreen();
 		void SortMOLabels(std::vector<const char*>& moLabels);
+		
+		sRef<Molecule> mMolecule;
 
-		sRef<VertexArray> mPosTriSurf, mNegTrisurf;
-		std::unique_ptr<std::jthread> mTrisurfThread;
-		bool mTrisurfShouldTerminate, mTrisurfFinished = false;
-		TriSurf mPosSurfaceTri, mNegSurfaceTri;
+		sRef<VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
+		struct TrisurfaceThread
+		{
+			std::unique_ptr<std::jthread> Ptr;
+			bool ShouldTerminate, Finished = false;
+		} mTrisurfThread;
+		bool mIsosurfaceUploaded, mIsoWasNull = false;
+		TriSurf mPosTrisurf, mNegTrisurf;
 
 		sRef<ShaderProgram> mDiffuseProg;
 
 		std::stringstream mHFConsoleOutput;
-		std::unique_ptr<std::jthread> mHFThread;
-		bool mHFThreadFinished = false;
+		struct HartreeFockThread
+		{
+			std::unique_ptr<std::jthread> Ptr;
+			bool Finished = false;
+		} mHartreeFockThread;
 		sRef<HFResult> mHFResult;
-		sRef<Molecule> mMolecule;
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
-		std::vector<std::string> mOrbLabels;
+		std::vector<std::string> mMOLabels;
 
+		int mSelectedMO = -1;
 
 		float mIsosurfaceVal=0.02;
 		int mIsosurfaceResolution = 20;
+		float mIsosurfaceVolume = 5.0f;
 	};
 
 }

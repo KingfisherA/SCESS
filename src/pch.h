@@ -46,3 +46,6 @@ constexpr size_t IndexUndefined = 0xffffffffffffffff;
 
 //JSON parsing support
 #include<nlohmann/json.hpp>
+
+//Boost
+#include "boost/filesystem.hpp"

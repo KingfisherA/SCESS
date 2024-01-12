@@ -16,13 +16,14 @@ namespace SCESS
 		std::stringstream* consoleStream)
 	{
 		if (consoleStream)
-			*consoleStream << "Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
+			*consoleStream << "---Restricted Hartree Fock---\n Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
 
-		Eigen::MatrixXd S = IntegralHelper::CalculateOverlapMatrix(molecule);
-		Eigen::MatrixXd T = IntegralHelper::CalculateKineticMatrix(molecule);
-		Eigen::MatrixXd V = IntegralHelper::CalculateNuclearMatrix(molecule);
-		TETensor twoElectronTensor = IntegralHelper::CalculateTwoElectronTensor(molecule);
-
+		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
+		const Eigen::MatrixXd& S = integrals.S;
+		const Eigen::MatrixXd& T = integrals.T;
+		const Eigen::MatrixXd& V = integrals.V;
+		const TETensor& tei = integrals.tei; //Two-electron tensor
+		
 		if (consoleStream)
 			*consoleStream << "Integral evaluation completed\n";
 
@@ -31,14 +32,6 @@ namespace SCESS
 		size_t scfCount = 0;
 		double Vnn = CalculateNuclearRepulsion(molecule);
 		double currentE = 0.0;
-		size_t Nelectrons = 0;
-
-		for (const Atom& a : molecule.GetAtoms())
-		{
-			//Nuclear charge=Number of electrons for reduced hartree fock
-			//Assume a closed shell molecule
-			Nelectrons += a.GetCharge();
-		}
 
 		Eigen::MatrixXd Hcore = T + V;
 
@@ -51,51 +44,8 @@ namespace SCESS
 		Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
 		TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
 
-		Eigen::MatrixXd Fock;
-		Eigen::MatrixXd Coeffs;
+		Eigen::MatrixXd Fock, Coeffs, Energies, OldDensity;
 		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(dimensions, dimensions);
-		Eigen::VectorXd Energies;
-		Eigen::MatrixXd OldDensity;
-
-
-		//if (consoleOutput)
-		//{
-		//    std::cout << "--Overlap Matrix, S--\n";
-		//    std::cout << S << "\n\n";
-		//    std::cout << "--Kinetic Energy Matrix, T--\n";
-		//    std::cout << T << "\n\n";
-		//    std::cout << "--Nuclear Attraction Matrix, V--\n";
-		//    std::cout << V << "\n\n";
-		//    std::cout << "--Two electron Tensor--\n";
-
-		//    std::stringstream ss;
-		//    size_t trunctatedDim = std::min<size_t>(dimensions, 2);
-		//    for (int i = 0; i < trunctatedDim; i++)
-		//    {
-		//        for (int j = 0; j < trunctatedDim; j++)
-		//        {
-		//            for (int k = 0; k < trunctatedDim; k++)
-		//            {
-		//                for (int l = 0; l < trunctatedDim; l++)
-		//                {
-		//                    char integralType = (i!=k && j!=l) ? 'K' : 'J';
-		//                    ss << integralType <<"; <" << i + 1 << " " << j + 1 << " | " << k + 1 << " " << l + 1 << "> " << twoElectronTensor(i, j, k, l) << "\n";
-		//                }
-		//            }
-		//        }
-		//    }
-		//    std::cout << ss.str();
-
-		//    if (trunctatedDim < (size_t)dimensions)
-		//        std::cout << "......\n";
-
-		//    std::cout << "--Core Hamiltonian Matrix, Hcore--\n";
-		//    std::cout << Hcore << "\n\n";
-
-		//    std::cout << "--Nuclear Repulsion, Vnn--\n";
-		//    std::cout << Vnn << "\n\n";
-		//}
-
 
 		if (consoleStream)
 			*consoleStream << "Beginning SCF iterations...\n";
@@ -103,7 +53,7 @@ namespace SCESS
 		{
 			scfCount++;
 			//Generate the Fock matrix
-			Fock = Hcore + ConstructG(DensityMat, twoElectronTensor);
+			Fock = Hcore + ConstructG(DensityMat, tei);
 			Fock = (Fock + Fock.transpose()) * 0.5;
 			//Transform the Fock matrix in the orthonormal basis set
 			Eigen::MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
@@ -119,7 +69,7 @@ namespace SCESS
 
 			//Recompute the density matrix
 			OldDensity = DensityMat;
-			DensityMat = ConstructDensityRHF(Coeffs, Nelectrons);
+			DensityMat = ConstructDensityRHF(Coeffs, molecule.GetNoElectrons());
 
 			//Calculate delta change to the density matrix
 			const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
@@ -144,6 +94,36 @@ namespace SCESS
 		return result;
 	}
 
+	HFResult HF::UnrestrictedHF(const Molecule& molecule, const double convergeLimit, const size_t scfMaxIterations, 
+		std::stringstream* consoleStream)
+	{
+		if (consoleStream != nullptr)
+			*consoleStream << "---Unrestricted Hartree Fock---\n Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
+
+		//Spin-up electrons
+		size_t alphaElectrons = molecule.GetNoElectrons()/2;
+		//Spin-down electrons
+		size_t betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
+
+		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
+		const Eigen::MatrixXd& S = integrals.S;
+		const Eigen::MatrixXd& T = integrals.T;
+		const Eigen::MatrixXd& V = integrals.V;
+		const TETensor& tei = integrals.tei; //Two-electron tensor
+
+		if (consoleStream)
+			*consoleStream << "Integral evaluation completed\n";
+
+		double delta = 1.0;
+		size_t scfCount = 0;
+		double Vnn = CalculateNuclearRepulsion(molecule);
+		double currentE = 0.0;
+
+		const Eigen::MatrixXd& Hcore = T + V;
+
+		return HFResult{};
+	}
+
 	Eigen::MatrixXd HF::ConstructG(const Eigen::MatrixXd& Density, const TETensor& teiTensor)
 	{
 		Eigen::MatrixXd G = Eigen::MatrixXd::Zero(Density.rows(), Density.rows());
@@ -156,7 +136,9 @@ namespace SCESS
 				{
 					for (Eigen::DenseIndex l = 0; l < G.rows(); l++)
 					{
+						//Coulomb integral
 						double J = teiTensor(i, j, k, l);
+						//Exchange integral
 						double K = teiTensor(i, l, k, j);
 						G(i, j) += Density(k, l) * (J - 0.5 * K);
 					}

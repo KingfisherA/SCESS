@@ -17,6 +17,8 @@
 #include"3D/Framebuffer.h"
 
 #include"Utilities/IO.h"
+#include<filesystem>
+#include "Utilities/PathUtils.h"
 
 //#define IMSPINNER_DEMO
 //#include "GUI/ImSpinner.h"
@@ -29,6 +31,15 @@ int main(int argc, char** argv)
 #ifdef PLATFORM_WIN
 	SCESS::Console::SetHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 #endif // PLATFORM_WIN
+
+	SCESS::PathUtils::Init();
+
+	if (!std::filesystem::exists(SCESS::PathUtils::GetAssetPath().string()))
+	{
+		std::cout << "Required assets directory not found relative to executable.\n";
+		system("PAUSE");
+		return -1;
+	}
 
 	SCESS::Application smApp;
 	return smApp.Run();
@@ -85,7 +96,7 @@ namespace SCESS
 
 		UpdateProjectionMatrix();
 
-		TextureLoader loader(R"(C:\dev\Chemistry\SCESS\Icon\SCESS Small.png)");
+		TextureLoader loader(PathUtils::GetAssetPath(R"(Icon\SCESS Small.png)").string());
 		mAppIcon = Texture2D::Create(loader);
 	}
 
@@ -176,7 +187,7 @@ namespace SCESS
 			ImGui::PopFont();
 			ImGui::Text("Schrodinger's Cat's Electronic System Solver");
 			ImGui::Text("By Charlie Wheelwright; cspw2");
-			ImGui::Text("(Meow)");	
+			ImGui::Text("(Meow)");
 			ImGui::EndPopup();
 		}
 
@@ -324,7 +335,7 @@ namespace SCESS
 			dispatcher.Dispatch<MouseButtonPressedEvent>(BIND_EVENT_FNC(OnMouseButtonPressed));
 			dispatcher.Dispatch<MouseButtonReleasedEvent>(BIND_EVENT_FNC(OnMouseButtonReleased));
 			dispatcher.Dispatch<MouseScrollEvent>(BIND_EVENT_FNC(OnMouseScroll));
-		};
+			};
 
 		DispatchApplicationEvents();
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
@@ -371,7 +382,7 @@ namespace SCESS
 	{
 		const glm::dvec2& mousePos = e.GetMousePos();
 		glm::dvec2 deltaMouse(mousePos.x - m_MouseLastPos.x, mousePos.y - m_MouseLastPos.y);
-		if(m_isViewportFocused) mCam.UpdateMouse((float)deltaMouse.x, (float)deltaMouse.y, m_MouseButtonDown, m_KeyMods);
+		if (m_isViewportFocused) mCam.UpdateMouse((float)deltaMouse.x, (float)deltaMouse.y, m_MouseButtonDown, m_KeyMods);
 		m_MouseLastPos = mousePos;
 		return true;
 	}
@@ -379,7 +390,7 @@ namespace SCESS
 	bool Application::OnMouseScroll(MouseScrollEvent& e)
 	{
 		double currentScrollTime = m_Window->GetTime();
-		double deltaScroll = glm::max(1.0/(currentScrollTime - mLastScrollTime),1.0) * glm::sign(e.GetYOffset());
+		double deltaScroll = glm::max(1.0 / (currentScrollTime - mLastScrollTime), 1.0) * glm::sign(e.GetYOffset());
 		mLastScrollTime = currentScrollTime;
 
 		if (m_isViewportFocused) mCam.UpdateZoom(deltaScroll);

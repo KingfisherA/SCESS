@@ -71,14 +71,15 @@ namespace SCESS
     private:
         std::vector<Atom> mAtoms;
         std::vector<GaussianCollection> mOrbitals;
+        size_t mNoElectrons;
     public:
 
-        Molecule(){}
-        Molecule(const Molecule& m):mAtoms(m.mAtoms), mOrbitals(m.mOrbitals){}
-        Molecule(Molecule&& m) noexcept:mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)) {}
-        Molecule(const std::vector<Atom>& atomsIn) :mAtoms(atomsIn)
+        Molecule():mNoElectrons(0){}
+        Molecule(const Molecule& m):mAtoms(m.mAtoms), mOrbitals(m.mOrbitals), mNoElectrons(m.mNoElectrons){}
+        Molecule(Molecule&& m) noexcept:mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
+        Molecule(const std::vector<Atom>& atomsIn) :mAtoms(atomsIn), mNoElectrons(0)
         {}
-        Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn))
+        Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn)), mNoElectrons(0)
         {}
 
         void AddAtom(const Atom& a)
@@ -131,6 +132,11 @@ namespace SCESS
         size_t NoOrbitals() const {
             return mOrbitals.size();
         }
+
+        size_t GetNoElectrons() const
+        {
+            return mNoElectrons;
+        }
     };
 
     Molecule GenerateWaterMolecule();
@@ -144,4 +150,6 @@ namespace SCESS
     Molecule GenerateMethaneMolecule();
 
     Molecule GenerateEtheneMolecule();
+
+    Molecule GenerateAmmoniaMolecule();
 }
