@@ -10,7 +10,7 @@
 //
 namespace SCESS
 {
-	HFResult HF::RestrictedHF(const Molecule& molecule,
+	RHFResult HF::RestrictedHF(const Molecule& molecule,
 		const double convergeLimit,
 		const size_t scfMaxIterations,
 		std::stringstream* consoleStream)
@@ -23,7 +23,7 @@ namespace SCESS
 		const Eigen::MatrixXd& T = integrals.T;
 		const Eigen::MatrixXd& V = integrals.V;
 		const TETensor& tei = integrals.tei; //Two-electron tensor
-		
+
 		if (consoleStream)
 			*consoleStream << "Integral evaluation completed\n";
 
@@ -39,7 +39,6 @@ namespace SCESS
 		eigensolver.compute(S);
 		const Eigen::VectorXd& SEigenValues = eigensolver.eigenvalues().real();
 		const Eigen::MatrixXd& SEigenVects = eigensolver.eigenvectors().real();
-
 		Eigen::MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
 		Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
 		TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
@@ -49,17 +48,19 @@ namespace SCESS
 
 		if (consoleStream)
 			*consoleStream << "Beginning SCF iterations...\n";
+
+
 		while (delta > convergeLimit && scfCount < scfMaxIterations)
 		{
 			scfCount++;
 			//Generate the Fock matrix
-			Fock = Hcore + ConstructG(DensityMat, tei);
+			Fock = Hcore + ConstructGRHF(DensityMat, tei);
 			Fock = (Fock + Fock.transpose()) * 0.5;
 			//Transform the Fock matrix in the orthonormal basis set
 			Eigen::MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
 
 			//Diagonalise the transformed Fock matrix
-			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver2(Fock);
+			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver2(FockPrime);
 			//eigensolver2.compute(FockPrime);
 			Energies = eigensolver2.eigenvalues().real();
 
@@ -75,13 +76,13 @@ namespace SCESS
 			const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
 			delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
 
-			currentE = CalculateEnergy(DensityMat, Hcore, Fock) + Vnn;
+			currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
 
 			//Calculate the current energy
 			if (consoleStream) *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE << " hartrees\n";
 		}
 
-		currentE = CalculateEnergy(DensityMat, Hcore, Fock) + Vnn;
+		currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
 		if (consoleStream)
 		{
 			if (scfCount < scfMaxIterations)
@@ -90,18 +91,25 @@ namespace SCESS
 				*consoleStream << "SCF procedure failed to achieve convergence criteria in " << scfMaxIterations << " iterations \n";
 		}
 
-		HFResult result(Fock, Hcore, DensityMat, Coeffs, Energies, Vnn, currentE);
-		return result;
+		Eigen::VectorXi Occupation = Eigen::VectorXi::Zero(Hcore.rows());
+
+		for (long i = (molecule.GetNoElectrons() / 2) -1; i >= 0; --i)
+		{
+			Occupation(i) = 2;
+		}
+
+
+		return RHFResult(Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, Vnn, currentE);
 	}
 
-	HFResult HF::UnrestrictedHF(const Molecule& molecule, const double convergeLimit, const size_t scfMaxIterations, 
+	UHFResult HF::UnrestrictedHF(const Molecule& molecule, const double convergeLimit, const size_t scfMaxIterations,
 		std::stringstream* consoleStream)
 	{
 		if (consoleStream != nullptr)
 			*consoleStream << "---Unrestricted Hartree Fock---\n Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
 
 		//Spin-up electrons
-		size_t alphaElectrons = molecule.GetNoElectrons()/2;
+		size_t alphaElectrons = molecule.GetNoElectrons() / 2;
 		//Spin-down electrons
 		size_t betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
 
@@ -109,7 +117,9 @@ namespace SCESS
 		const Eigen::MatrixXd& S = integrals.S;
 		const Eigen::MatrixXd& T = integrals.T;
 		const Eigen::MatrixXd& V = integrals.V;
-		const TETensor& tei = integrals.tei; //Two-electron tensor
+		const TETensor& tei = integrals.tei;
+
+		const size_t dimensions = S.rows();
 
 		if (consoleStream)
 			*consoleStream << "Integral evaluation completed\n";
@@ -121,10 +131,111 @@ namespace SCESS
 
 		const Eigen::MatrixXd& Hcore = T + V;
 
-		return HFResult{};
+		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver;
+		eigensolver.compute(S);
+		const Eigen::VectorXd& SEigenValues = eigensolver.eigenvalues().real();
+		const Eigen::MatrixXd& SEigenVects = eigensolver.eigenvectors().real();
+		Eigen::MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
+		Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
+		TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
+
+		Eigen::MatrixXd DensityAlpha = Eigen::MatrixXd::Zero(dimensions, dimensions);
+		Eigen::MatrixXd DensityBeta = Eigen::MatrixXd::Zero(dimensions, dimensions);
+		Eigen::MatrixXd OldDensityAlpha, OldDensityBeta;
+		Eigen::MatrixXd FockAlpha, FockBeta;
+		Eigen::MatrixXd CoeffsAlpha, CoeffsBeta;
+		Eigen::VectorXd EnergiesAlpha, EnergiesBeta;
+
+		while (delta > convergeLimit && scfCount < scfMaxIterations)
+		{
+			const auto [GAlpha, GBeta] = ConstructGUHF(DensityAlpha, DensityBeta, tei);
+			FockAlpha = Hcore + GAlpha;
+			FockAlpha = (FockAlpha + FockAlpha.transpose()) * 0.5;
+			FockBeta = Hcore + GBeta;
+			FockBeta = (FockBeta + FockBeta.transpose()) * 0.5;
+
+			Eigen::MatrixXd FockAlphaPrime = TransformMat.transpose() * FockAlpha * TransformMat;
+			Eigen::MatrixXd FockBetaPrime = TransformMat.transpose() * FockBeta * TransformMat;
+
+			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> alphaEigen(FockAlphaPrime);
+			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> betaEigen(FockBetaPrime);
+
+			EnergiesAlpha = alphaEigen.eigenvalues().real();
+			EnergiesBeta = betaEigen.eigenvalues().real();
+
+			CoeffsAlpha = TransformMat * alphaEigen.eigenvectors().real();
+			CoeffsBeta = TransformMat * betaEigen.eigenvectors().real();
+
+			OldDensityAlpha = DensityAlpha;
+			OldDensityBeta = DensityBeta;
+
+			DensityAlpha = Eigen::MatrixXd::Zero(Hcore.rows(), Hcore.rows());
+			DensityBeta = Eigen::MatrixXd::Zero(Hcore.rows(), Hcore.rows());
+			for (size_t i = 0; i < Hcore.rows(); ++i)
+			{
+				for (size_t j = 0; j < Hcore.cols(); ++j)
+				{
+					size_t k = 0;
+					for (k = 0; k < alphaElectrons; ++k)
+					{
+						DensityAlpha(i, j) += CoeffsAlpha(i, k) * CoeffsAlpha(j, k);
+					}
+
+					for (k = 0; k < betaElectrons; ++k)
+					{
+						DensityBeta(i, j) += CoeffsBeta(i, k) * CoeffsBeta(j, k);
+					}
+				}
+			}
+
+			Eigen::MatrixXd DensityMatriciesDelta = DensityAlpha - OldDensityAlpha;
+			delta = DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum();
+			DensityMatriciesDelta = DensityBeta - OldDensityBeta;
+			delta += DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum();
+			delta = sqrt(delta);
+
+			currentE = CalculateEnergyUHF(DensityAlpha,
+				DensityBeta,
+				Hcore,
+				FockAlpha,
+				FockBeta) + Vnn;
+
+			if (consoleStream) *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE << " hartrees\n";
+
+			scfCount++;
+		}
+
+		currentE = CalculateEnergyUHF(DensityAlpha,
+			DensityBeta,
+			Hcore,
+			FockAlpha,
+			FockBeta) + Vnn;
+
+		if (consoleStream)
+		{
+			if (scfCount < scfMaxIterations)
+				*consoleStream << "SCF procedure achieved required convergence criteria!\n SCF converged after " << scfCount << " iterations.\n Unrestricted Hartree Fock Energy=" << currentE << " hartrees\n";
+			else
+				*consoleStream << "SCF procedure failed to achieve convergence criteria in " << scfMaxIterations << " iterations \n";
+		}
+
+		Eigen::VectorXi OccupationAlpha = Eigen::VectorXi::Zero(Hcore.rows());
+		Eigen::VectorXi OccupationBeta = Eigen::VectorXi::Zero(Hcore.rows());
+		for (long i = alphaElectrons - 1; i >= 0; i--)
+		{
+			OccupationAlpha(i) = 1;
+		}
+		for (long i = betaElectrons - 1; i >= 0; i--)
+		{
+			OccupationBeta(i) = 1;
+		}
+
+		return UHFResult(FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta, 
+			CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta, Vnn, currentE);
 	}
 
-	Eigen::MatrixXd HF::ConstructG(const Eigen::MatrixXd& Density, const TETensor& teiTensor)
+	Eigen::MatrixXd HF::ConstructGRHF(const Eigen::MatrixXd& Density,
+		const TETensor& teiTensor)
 	{
 		Eigen::MatrixXd G = Eigen::MatrixXd::Zero(Density.rows(), Density.rows());
 
@@ -147,6 +258,31 @@ namespace SCESS
 		}
 
 		return G;
+	}
+
+	std::pair<Eigen::MatrixXd, Eigen::MatrixXd> HF::ConstructGUHF(const Eigen::MatrixXd& DensityAlpha,
+		const Eigen::MatrixXd& DensityBeta, const TETensor& teiTensor)
+	{
+		Eigen::MatrixXd GAlpha = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
+		Eigen::MatrixXd GBeta = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
+
+		for (size_t i = 0; i < DensityAlpha.rows(); i++)
+		{
+			for (size_t j = 0; j < DensityAlpha.rows(); j++)
+			{
+				for (size_t k = 0; k < DensityAlpha.rows(); k++)
+				{
+					for (size_t l = 0; l < DensityAlpha.rows(); l++)
+					{
+						const double J = teiTensor(i, j, k, l);
+						const double K = teiTensor(i, l, k, j);
+						GAlpha(i, j) += DensityAlpha(k, l) * (J - K) + DensityBeta(k, l) * J;
+						GBeta(i, j) += DensityBeta(k, l) * (J - K) + DensityAlpha(k, l) * J;
+					}
+				}
+			}
+		}
+		return { GAlpha, GBeta };
 	}
 
 	Eigen::MatrixXd HF::ConstructDensityRHF(const Eigen::MatrixXd& Coeffs,
@@ -195,7 +331,7 @@ namespace SCESS
 		return Vnn;
 	}
 
-	double HF::CalculateEnergy(const Eigen::MatrixXd& Density,
+	double HF::CalculateEnergyRHF(const Eigen::MatrixXd& Density,
 		const Eigen::MatrixXd& Hcore, const Eigen::MatrixXd& Fock)
 	{
 		double result = 0.0;
@@ -210,4 +346,25 @@ namespace SCESS
 
 		return 0.5 * result;
 	}
+
+	double HF::CalculateEnergyUHF(
+		const Eigen::MatrixXd& DensityAlpha,
+		const Eigen::MatrixXd& DensityBeta,
+		const Eigen::MatrixXd& Hcore,
+		const Eigen::MatrixXd& FockAlpha,
+		const Eigen::MatrixXd& FockBeta)
+	{
+		double energy = 0.0;
+		for (size_t i = 0; i < Hcore.rows(); i++)
+		{
+			for (size_t j = 0; j < Hcore.cols(); j++)
+			{
+				energy += (DensityAlpha(i, j) + DensityBeta(i, j)) * Hcore(i, j);
+				energy += DensityAlpha(i, j) * FockAlpha(i, j) + DensityBeta(i, j) * FockBeta(i, j);
+			}
+		}
+		energy *= 0.5;
+		return energy;
+	}
+
 }

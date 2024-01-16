@@ -16,7 +16,8 @@ namespace SCESS
 {
 	class Camera;
 	class GaussianCollection;
-	struct HFResult;
+	struct RHFResult;
+	struct UHFResult;
 
 	struct TriSurf
 	{
@@ -57,9 +58,7 @@ namespace SCESS
 		static void GenerateIsosurface(const std::function<float(float, float, float)>& func, TriSurf* outSurface, 
 			size_t resolution, bool* threadShouldTerminate=nullptr, float isosurfaceVol = 10.0f, float isosurfaceVal = 0.01f);
 
-
 	private:
-
 		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
 		void RenderMOIsosurface();
 
@@ -86,11 +85,19 @@ namespace SCESS
 			std::unique_ptr<std::jthread> Ptr;
 			bool Finished = false;
 		} mHartreeFockThread;
-		sRef<HFResult> mHFResult;
+
+		enum class HFMethod
+		{
+			Restricted,
+			Unrestricted
+		} mMethod;
+		sRef<RHFResult> mRHFResult;
+		sRef<UHFResult> mUHFResult;
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
 		std::vector<std::string> mMOLabels;
 
+		char mSelectedSpin = -1;
 		int mSelectedMO = -1;
 
 		float mIsosurfaceVal=0.02;

@@ -152,4 +152,6 @@ namespace SCESS
     Molecule GenerateEtheneMolecule();
 
     Molecule GenerateAmmoniaMolecule();
+
+    Molecule GenerateCarbeneMolecule();
 }
