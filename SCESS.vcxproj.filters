@@ -177,6 +177,7 @@
     </ClInclude>
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Utilities\PathUtils.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -280,5 +281,11 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Eigen.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="SCESS.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\Icon\SCESS Icon.ico" />
   </ItemGroup>
 </Project>

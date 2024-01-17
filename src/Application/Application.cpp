@@ -200,7 +200,6 @@ namespace SCESS
 
 	void Application::RenderViewport()
 	{
-		ImGui::ShowDemoWindow();
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0,0 });
 		if (ImGui::Begin("3D Viewport", nullptr))
 		{

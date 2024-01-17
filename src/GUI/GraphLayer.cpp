@@ -250,14 +250,14 @@ namespace SCESS
 
 	void GraphLayer::SortMOLabels(std::vector<const char*>& moLabels)
 	{
-		auto sortCoeffs = [this](Eigen::VectorXd& Energies, Eigen::MatrixXd& Coeffs) {
+		auto sortCoeffs = [this](Eigen::VectorXd& Energies, Eigen::MatrixXd& Coeffs, 
+			const Eigen::VectorXi& Occupation) {
 			std::unordered_map<double, uint32_t> sortMap;
 			for (size_t i = 0; i < Energies.rows(); i++)
 			{
 				sortMap.insert({ Energies[i], i });
 			}
 			std::sort(Energies.begin(), Energies.end());
-			Energies.reverseInPlace();
 
 			Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
 
@@ -269,7 +269,15 @@ namespace SCESS
 
 				std::stringstream ss;
 				ss.precision(3);
-				ss << "MO " << Energies.rows() - i << "; E=" << Energies[i] << " hartrees";
+				ss << "MO " << i + 1 << "; E=" << Energies[i] << " hartrees. ";
+
+				if (i + 1 < Occupation.rows())
+					if (Occupation(i + 1) == 0 && Occupation(i) > 0)
+						ss << "HOMO";
+				if (i != 0)
+					if (Occupation(i - 1) > 0 && Occupation(i) == 0)
+						ss << "LUMO";
+
 				mMOLabels.push_back(ss.str());
 			}
 			Coeffs = sortedCoeffs;
@@ -277,11 +285,11 @@ namespace SCESS
 
 		mMOLabels.clear();
 		if (mMethod == HFMethod::Restricted)
-			sortCoeffs(mRHFResult->Energies, mRHFResult->Coeffs);
+			sortCoeffs(mRHFResult->Energies, mRHFResult->Coeffs, mRHFResult->Occupation);
 		else
 		{
-			sortCoeffs(mUHFResult->EnergiesAlpha, mUHFResult->CoeffsAlpha);
-			sortCoeffs(mUHFResult->EnergiesBeta, mUHFResult->CoeffsBeta);
+			sortCoeffs(mUHFResult->EnergiesAlpha, mUHFResult->CoeffsAlpha, mUHFResult->OccupationAlpha);
+			sortCoeffs(mUHFResult->EnergiesBeta, mUHFResult->CoeffsBeta, mUHFResult->OccupationBeta);
 		}
 
 		moLabels.clear();
@@ -350,17 +358,17 @@ namespace SCESS
 					{
 						if (mMethod == HFMethod::Restricted)
 						{
-							ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mRHFResult->Energies.rows() - mSelectedMO);
+							ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
+							if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
+								if (mRHFResult->Occupation(mSelectedMO + 1) == 0
+									&& mRHFResult->Occupation(mSelectedMO) > 0)
+									ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
+							if (mSelectedMO - 1 > 0)
+								if (mRHFResult->Occupation(mSelectedMO - 1) > 0
+									&& mRHFResult->Occupation(mSelectedMO) == 0)
+									ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
 							ImGui::BulletText("Energy: %.3f hartrees", mRHFResult->Energies(mSelectedMO));
 							ImGui::BulletText("Occupation: %i e-", mRHFResult->Occupation(mSelectedMO));
-							if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
-								if (mRHFResult->Occupation(mSelectedMO + 1) == 0 
-									&& mRHFResult->Occupation(mSelectedMO) > 0)
-									ImGui::BulletText("HOMO");
-							if (mSelectedMO - 1 > 0)
-								if (mRHFResult->Occupation(mSelectedMO - 1) > 0 
-									&& mRHFResult->Occupation(mSelectedMO) == 0)
-									ImGui::BulletText("LUMO");
 						}
 						else
 						{
@@ -369,16 +377,17 @@ namespace SCESS
 							const auto& occupation = mSelectedSpin == 1 ?
 								mUHFResult->OccupationAlpha
 								: mUHFResult->OccupationBeta;
-							ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", energies.rows() - mSelectedMO);
+							ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
+							if (mSelectedMO + 1 < occupation.rows())
+								if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
+									ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
+							if (mSelectedMO - 1 > 0)
+								if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
+									ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
 							ImGui::BulletText("Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
 							ImGui::BulletText("Energy: %.3f hartrees", energies(mSelectedMO));
 							ImGui::BulletText("Occupation: %i e-", occupation(mSelectedMO));
-							if (mSelectedMO + 1 < occupation.rows())
-								if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO)>0)
-									ImGui::BulletText("HOMO");
-							if (mSelectedMO - 1 > 0)
-								if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
-									ImGui::BulletText("LUMO");
+							
 						}
 						ImGui::Separator();
 					}
@@ -435,7 +444,7 @@ namespace SCESS
 					{
 						if (mPosTrisurf.triangles.size() != 0)
 							UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
-						if (mPosTrisurf.triangles.size() != 0)
+						if (mNegTrisurf.triangles.size() != 0)
 							UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
 
 						mIsoWasNull = mPosTrisurf.triangles.size() == 0 && mNegTrisurf.triangles.size() == 0;
