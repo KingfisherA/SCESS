@@ -204,8 +204,26 @@ namespace SCESS
 
 	constexpr const char* PROG_SCREEN_NAME = "HF Progress";
 
+	void GraphLayer::SelectMolecule()
+	{
+		static SCESS::Molecule(*moleculeFuncs[])() =
+		{
+			{&GenerateWaterMolecule},
+			{&GenerateAmmoniaMolecule},
+			{&GenerateCOMolecule},
+			{&GenerateEtheneMolecule},
+			{&GenerateMethaneMolecule},
+			{&GenerateLithiumHydrideMolecule},
+			{&GenerateHydrogenMolecule}
+		};
+
+		mMolecule = std::make_unique<SCESS::Molecule>(moleculeFuncs[mSelectedMolecule]());
+	}
+
 	void GraphLayer::RunHF()
 	{
+		if (mSelectedMolecule == -1)
+			return;
 		if (mTrisurfThread.Ptr != nullptr)
 		{
 			mTrisurfThread.ShouldTerminate = true;
@@ -213,8 +231,7 @@ namespace SCESS
 		}
 
 		mHartreeFockThread.Ptr = nullptr;
-
-		mMolecule = std::make_shared<Molecule>(SCESS::GenerateWaterMolecule());
+		SelectMolecule();
 		mHartreeFockThread.Finished = false;
 		mHFConsoleOutput.str(std::string());
 		mHartreeFockThread.Ptr = std::make_unique<std::jthread>([this]() {
@@ -250,37 +267,37 @@ namespace SCESS
 
 	void GraphLayer::SortMOLabels(std::vector<const char*>& moLabels)
 	{
-		auto sortCoeffs = [this](Eigen::VectorXd& Energies, Eigen::MatrixXd& Coeffs, 
+		auto sortCoeffs = [this](Eigen::VectorXd& Energies, Eigen::MatrixXd& Coeffs,
 			const Eigen::VectorXi& Occupation) {
-			std::unordered_map<double, uint32_t> sortMap;
-			for (size_t i = 0; i < Energies.rows(); i++)
-			{
-				sortMap.insert({ Energies[i], i });
-			}
-			std::sort(Energies.begin(), Energies.end());
+				std::unordered_map<double, uint32_t> sortMap;
+				for (size_t i = 0; i < Energies.rows(); i++)
+				{
+					sortMap.insert({ Energies[i], i });
+				}
+				std::sort(Energies.begin(), Energies.end());
 
-			Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
+				Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
 
-			mMOLabels.reserve(Energies.rows());
-			for (size_t i = 0; i < Energies.rows(); i++)
-			{
-				uint32_t index = sortMap.at(Energies[i]);
-				sortedCoeffs.col(i) = Coeffs.col(index);
+				mMOLabels.reserve(Energies.rows());
+				for (size_t i = 0; i < Energies.rows(); i++)
+				{
+					uint32_t index = sortMap.at(Energies[i]);
+					sortedCoeffs.col(i) = Coeffs.col(index);
 
-				std::stringstream ss;
-				ss.precision(3);
-				ss << "MO " << i + 1 << "; E=" << Energies[i] << " hartrees. ";
+					std::stringstream ss;
+					ss.precision(3);
+					ss << "MO " << i + 1 << "; E=" << Energies[i] << " hartrees. ";
 
-				if (i + 1 < Occupation.rows())
-					if (Occupation(i + 1) == 0 && Occupation(i) > 0)
-						ss << "HOMO";
-				if (i != 0)
-					if (Occupation(i - 1) > 0 && Occupation(i) == 0)
-						ss << "LUMO";
+					if (i + 1 < Occupation.rows())
+						if (Occupation(i + 1) == 0 && Occupation(i) > 0)
+							ss << "HOMO";
+					if (i != 0)
+						if (Occupation(i - 1) > 0 && Occupation(i) == 0)
+							ss << "LUMO";
 
-				mMOLabels.push_back(ss.str());
-			}
-			Coeffs = sortedCoeffs;
+					mMOLabels.push_back(ss.str());
+				}
+				Coeffs = sortedCoeffs;
 			};
 
 		mMOLabels.clear();
@@ -303,10 +320,40 @@ namespace SCESS
 	void GraphLayer::OnImGuiRender()
 	{
 		static std::vector<const char*> moLabels;
+		static const char* moleculeNames[] =
+		{
+			"Water",
+			"Ammonia",
+			"Carbon Monoxide",
+			"Ethene",
+			"Methane",
+			"Lithium Hydride",
+			"Hydrogen"
+		};
+
+		if (!ImGui::Begin("Select Molecule"))
+		{
+			ImGui::End();
+			return;
+		}
+
+		ImGui::SeparatorText("Molecules");
+		ImGui::BulletText("Selected Molecule: %s", mMoleculeName.c_str());
+		int selectedMolecule = -1;
+		ImGui::ListBox("##selectMoleculeLB", &selectedMolecule, moleculeNames, IM_ARRAYSIZE(moleculeNames));
+
+		if (selectedMolecule != -1)
+		{
+			mSelectedMolecule = selectedMolecule;
+			mMoleculeName = moleculeNames[mSelectedMolecule];
+		}
+
+		ImGui::End();
 
 		DrawProgressScreen();
 		if (mHartreeFockThread.Ptr != nullptr && !mHartreeFockThread.Finished)
 			ImGui::OpenPopup(PROG_SCREEN_NAME);
+
 
 		if (!ImGui::Begin("Hartree Fock"))
 		{
@@ -314,20 +361,42 @@ namespace SCESS
 			return;
 		}
 
-		ImGui::BulletText("Selected Molecule: Water");
-		ImGui::Separator();
-		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
-		if (ImGui::Button("Run RHF", { 100,0 }))
+		if (mSelectedMolecule != -1)
 		{
-			mMethod = HFMethod::Restricted;
-			RunHF();
-		}
+			ImGui::SeparatorText("Hartree Fock");
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
+			if (ImGui::Button("Run RHF", { 100,0 }))
+			{
+				mMethod = HFMethod::Restricted;
+				RunHF();
+			}
 
-		ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
-		if (ImGui::Button("Run UHF", { 100,0 }))
-		{
-			mMethod = HFMethod::Unrestricted;
-			RunHF();
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
+			if (ImGui::Button("Run UHF", { 100,0 }))
+			{
+				mMethod = HFMethod::Unrestricted;
+				RunHF();
+			}
+
+			if (mRHFResult != nullptr)
+			{
+				ImGui::SeparatorText("Moller-Plesset");
+
+				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0) * 0.5);
+				if (ImGui::Button("Calculate MP2 Energy", { 200,0 }))
+				{
+					if (mMethod == HFMethod::Restricted)
+					{
+						mMP2Energy = HF::CalculateMP2Energy(*mRHFResult);
+					}
+				}
+
+				if (mMP2Energy != 0)
+				{
+					ImGui::Text("Moller-Plesset Order 2 Correction= %.8f hartrees", mMP2Energy);
+					ImGui::TextColored({ 0.0, 1.0, 0.0, 1.0 }, "Total Energy (HF+MP2) = %.8f hartrees", mMP2Energy + mRHFResult->Energy);
+				}
+			}
 		}
 
 		if (mHartreeFockThread.Finished)
@@ -387,7 +456,7 @@ namespace SCESS
 							ImGui::BulletText("Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
 							ImGui::BulletText("Energy: %.3f hartrees", energies(mSelectedMO));
 							ImGui::BulletText("Occupation: %i e-", occupation(mSelectedMO));
-							
+
 						}
 						ImGui::Separator();
 					}
@@ -442,10 +511,10 @@ namespace SCESS
 
 					if (mTrisurfThread.Finished && !mIsosurfaceUploaded)
 					{
-						if (mPosTrisurf.triangles.size() != 0)
-							UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
-						if (mNegTrisurf.triangles.size() != 0)
-							UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
+						//if (mPosTrisurf.triangles.size() != 0)
+						UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
+						//if (mNegTrisurf.triangles.size() != 0)
+						UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
 
 						mIsoWasNull = mPosTrisurf.triangles.size() == 0 && mNegTrisurf.triangles.size() == 0;
 
@@ -494,6 +563,8 @@ namespace SCESS
 		}
 
 		ImGui::End();
+
+
 	}
 
 	void GraphLayer::OnEvent(Event& e)

@@ -5,6 +5,8 @@
 #include"Quantum/Integrals/IntegralHelper.h"
 #include"Quantum/Molecule.h"
 
+#include<algorithm>
+
 
 //
 //
@@ -93,13 +95,13 @@ namespace SCESS
 
 		Eigen::VectorXi Occupation = Eigen::VectorXi::Zero(Hcore.rows());
 
-		for (long i = (molecule.GetNoElectrons() / 2) -1; i >= 0; --i)
+		for (long i = (molecule.GetNoElectrons() / 2) - 1; i >= 0; --i)
 		{
 			Occupation(i) = 2;
 		}
 
 
-		return RHFResult(Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, Vnn, currentE);
+		return RHFResult(Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, integrals, currentE);
 	}
 
 	UHFResult HF::UnrestrictedHF(const Molecule& molecule, const double convergeLimit, const size_t scfMaxIterations,
@@ -230,8 +232,8 @@ namespace SCESS
 			OccupationBeta(i) = 1;
 		}
 
-		return UHFResult(FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta, 
-			CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta, Vnn, currentE);
+		return UHFResult(FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta,
+			CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta, integrals, currentE);
 	}
 
 	Eigen::MatrixXd HF::ConstructGRHF(const Eigen::MatrixXd& Density,
@@ -366,5 +368,60 @@ namespace SCESS
 		energy *= 0.5;
 		return energy;
 	}
+
+	double HF::CalculateMP2Energy(const RHFResult& result)
+	{
+		const Eigen::VectorXi& occ = result.Occupation;
+		const Eigen::VectorXd& energies = result.Energies;
+		const Eigen::MatrixXd& coeffs = result.Coeffs;
+		const TETensor& tei = result.Integrals.tei;
+
+		double MP2_E = 0.0;
+
+		size_t LUMOIndex = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
+
+		//<ab | ij > [MO Basis] = [AO Basis] <ab|ij>
+		auto teiAOToMOBasis = [&tei, &coeffs](size_t i, size_t j, size_t a, size_t b)->double
+			{
+				double result = 0.0;
+				for (size_t mu = 0; mu < coeffs.rows(); mu++)
+				{
+					for (size_t nu = 0; nu < coeffs.rows(); nu++)
+					{
+						for (size_t kappa = 0; kappa < coeffs.rows(); kappa++)
+						{
+							for (size_t lam = 0; lam < coeffs.rows(); lam++)
+							{
+								result += coeffs(mu, i) * coeffs(nu, j) * tei(mu, kappa, nu, lam) * coeffs(lam, b) * coeffs(kappa, a);
+							}
+						}
+					}
+				}
+				return result;
+			};
+
+
+		//i and j run over the occupied orbitals
+		for (size_t i = 0; i < LUMOIndex; i++)
+		{
+			for (size_t j = 0; j < LUMOIndex; j++)
+			{
+				//a and b run over the virtual orbitals
+				for (size_t a = LUMOIndex; a < occ.size(); a++)
+				{
+					for (size_t b = LUMOIndex; b < occ.size(); b++)
+					{
+						double intIJAB = teiAOToMOBasis(i, j, a, b);
+						double intIJBA = teiAOToMOBasis(i, j, b, a);
+						double epsilonIJAB = energies[i] + energies[j] - energies[a] - energies[b];
+						MP2_E += intIJAB * (2.0 * intIJAB - intIJBA) / epsilonIJAB;
+					}
+				}
+			}
+		}
+
+		return MP2_E;
+	}
+
 
 }

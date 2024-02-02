@@ -21,9 +21,9 @@ namespace SCESS
 
 	struct TriSurf
 	{
-		TriSurf(){}
-		TriSurf(const std::vector<Triangle>& trianglesIn):triangles(trianglesIn) {}
-		TriSurf(const TriSurf& tri):triangles(tri.triangles){}
+		TriSurf() {}
+		TriSurf(const std::vector<Triangle>& trianglesIn) :triangles(trianglesIn) {}
+		TriSurf(const TriSurf& tri) :triangles(tri.triangles) {}
 		TriSurf(TriSurf&& tri) noexcept :triangles(std::move(tri.triangles)) {}
 
 		void operator=(const TriSurf& tri)
@@ -42,7 +42,7 @@ namespace SCESS
 	class GraphLayer : public Layer
 	{
 	public:
-		GraphLayer():Layer("Graph Layer") {}
+		GraphLayer() :Layer("Graph Layer") {}
 		virtual ~GraphLayer();
 
 		static float EvaluateGaussianFunction(const GaussianCollection& gc, float x, float y, float z);
@@ -55,18 +55,21 @@ namespace SCESS
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
-		static void GenerateIsosurface(const std::function<float(float, float, float)>& func, TriSurf* outSurface, 
-			size_t resolution, bool* threadShouldTerminate=nullptr, float isosurfaceVol = 10.0f, float isosurfaceVal = 0.01f);
+		static void GenerateIsosurface(const std::function<float(float, float, float)>& func, TriSurf* outSurface,
+			size_t resolution, bool* threadShouldTerminate = nullptr, float isosurfaceVol = 10.0f, float isosurfaceVal = 0.01f);
 
 	private:
 		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
 		void RenderMOIsosurface();
+		void SelectMolecule();
 
 		void RunHF();
 		void DrawProgressScreen();
 		void SortMOLabels(std::vector<const char*>& moLabels);
-		
-		sRef<Molecule> mMolecule;
+
+		int mSelectedMolecule = -1;
+		std::string mMoleculeName;
+		uRef<Molecule> mMolecule;
 
 		sRef<VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
 		struct TrisurfaceThread
@@ -93,6 +96,7 @@ namespace SCESS
 		} mMethod;
 		sRef<RHFResult> mRHFResult;
 		sRef<UHFResult> mUHFResult;
+		double mMP2Energy = 0.0;
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
 		std::vector<std::string> mMOLabels;
@@ -100,7 +104,7 @@ namespace SCESS
 		char mSelectedSpin = -1;
 		int mSelectedMO = -1;
 
-		float mIsosurfaceVal=0.02;
+		float mIsosurfaceVal = 0.02;
 		int mIsosurfaceResolution = 20;
 		float mIsosurfaceVolume = 5.0f;
 	};

@@ -15,6 +15,7 @@ namespace SCESS
         std::unordered_map<size_t, double> mTEIntegrals;
     public:
         TETensor(){}
+        TETensor(const TETensor& tensorIn):mTEIntegrals(tensorIn.mTEIntegrals) {}
 
         double& operator()(size_t i, size_t j, size_t k, size_t l)
         {
@@ -77,6 +78,20 @@ namespace SCESS
 
     struct ConfigIntegrals
     {
+        ConfigIntegrals(){}
+        ConfigIntegrals(const Eigen::MatrixXd& S_, 
+            const Eigen::MatrixXd& T_,
+            const Eigen::MatrixXd& V_,
+            const TETensor& tei_
+            ):S(S_), T(T_), V(V_), tei(tei_)
+        {
+
+        }
+        ConfigIntegrals(const ConfigIntegrals& intIn):
+            S(intIn.S),
+            T(intIn.T),
+            V(intIn.V),
+            tei(intIn.tei){}
         // S = Overlap, T = Kinetic, V = Nuclear
         Eigen::MatrixXd S, T, V;
         //Two-electron tensor

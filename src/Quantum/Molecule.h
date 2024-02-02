@@ -7,151 +7,151 @@
 #include<Eigen/Core>
 #include<utility>
 
-namespace SCESS 
+namespace SCESS
 {
-    constexpr double ANGSTROM_2_BOHR = 1.8897259886;
+	constexpr double ANGSTROM_2_BOHR = 1.8897259886;
 
-    class Atom {
-    private:
-        Eigen::Vector3d mPosition;
-        std::string mSymbol;
-        int mCharge;
-    public:
+	class Atom {
+	private:
+		Eigen::Vector3d mPosition;
+		std::string mSymbol;
+		int mCharge;
+	public:
 
-        Atom(const char* atomID) noexcept :mSymbol(mSymbol){}
-        
-        Atom(const Atom& a) : mSymbol(a.mSymbol), 
-            mCharge(a.mCharge),  mPosition(a.mPosition)
-        {
+		Atom(const char* atomID) noexcept :mSymbol(mSymbol) {}
 
-        }
+		Atom(const Atom& a) : mSymbol(a.mSymbol),
+			mCharge(a.mCharge), mPosition(a.mPosition)
+		{
 
-        Atom(Atom&& a) noexcept : mSymbol(a.mSymbol), mCharge(a.mCharge), mPosition(std::move(a.mPosition))
-        {}
+		}
 
-        Atom(const char* atomSymbol,
-             const Eigen::Vector3d& pos = { 0., 0., 0. })
-            : mSymbol(atomSymbol), mPosition(pos)
-        {
+		Atom(Atom&& a) noexcept : mSymbol(a.mSymbol), mCharge(a.mCharge), mPosition(std::move(a.mPosition))
+		{}
 
-        }
+		Atom(const char* atomSymbol,
+			const Eigen::Vector3d& pos = { 0., 0., 0. })
+			: mSymbol(atomSymbol), mPosition(pos)
+		{
 
-
-        Atom(const char* atomSymbol,
-            int charge, const Eigen::Vector3d& pos = { 0., 0., 0. })
-            : mSymbol(atomSymbol), mCharge(charge), mPosition(pos)
-        {
-    
-        }
+		}
 
 
-        const Eigen::Vector3d GetPos()const
-        {
-            return mPosition;
-        }
+		Atom(const char* atomSymbol,
+			int charge, const Eigen::Vector3d& pos = { 0., 0., 0. })
+			: mSymbol(atomSymbol), mCharge(charge), mPosition(pos)
+		{
 
-        const std::string GetAtomSymbol() const
-        {
-            return mSymbol;
-        }
+		}
 
-        void SetCharge(int charge)
-        {
-            mCharge = charge;
-        }
 
-        const int GetCharge() const
-        {
-            return mCharge;
-        }
-    };
+		const Eigen::Vector3d GetPos()const
+		{
+			return mPosition;
+		}
 
-    class Molecule
-    {
-    private:
-        std::vector<Atom> mAtoms;
-        std::vector<GaussianCollection> mOrbitals;
-        size_t mNoElectrons;
-    public:
+		const std::string GetAtomSymbol() const
+		{
+			return mSymbol;
+		}
 
-        Molecule():mNoElectrons(0){}
-        Molecule(const Molecule& m):mAtoms(m.mAtoms), mOrbitals(m.mOrbitals), mNoElectrons(m.mNoElectrons){}
-        Molecule(Molecule&& m) noexcept:mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
-        Molecule(const std::vector<Atom>& atomsIn) :mAtoms(atomsIn), mNoElectrons(0)
-        {}
-        Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn)), mNoElectrons(0)
-        {}
+		void SetCharge(int charge)
+		{
+			mCharge = charge;
+		}
 
-        void AddAtom(const Atom& a)
-        {
-            mAtoms.emplace_back(a);
-        }
+		const int GetCharge() const
+		{
+			return mCharge;
+		}
+	};
 
-        void MakeOrbitals();
+	class Molecule
+	{
+	private:
+		std::vector<Atom> mAtoms;
+		std::vector<GaussianCollection> mOrbitals;
+		size_t mNoElectrons;
+	public:
 
-        const Atom& GetAtom(size_t index) const
-        {
-            return mAtoms[index];
-        }
+		Molecule() :mNoElectrons(0) {}
+		Molecule(const Molecule& m) :mAtoms(m.mAtoms), mOrbitals(m.mOrbitals), mNoElectrons(m.mNoElectrons) {}
+		Molecule(Molecule&& m) noexcept :mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
+		Molecule(const std::vector<Atom>& atomsIn) : mAtoms(atomsIn), mNoElectrons(0)
+		{}
+		Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn)), mNoElectrons(0)
+		{}
 
-        Atom& GetAtom(size_t index)
-        {
-            return mAtoms[index];
-        }
+		void AddAtom(const Atom& a)
+		{
+			mAtoms.emplace_back(a);
+		}
 
-        const std::vector<Atom>& GetAtoms() const
-        {
-            return mAtoms;
-        }
+		void MakeOrbitals();
 
-        std::vector<Atom>& GetAtoms()
-        {
-            return mAtoms;
-        }
+		const Atom& GetAtom(size_t index) const
+		{
+			return mAtoms[index];
+		}
 
-        GaussianCollection& GetOrbital(uint32_t i)
-        {
-            return mOrbitals[i];
-        }
+		Atom& GetAtom(size_t index)
+		{
+			return mAtoms[index];
+		}
 
-        const GaussianCollection& GetOrbital(uint32_t i) const
-        {
-            return mOrbitals[i];
-        }
+		const std::vector<Atom>& GetAtoms() const
+		{
+			return mAtoms;
+		}
 
-        std::vector<GaussianCollection>& GetOrbitals()
-        {
-            return mOrbitals;
-        }
+		std::vector<Atom>& GetAtoms()
+		{
+			return mAtoms;
+		}
 
-        const std::vector<GaussianCollection>& GetOrbitals() const
-        {
-            return mOrbitals;
-        }
+		GaussianCollection& GetOrbital(uint32_t i)
+		{
+			return mOrbitals[i];
+		}
 
-        size_t NoOrbitals() const {
-            return mOrbitals.size();
-        }
+		const GaussianCollection& GetOrbital(uint32_t i) const
+		{
+			return mOrbitals[i];
+		}
 
-        size_t GetNoElectrons() const
-        {
-            return mNoElectrons;
-        }
-    };
+		std::vector<GaussianCollection>& GetOrbitals()
+		{
+			return mOrbitals;
+		}
 
-    Molecule GenerateWaterMolecule();
+		const std::vector<GaussianCollection>& GetOrbitals() const
+		{
+			return mOrbitals;
+		}
 
-    Molecule GenerateHydrogenMolecule();
+		size_t NoOrbitals() const {
+			return mOrbitals.size();
+		}
 
-    Molecule GenerateLithiumHydrideMolecule();
+		size_t GetNoElectrons() const
+		{
+			return mNoElectrons;
+		}
+	};
 
-    Molecule GenerateCOMolecule();
+	Molecule GenerateWaterMolecule();
 
-    Molecule GenerateMethaneMolecule();
+	Molecule GenerateHydrogenMolecule();
 
-    Molecule GenerateEtheneMolecule();
+	Molecule GenerateLithiumHydrideMolecule();
 
-    Molecule GenerateAmmoniaMolecule();
+	Molecule GenerateCOMolecule();
 
-    Molecule GenerateCarbeneMolecule();
+	Molecule GenerateMethaneMolecule();
+
+	Molecule GenerateEtheneMolecule();
+
+	Molecule GenerateAmmoniaMolecule();
+
+	Molecule GenerateCarbeneMolecule();
 }
