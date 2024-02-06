@@ -13,6 +13,7 @@
 #include"3D/Texture.h"
 
 #include"GUI/ImGuiLayer.h"
+#include"GUI/CalculationLayer.h"
 
 #include"3D/Framebuffer.h"
 
@@ -84,7 +85,7 @@ namespace SCESS
 		m_ImGuiLayer = new SCESS::ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 
-		mGraphLayer = new GraphLayer();
+		mGraphLayer = new CalculationLayer();
 		PushLayer(mGraphLayer);
 
 		mCam.MoveTo(glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
@@ -167,8 +168,8 @@ namespace SCESS
 				ImGui::MenuItem("Splash Screen", nullptr, &mSplashScreenOpen);
 				ImGui::EndMenu();
 			}
-			ImGui::EndMenuBar();
 		}
+		ImGui::EndMenuBar();
 	}
 
 	void Application::RenderSplashScreen()

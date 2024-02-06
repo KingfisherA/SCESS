@@ -39,14 +39,18 @@ namespace SCESS
 		std::vector<Triangle> triangles;
 	};
 
-	class GraphLayer : public Layer
+	class CalculationLayer : public Layer
 	{
 	public:
-		GraphLayer() :Layer("Graph Layer") {}
-		virtual ~GraphLayer();
+		CalculationLayer() :Layer("Graph Layer") {}
+		//virtual ~CalculationLayer();
 
 		static float EvaluateGaussianFunction(const GaussianCollection& gc, float x, float y, float z);
+		static void EvaluateScalarField(const std::function<float(float, float, float)>& func, 
+			std::vector<std::vector<std::vector<float>>>& scalarField, float isosurfaceVol, bool* threadShouldTerminate);
 		static std::function<float(float, float, float)> GenerateGaussianFunction(const GaussianCollection& gc);
+		std::function<float(float, float, float)> GenerateMolecularWavefunction();
+
 
 		virtual void OnAttach() override;
 		virtual void OnDetach() override;

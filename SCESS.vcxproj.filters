@@ -91,7 +91,7 @@
     <ClInclude Include="src\Events\WindowEvents.h">
       <Filter>Events</Filter>
     </ClInclude>
-    <ClInclude Include="src\GUI\GraphLayer.h">
+    <ClInclude Include="src\GUI\CalculationLayer.h">
       <Filter>GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\GUI\ImGuiLayer.h">
@@ -178,6 +178,7 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Utilities\PathUtils.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="src\Quantum\Tests\Tests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -202,7 +203,7 @@
       <Filter>Application</Filter>
     </ClCompile>
     <ClCompile Include="src\Display.cpp" />
-    <ClCompile Include="src\GUI\GraphLayer.cpp">
+    <ClCompile Include="src\GUI\CalculationLayer.cpp">
       <Filter>GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\GUI\ImGuiBuild.cpp">

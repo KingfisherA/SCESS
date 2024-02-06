@@ -8,7 +8,6 @@
 
 #include"Layers/LayerStack.h"
 #include"GUI/ImGuiLayer.h"
-#include"GUI/GraphLayer.h"
 
 namespace SCESS
 {
@@ -18,6 +17,7 @@ namespace SCESS
 	class MouseButtonPressedEvent;
 	class MouseButtonReleasedEvent;
 	class MouseScrollEvent;
+	class CalculationLayer;
 
 	class Framebuffer;
 
@@ -72,7 +72,7 @@ namespace SCESS
 		ImVec2 m_lastViewportSize = { 0,0 };
 
 		SCESS::ImGuiLayer* m_ImGuiLayer = nullptr;
-		SCESS::GraphLayer* mGraphLayer = nullptr;
+		SCESS::CalculationLayer* mGraphLayer = nullptr;
 		LayerStack m_LayerStack;
 
 		double m_Time = 0.0;

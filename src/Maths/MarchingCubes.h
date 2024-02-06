@@ -348,7 +348,6 @@ namespace SCESS
         /// (Calls `interpolate()`)
         std::vector<glm::vec3> get_intersection_coordinates(GridCell& cell, float isovalue);
 
-
         /// Given `cubeIndex`, get the edge table entry and using `intersections`, make all triangles
         std::vector<Triangle> GetTriangles(std::vector<glm::vec3>& intersections, int cubeIndex);
 
