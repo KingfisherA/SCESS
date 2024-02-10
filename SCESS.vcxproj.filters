@@ -109,7 +109,7 @@
     <ClInclude Include="src\Maths\Geometry.hpp">
       <Filter>Maths</Filter>
     </ClInclude>
-    <ClInclude Include="src\Maths\MarchingCubes.h">
+    <ClInclude Include="src\Maths\Isosurfaces.h">
       <Filter>Maths</Filter>
     </ClInclude>
     <ClInclude Include="src\Maths\Maths.hpp">
@@ -179,6 +179,8 @@
     <ClInclude Include="src\Utilities\PathUtils.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\Quantum\Tests\Tests.h" />
+    <ClInclude Include="src\Platform\Intrinsics.h" />
+    <ClInclude Include="src\Utilities\Threading.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -221,7 +223,7 @@
     <ClCompile Include="src\Maths\Geometry.cpp">
       <Filter>Maths</Filter>
     </ClCompile>
-    <ClCompile Include="src\Maths\MarchingCubes.cpp">
+    <ClCompile Include="src\Maths\Isosurfaces.cpp">
       <Filter>Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Maths.cpp">

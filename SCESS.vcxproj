@@ -129,10 +129,11 @@
     <ClInclude Include="src\Layers\Layer.h" />
     <ClInclude Include="src\Layers\LayerStack.h" />
     <ClInclude Include="src\Maths\Geometry.hpp" />
-    <ClInclude Include="src\Maths\MarchingCubes.h" />
+    <ClInclude Include="src\Maths\Isosurfaces.h" />
     <ClInclude Include="src\Maths\Maths.hpp" />
     <ClInclude Include="src\Platform\API Core.h" />
     <ClInclude Include="src\Platform\GLFW\GLFWDisplay.h" />
+    <ClInclude Include="src\Platform\Intrinsics.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLBuffers.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLCore.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLFramebuffer.h" />
@@ -154,6 +155,7 @@
     <ClInclude Include="src\Utilities\PathUtils.h" />
     <ClInclude Include="src\Utilities\StringOperations.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Utilities\Threading.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp" />
@@ -170,7 +172,7 @@
     <ClCompile Include="src\Layers\Layer.cpp" />
     <ClCompile Include="src\Layers\LayerStack.cpp" />
     <ClCompile Include="src\Maths\Geometry.cpp" />
-    <ClCompile Include="src\Maths\MarchingCubes.cpp" />
+    <ClCompile Include="src\Maths\Isosurfaces.cpp" />
     <ClCompile Include="src\Maths\Maths.cpp" />
     <ClCompile Include="src\Platform\GLFW\GLFWDisplay.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffers.cpp" />
