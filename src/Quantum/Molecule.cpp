@@ -82,6 +82,19 @@ namespace SCESS
 		}
 	}
 
+	double Molecule::CalculateNuclearRepulsion() const
+	{
+		double Vnn = 0.0;
+		for (size_t i = 0; i < mAtoms.size(); i++) {
+			for (size_t j = i + 1; j < mAtoms.size(); j++)
+			{
+				double r = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).norm();
+				if (r > 0.0) Vnn += mAtoms[i].GetCharge() * mAtoms[j].GetCharge() / r;
+			}
+		}
+		return Vnn;
+	}
+
 	Molecule GenerateWaterMolecule()
 	{
 		constexpr double waterBondLength = 0.957 * ANGSTROM_2_BOHR;
@@ -167,8 +180,8 @@ namespace SCESS
 	Molecule GenerateAmmoniaMolecule()
 	{
 		Eigen::Vector3d NPos{ -6.6842683864,   1.9896777361, -0.0017590331 };
-		NPos*=ANGSTROM_2_BOHR;
-		Atom N("N", {0,0,0});
+		NPos *= ANGSTROM_2_BOHR;
+		Atom N("N", { 0,0,0 });
 		Atom H1("H", Eigen::Vector3d{ -5.6844990792,   1.9942938061 ,  0.0072441956 }*ANGSTROM_2_BOHR - NPos);
 		Atom H2("H", Eigen::Vector3d{ -7.0127564806 ,  2.9323453345 ,  0.0540465122 }*ANGSTROM_2_BOHR - NPos);
 		Atom H3("H", Eigen::Vector3d{ -7.0127560539 ,  1.4847331233  , 0.7962183253 }*ANGSTROM_2_BOHR - NPos);

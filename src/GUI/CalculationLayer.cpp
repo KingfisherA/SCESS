@@ -11,6 +11,7 @@
 #include"Quantum/Molecule.h"
 #include"Quantum/Basis/Gaussian.h"
 #include"Quantum/HF/HartreeFock.h"
+#include "Quantum/DFT/DFT.h"
 
 #include"Application/Application.h"
 
@@ -93,7 +94,7 @@ namespace SCESS
 		mPosTrisurf.Stop();
 		mNegTrisurf.Stop();
 
-		if (mMethod == HFMethod::Restricted)
+		if (mMethod == CalcMethod::RHF)
 		{
 			coeffsM = &mRHFResult->Coeffs;
 		}
@@ -115,7 +116,7 @@ namespace SCESS
 		mNegTrisurf.Evaluate(true);
 	}
 
-	constexpr const char* PROG_SCREEN_NAME = "HF Progress";
+	constexpr const char* PROG_SCREEN_NAME = "Calc_Progress";
 
 	void CalculationLayer::SelectMolecule()
 	{
@@ -133,7 +134,7 @@ namespace SCESS
 		mMolecule = std::make_unique<SCESS::Molecule>(moleculeFuncs[mSelectedMolecule]());
 	}
 
-	void CalculationLayer::RunHF()
+	void CalculationLayer::ExecuteCalculation()
 	{
 		if (mSelectedMolecule == -1)
 			return;
@@ -144,16 +145,25 @@ namespace SCESS
 		mOrderedLabels = false;
 		mSelectedMO = -1;
 		SelectMolecule();
-		mHFConsoleOutput.str(std::string());
+		mConsoleOutput.str(std::string());
 
-		mHartreeFockThread.Start([this]() {
-			if (mMethod == HFMethod::Restricted)
-				mRHFResult = std::make_shared<RHFResult>(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mHFConsoleOutput));
-			else
-				mUHFResult = std::make_shared<UHFResult>(SCESS::HF::UnrestrictedHF(*mMolecule, 1E-5, 100, &mHFConsoleOutput));
-
-			mHartreeFockThread.MarkAsFinished();
-		});
+		mCalculationThread.Start([this]() {
+			switch (mMethod)
+			{
+			case CalcMethod::RHF:
+				mRHFResult = std::make_shared<RHFResult>(
+					std::move(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput)));
+				break;
+			case CalcMethod::UHF:
+				mUHFResult = std::make_shared<UHFResult>(
+					std::move(SCESS::HF::UnrestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput)));
+				break;
+			case CalcMethod::DFT:
+				mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput);
+				break;
+			}
+			mCalculationThread.MarkAsFinished();
+			});
 	}
 
 	void CalculationLayer::DrawProgressScreen()
@@ -164,13 +174,24 @@ namespace SCESS
 		{
 			ImSpinner::SpinnerAtom("##atomSpinner", 20.0, 2.5);
 			ImGui::SameLine();
-			ImGui::Text("Running %s single-point energy. Please wait...", mMethod == HFMethod::Restricted ? "RHF" : "UHF");
+			ImGui::Text("Running %s single-point energy. Please wait...", [this]() {
+				switch (mMethod)
+				{
+				case CalcMethod::RHF:
+					return "RHF";
+				case CalcMethod::UHF:
+					return "UHF";
+				case CalcMethod::DFT:
+					return "DFT";
+				};
+				}());
 
-			const std::string& consoleStr = mHFConsoleOutput.str();
-			ImGui::InputTextMultiline("##hfConsoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
+
+			const std::string& consoleStr = mConsoleOutput.str();
+			ImGui::InputTextMultiline("##consoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
 				{ 0,0 }, ImGuiInputTextFlags_ReadOnly);
 
-			if (mHartreeFockThread.HasFinished())
+			if (mCalculationThread.HasFinished())
 				ImGui::CloseCurrentPopup();
 
 			ImGui::EndPopup();
@@ -213,7 +234,7 @@ namespace SCESS
 			};
 
 		mMOLabels.clear();
-		if (mMethod == HFMethod::Restricted)
+		if (mMethod == CalcMethod::RHF)
 			sortCoeffs(mRHFResult->Energies, mRHFResult->Coeffs, mRHFResult->Occupation);
 		else
 		{
@@ -260,11 +281,11 @@ namespace SCESS
 		ImGui::End();
 
 		DrawProgressScreen();
-		if (mHartreeFockThread.IsRunning())
+		if (mCalculationThread.IsRunning())
 			ImGui::OpenPopup(PROG_SCREEN_NAME);
 
 
-		if (ImGui::Begin("Hartree Fock"))
+		if (ImGui::Begin("Quantum Calculation"))
 		{
 			if (mSelectedMolecule != -1)
 			{
@@ -272,15 +293,15 @@ namespace SCESS
 				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
 				if (ImGui::Button("Run RHF", { 100,0 }))
 				{
-					mMethod = HFMethod::Restricted;
-					RunHF();
+					mMethod = CalcMethod::RHF;
+					ExecuteCalculation();
 				}
 
 				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
 				if (ImGui::Button("Run UHF", { 100,0 }))
 				{
-					mMethod = HFMethod::Unrestricted;
-					RunHF();
+					mMethod = CalcMethod::UHF;
+					ExecuteCalculation();
 				}
 
 				if (mRHFResult != nullptr)
@@ -290,7 +311,7 @@ namespace SCESS
 					ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0) * 0.5);
 					if (ImGui::Button("Calculate MP2 Energy", { 200,0 }))
 					{
-						if (mMethod == HFMethod::Restricted)
+						if (mMethod == CalcMethod::RHF)
 						{
 							mMP2Energy = HF::CalculateMP2Energy(*mRHFResult);
 						}
@@ -302,162 +323,177 @@ namespace SCESS
 						ImGui::TextColored({ 0.0, 1.0, 0.0, 1.0 }, "Total Energy (HF+MP2) = %.8f hartrees", mMP2Energy + mRHFResult->Energy);
 					}
 				}
+
+				ImGui::SeparatorText("Density Functional Theory");
+				ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
+				if (ImGui::Button("Run DFT", { 100,0 }))
+				{
+					mMethod = CalcMethod::DFT;
+					ExecuteCalculation();
+				}
 			}
 
-			if (mHartreeFockThread.HasFinished())
+			if (mCalculationThread.HasFinished())
 			{
-				if (!mOrderedLabels)
+				if (ImGui::CollapsingHeader("Console", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					SortMOLabels(moLabels);
-					mOrderedLabels = true;
-				}
-
-				if (ImGui::CollapsingHeader("Hartree Fock Console", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					const std::string& consoleStr = mHFConsoleOutput.str();
-					ImGui::InputTextMultiline("##hfConsoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
+					const std::string& consoleStr = mConsoleOutput.str();
+					ImGui::InputTextMultiline("##consoleOutput", (char*)consoleStr.c_str(), consoleStr.length(),
 						{ 0,0 }, ImGuiInputTextFlags_ReadOnly);
 				}
 
 				if (ImGui::CollapsingHeader("Result", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					ImGui::BulletText("Basis Set: STO-3G");
-					ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
-						mMethod == HFMethod::Restricted ? mRHFResult->Energy : mUHFResult->Energy);
-
-					ImGui::Indent();
-					if (ImGui::CollapsingHeader("Orbitals", ImGuiTreeNodeFlags_DefaultOpen))
+					if (mMethod == CalcMethod::RHF || mMethod == CalcMethod::UHF)
 					{
-						if (mSelectedMO != -1)
+						if (!mOrderedLabels)
 						{
-							if (mMethod == HFMethod::Restricted)
-							{
-								ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
-								if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
-									if (mRHFResult->Occupation(mSelectedMO + 1) == 0
-										&& mRHFResult->Occupation(mSelectedMO) > 0)
-										ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
-								if (mSelectedMO - 1 > 0)
-									if (mRHFResult->Occupation(mSelectedMO - 1) > 0
-										&& mRHFResult->Occupation(mSelectedMO) == 0)
-										ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
-								ImGui::BulletText("Energy: %.3f hartrees", mRHFResult->Energies(mSelectedMO));
-								ImGui::BulletText("Occupation: %i e-", mRHFResult->Occupation(mSelectedMO));
-							}
-							else
-							{
-								const auto& energies =
-									mSelectedSpin == 1 ? mUHFResult->EnergiesAlpha : mUHFResult->EnergiesBeta;
-								const auto& occupation = mSelectedSpin == 1 ?
-									mUHFResult->OccupationAlpha
-									: mUHFResult->OccupationBeta;
-								ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
-								if (mSelectedMO + 1 < occupation.rows())
-									if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
-										ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
-								if (mSelectedMO - 1 > 0)
-									if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
-										ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
-								ImGui::BulletText("Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
-								ImGui::BulletText("Energy: %.3f hartrees", energies(mSelectedMO));
-								ImGui::BulletText("Occupation: %i e-", occupation(mSelectedMO));
-
-							}
-							ImGui::Separator();
+							SortMOLabels(moLabels);
+							mOrderedLabels = true;
 						}
 
-						int selectedOption = -1;
-						int selectedOption2 = -1;
-						if (!(mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning()))
-						{
-							ImGui::Text("Select an MO to generate an isosurface");
-							if (mMethod == HFMethod::Restricted)
-								ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], moLabels.size());
-							else
-							{
-								float width = ImGui::GetColumnWidth() * 0.5f;
+						ImGui::BulletText("Basis Set: STO-3G");
+						ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
+							mMethod == CalcMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
 
-								ImGui::Text("Alpha (spin up) Orbitals");
-								ImGui::SameLine(width, 10.0f);
-								ImGui::Text("Beta (spin down) Orbitals");
-								ImGui::PushItemWidth(width);
-								ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], mUHFResult->EnergiesAlpha.rows());
-								ImGui::SameLine();
-								ImGui::ListBox("##listbox2", &selectedOption2, &moLabels[mUHFResult->EnergiesAlpha.rows()], mUHFResult->EnergiesBeta.rows());
-								ImGui::PopItemWidth();
-							}
-						}
-
-						if (selectedOption != -1 || selectedOption2 != -1)
+						ImGui::Indent();
+						if (ImGui::CollapsingHeader("Orbitals", ImGuiTreeNodeFlags_DefaultOpen))
 						{
-							if (mMethod == HFMethod::Restricted)
-								mSelectedMO = selectedOption;
-							else
+							if (mSelectedMO != -1)
 							{
-								if (selectedOption != -1)
+								if (mMethod == CalcMethod::RHF)
 								{
-									mSelectedMO = selectedOption;
-									mSelectedSpin = 1;
+									ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
+									if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
+										if (mRHFResult->Occupation(mSelectedMO + 1) == 0
+											&& mRHFResult->Occupation(mSelectedMO) > 0)
+											ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
+									if (mSelectedMO - 1 > 0)
+										if (mRHFResult->Occupation(mSelectedMO - 1) > 0
+											&& mRHFResult->Occupation(mSelectedMO) == 0)
+											ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
+									ImGui::BulletText("Energy: %.3f hartrees", mRHFResult->Energies(mSelectedMO));
+									ImGui::BulletText("Occupation: %i e-", mRHFResult->Occupation(mSelectedMO));
 								}
 								else
 								{
-									mSelectedMO = selectedOption2;
-									mSelectedSpin = -1;
-								}
+									const auto& energies =
+										mSelectedSpin == 1 ? mUHFResult->EnergiesAlpha : mUHFResult->EnergiesBeta;
+									const auto& occupation = mSelectedSpin == 1 ?
+										mUHFResult->OccupationAlpha
+										: mUHFResult->OccupationBeta;
+									ImGui::TextColored({ 1.0f, 1.0f, 0.0f, 1.0f }, "Previewing MO %i", mSelectedMO + 1);
+									if (mSelectedMO + 1 < occupation.rows())
+										if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
+											ImGui::TextColored({ 1.0f, 0.0f, 0.0f, 1.0f }, "HOMO");
+									if (mSelectedMO - 1 > 0)
+										if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
+											ImGui::TextColored({ 0.0f, 0.5f, 0.5f, 1.0f }, "LUMO");
+									ImGui::BulletText("Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
+									ImGui::BulletText("Energy: %.3f hartrees", energies(mSelectedMO));
+									ImGui::BulletText("Occupation: %i e-", occupation(mSelectedMO));
 
+								}
+								ImGui::Separator();
 							}
 
-							mIsosurfaceUploaded = false;
-							mIsoWasNull = false;
-							RenderMOIsosurface();
-						}
-
-						if ((mPosTrisurf.HasFinished() && mNegTrisurf.HasFinished()) && !mIsosurfaceUploaded)
-						{
-							//if (mPosTrisurf.triangles.size() != 0)
-							UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
-							//if (mNegTrisurf.triangles.size() != 0)
-							UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
-
-							mIsoWasNull = mPosTrisurf.GetTriangles().size() == 0 && mNegTrisurf.GetTriangles().size() == 0;
-
-							mPosTrisurf.Reset();
-							mNegTrisurf.Reset();
-							mIsosurfaceUploaded = true;
-						}
-
-						if (mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning())
-						{
-							ImSpinner::SpinnerTwinBall("spinner1", 16.0, 16.0f, 3.0, 6.0, { 1.0f, 0.0f, 0.0f, 1.0f }, ImSpinner::white, 3.0f, 1);
-							ImGui::SameLine();
-							ImGui::Text("Generating isosurface...");
-							if (ImGui::Button("Cancel", { 100,0 }))
+							int selectedOption = -1;
+							int selectedOption2 = -1;
+							if (!(mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning()))
 							{
+								ImGui::Text("Select an MO to generate an isosurface");
+								if (mMethod == CalcMethod::RHF)
+									ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], moLabels.size());
+								else
+								{
+									float width = ImGui::GetColumnWidth() * 0.5f;
+
+									ImGui::Text("Alpha (spin up) Orbitals");
+									ImGui::SameLine(width, 10.0f);
+									ImGui::Text("Beta (spin down) Orbitals");
+									ImGui::PushItemWidth(width);
+									ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], mUHFResult->EnergiesAlpha.rows());
+									ImGui::SameLine();
+									ImGui::ListBox("##listbox2", &selectedOption2, &moLabels[mUHFResult->EnergiesAlpha.rows()], mUHFResult->EnergiesBeta.rows());
+									ImGui::PopItemWidth();
+								}
+							}
+
+							if (selectedOption != -1 || selectedOption2 != -1)
+							{
+								if (mMethod == CalcMethod::RHF)
+									mSelectedMO = selectedOption;
+								else
+								{
+									if (selectedOption != -1)
+									{
+										mSelectedMO = selectedOption;
+										mSelectedSpin = 1;
+									}
+									else
+									{
+										mSelectedMO = selectedOption2;
+										mSelectedSpin = -1;
+									}
+
+								}
+
+								mIsosurfaceUploaded = false;
+								mIsoWasNull = false;
+								RenderMOIsosurface();
+							}
+
+							if ((mPosTrisurf.HasFinished() && mNegTrisurf.HasFinished()) && !mIsosurfaceUploaded)
+							{
+								//if (mPosTrisurf.triangles.size() != 0)
+								UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
+								//if (mNegTrisurf.triangles.size() != 0)
+								UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
+
+								mIsoWasNull = mPosTrisurf.GetTriangles().size() == 0 && mNegTrisurf.GetTriangles().size() == 0;
+
 								mPosTrisurf.Reset();
 								mNegTrisurf.Reset();
-							}
-						}
-						else
-						{
-							if (mIsosurfaceUploaded)
-							{
-								if (!mIsoWasNull)
-									ImGui::TextColored({ 0.0f,1.0f,0.0f,1.0f }, "Isosurface generated.");
-								else
-									ImGui::TextColored({ 1.0f,0.0f,0.0f,1.0f }, "Wavefunction has no valid isosurface in the given parameters.");
+								mIsosurfaceUploaded = true;
 							}
 
-							if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen))
+							if (mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning())
 							{
-								ImGui::Text("Isosurface Value:");
-								ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);
-								ImGui::Text("Isosurface Resolution:");
-								ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
-								ImGui::Text("Isosurface Volume:");
-								ImGui::DragFloat("bohr##isoVolumeVal", &mIsosurfaceVolume, 0.5f, 0.01f, 100.0f);
+								ImSpinner::SpinnerTwinBall("spinner1", 16.0, 16.0f, 3.0, 6.0, { 1.0f, 0.0f, 0.0f, 1.0f }, ImSpinner::white, 3.0f, 1);
+								ImGui::SameLine();
+								ImGui::Text("Generating isosurface...");
+								if (ImGui::Button("Cancel", { 100,0 }))
+								{
+									mPosTrisurf.Reset();
+									mNegTrisurf.Reset();
+								}
+							}
+							else
+							{
+								if (mIsosurfaceUploaded)
+								{
+									if (!mIsoWasNull)
+										ImGui::TextColored({ 0.0f,1.0f,0.0f,1.0f }, "Isosurface generated.");
+									else
+										ImGui::TextColored({ 1.0f,0.0f,0.0f,1.0f }, "Wavefunction has no valid isosurface in the given parameters.");
+								}
+
+								if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen))
+								{
+									ImGui::Text("Isosurface Value:");
+									ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001, 1E-10, 1.0f);
+									ImGui::Text("Isosurface Resolution:");
+									ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
+									ImGui::Text("Isosurface Volume:");
+									ImGui::DragFloat("bohr##isoVolumeVal", &mIsosurfaceVolume, 0.5f, 0.01f, 100.0f);
+								}
 							}
 						}
-
+					}
+					else if (mMethod == CalcMethod::DFT)
+					{
+						ImGui::TextColored({ 0.0, 1.0, 0.0, 1.0 }, "Density Functional calculation finished!");
+						ImGui::BulletText("Total DFT Energy : %.4f hartrees", mDFTEnergy);
 					}
 				}
 			}

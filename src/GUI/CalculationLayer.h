@@ -18,6 +18,12 @@ namespace SCESS
 	struct UHFResult;
 	class TriSurf;
 
+	enum class CalcMethod
+	{
+		RHF,
+		UHF,
+		DFT
+	};
 
 	class CalculationLayer : public Layer
 	{
@@ -37,7 +43,7 @@ namespace SCESS
 		void RenderMOIsosurface();
 		void SelectMolecule();
 
-		void RunHF();
+		void ExecuteCalculation();
 		void DrawProgressScreen();
 		void SortMOLabels(std::vector<const char*>& moLabels);
 
@@ -51,17 +57,14 @@ namespace SCESS
 
 		sRef<ShaderProgram> mDiffuseProg;
 
-		std::stringstream mHFConsoleOutput;
+		std::stringstream mConsoleOutput;
 		bool mOrderedLabels = false;
-		Thread mHartreeFockThread;
+		Thread mCalculationThread;
 
-		enum class HFMethod
-		{
-			Restricted,
-			Unrestricted
-		} mMethod = HFMethod::Restricted;
+		CalcMethod mMethod = CalcMethod::RHF;
 		sRef<RHFResult> mRHFResult;
 		sRef<UHFResult> mUHFResult;
+		double mDFTEnergy = 0.0;
 		double mMP2Energy = 0.0;
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;

@@ -137,6 +137,8 @@ namespace SCESS
 		{
 			return mNoElectrons;
 		}
+
+		double CalculateNuclearRepulsion() const;
 	};
 
 	Molecule GenerateWaterMolecule();

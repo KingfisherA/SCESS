@@ -13,7 +13,7 @@ namespace SCESS
 
 		virtual ~Thread()
 		{
-			mThread->request_stop();
+			if (mThread != nullptr) mThread->request_stop();
 		}
 
 		void operator=(Thread&& t) noexcept

@@ -181,6 +181,10 @@
     <ClInclude Include="src\Quantum\Tests\Tests.h" />
     <ClInclude Include="src\Platform\Intrinsics.h" />
     <ClInclude Include="src\Utilities\Threading.h" />
+    <ClInclude Include="src\Quantum\DFT\DFT.h" />
+    <ClInclude Include="src\Quantum\DFT\XCFunctional.h" />
+    <ClInclude Include="src\Quantum\DFT\DFTGrid.h" />
+    <ClInclude Include="src\Maths\Quadrature.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -281,6 +285,10 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\Quantum\DFT\DFT.cpp" />
+    <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp" />
+    <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp" />
+    <ClCompile Include="src\Maths\Quadrature.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Eigen.natvis" />

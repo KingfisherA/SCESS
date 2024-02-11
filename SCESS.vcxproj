@@ -131,6 +131,7 @@
     <ClInclude Include="src\Maths\Geometry.hpp" />
     <ClInclude Include="src\Maths\Isosurfaces.h" />
     <ClInclude Include="src\Maths\Maths.hpp" />
+    <ClInclude Include="src\Maths\Quadrature.h" />
     <ClInclude Include="src\Platform\API Core.h" />
     <ClInclude Include="src\Platform\GLFW\GLFWDisplay.h" />
     <ClInclude Include="src\Platform\Intrinsics.h" />
@@ -143,6 +144,9 @@
     <ClInclude Include="src\Platform\Windows\Console.h" />
     <ClInclude Include="src\Quantum\Basis\BasisUtils.h" />
     <ClInclude Include="src\Quantum\Basis\Gaussian.h" />
+    <ClInclude Include="src\Quantum\DFT\DFT.h" />
+    <ClInclude Include="src\Quantum\DFT\DFTGrid.h" />
+    <ClInclude Include="src\Quantum\DFT\XCFunctional.h" />
     <ClInclude Include="src\Quantum\HF\HartreeFock.h" />
     <ClInclude Include="src\Quantum\Integrals\Gamma.h" />
     <ClInclude Include="src\Quantum\Integrals\IntegralHelper.h" />
@@ -174,6 +178,7 @@
     <ClCompile Include="src\Maths\Geometry.cpp" />
     <ClCompile Include="src\Maths\Isosurfaces.cpp" />
     <ClCompile Include="src\Maths\Maths.cpp" />
+    <ClCompile Include="src\Maths\Quadrature.cpp" />
     <ClCompile Include="src\Platform\GLFW\GLFWDisplay.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffers.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLCore.cpp" />
@@ -184,6 +189,9 @@
     <ClCompile Include="src\Platform\Windows\Console.cpp" />
     <ClCompile Include="src\Quantum\Basis\BasisUtils.cpp" />
     <ClCompile Include="src\Quantum\Basis\Gaussian.cpp" />
+    <ClCompile Include="src\Quantum\DFT\DFT.cpp" />
+    <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp" />
+    <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp" />
     <ClCompile Include="src\Quantum\HF\HartreeFock.cpp" />
     <ClCompile Include="src\Quantum\Integrals\Gamma.cpp" />
     <ClCompile Include="src\Quantum\Integrals\IntegralHelper.cpp" />

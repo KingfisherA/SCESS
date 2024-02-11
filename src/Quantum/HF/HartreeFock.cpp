@@ -32,7 +32,7 @@ namespace SCESS
 		const Eigen::Index dimensions = S.rows();
 		double delta = 1.0;
 		size_t scfCount = 0;
-		double Vnn = CalculateNuclearRepulsion(molecule);
+		double Vnn = molecule.CalculateNuclearRepulsion();
 		double currentE = 0.0;
 
 		Eigen::MatrixXd Hcore = T + V;
@@ -128,7 +128,7 @@ namespace SCESS
 
 		double delta = 1.0;
 		size_t scfCount = 0;
-		double Vnn = CalculateNuclearRepulsion(molecule);
+		double Vnn = molecule.CalculateNuclearRepulsion();
 		double currentE = 0.0;
 
 		const Eigen::MatrixXd& Hcore = T + V;
@@ -317,20 +317,6 @@ namespace SCESS
 		}
 
 		return std::sqrt(delta);
-	}
-
-	double HF::CalculateNuclearRepulsion(const Molecule& molecule)
-	{
-		double Vnn = 0.0;
-		const std::vector<Atom>& atoms = molecule.GetAtoms();
-		for (size_t i = 0; i < atoms.size(); i++) {
-			for (size_t j = i + 1; j < atoms.size(); j++)
-			{
-				double r = (atoms[i].GetPos() - atoms[j].GetPos()).norm();
-				if (r > 0.0) Vnn += atoms[i].GetCharge() * atoms[j].GetCharge() / r;
-			}
-		}
-		return Vnn;
 	}
 
 	double HF::CalculateEnergyRHF(const Eigen::MatrixXd& Density,

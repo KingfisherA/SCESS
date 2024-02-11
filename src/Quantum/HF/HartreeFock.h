@@ -81,8 +81,6 @@ namespace SCESS
 
 		static double CalculateDelta(const Eigen::MatrixXd& oldDensity,
 			const Eigen::MatrixXd& density);
-
-		static double CalculateNuclearRepulsion(const Molecule& molecule);
 	};
 
 

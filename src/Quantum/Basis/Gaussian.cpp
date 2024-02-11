@@ -37,6 +37,21 @@ namespace SCESS
 				{OrbitalType::F_XYZ , {1, 1, 1} }
 	};
 
+	void Gaussian::CalculateNormalisationConstant()
+	{
+		/*     double numerator = std::pow(2.0, 2.0 * (mAngular[0] + mAngular[1] + mAngular[2]) + 3.0 / 2.0) *
+		std::pow(mExponent, (mAngular[0] + mAngular[1] + mAngular[2]) + 3.0 / 2.0);*/
+
+		double numerator = std::pow(2 * mExponent / std::numbers::pi, 0.75) * std::pow(4 * mExponent, (mAngular[0] + mAngular[1] + mAngular[2]) * 0.5);
+
+
+		double denominator = std::sqrt((mAngular[0] < 1 ? 1 : boost::math::double_factorial<double>(2 * mAngular[0] - 1)) *
+			(mAngular[1] < 1 ? 1 : boost::math::double_factorial<double>(2 * mAngular[1] - 1)) *
+			(mAngular[2] < 1 ? 1 : boost::math::double_factorial<double>(2 * mAngular[2] - 1)));
+
+		mNorm = numerator / denominator;
+	}
+
 	//std::function<float(float, float, float)> CalculationLayer::GenerateGaussianFunction(const GaussianCollection& gc)
 	//{
 	//	auto returnFunc = [gc](float x, float y, float z) ->float
