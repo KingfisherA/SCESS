@@ -6,6 +6,7 @@
 #include<string_view>
 #include<Eigen/Core>
 #include<utility>
+#include<unordered_map>
 
 namespace SCESS
 {
@@ -139,6 +140,22 @@ namespace SCESS
 		}
 
 		double CalculateNuclearRepulsion() const;
+	};
+
+	struct AtomStyle
+	{
+		//RGB colour
+		glm::vec3 mColour;
+		//In Bohr radii
+		float mRadius;
+
+		static std::unordered_map<std::string_view, AtomStyle> sAtomStyle;
+
+		inline static const AtomStyle& GetStyle(const std::string_view atom)
+		{
+			return sAtomStyle.at(atom);
+		}
+
 	};
 
 	Molecule GenerateWaterMolecule();

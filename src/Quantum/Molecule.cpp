@@ -9,6 +9,15 @@
 //
 namespace SCESS
 {
+	std::unordered_map<std::string_view, AtomStyle> AtomStyle::sAtomStyle =
+	{
+		{"H", {{1.0f, 1.0f, 1.0f}, 0.7f}},
+		{"C", {{0.1f, 0.1f, 0.1f}, 2.0f}},
+		{"Li", {{0.8f, 0.9f, 1.0f}, 3.15f}},
+		{"N", {{0.0f, 0.5f, 0.5f}, 1.8f}},
+		{"O", {{1.0f, 0.0f, 0.0f}, 1.7f}}
+	};
+
 	void Molecule::MakeOrbitals()
 	{
 		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath(R"(Basis\sto-3g.json)").string());
@@ -19,6 +28,7 @@ namespace SCESS
 		nlohmann::json& basisSet = *basisSetOpt;
 
 		mOrbitals.clear();
+		mNoElectrons = 0;
 		for (Atom& a : mAtoms)
 		{
 			nlohmann::json& atomBasis = basisSet[a.GetAtomSymbol()];
@@ -104,7 +114,6 @@ namespace SCESS
 		SCESS::Atom O("O", Eigen::Vector3d{ 0.0,0.0, 0.0 });
 
 		SCESS::Molecule water({ H1, O, H2 });
-		water.MakeOrbitals();
 
 		return water;
 	}
@@ -117,7 +126,6 @@ namespace SCESS
 		SCESS::Atom H2("H", { hydrogenBondLength,0.0,0.0 });
 
 		SCESS::Molecule hydrogenMol({ H1, H2 });
-		hydrogenMol.MakeOrbitals();
 
 		return hydrogenMol;
 	}
@@ -130,7 +138,6 @@ namespace SCESS
 		SCESS::Atom Li("Li", { LiHBondLength,0.0,0.0 });
 
 		SCESS::Molecule LiHMolecule({ H, Li });
-		LiHMolecule.MakeOrbitals();
 
 		return LiHMolecule;
 	}
@@ -143,7 +150,6 @@ namespace SCESS
 		SCESS::Atom O("O", { COBondLength,0.0,0.0 });
 
 		SCESS::Molecule COMolecule({ C,O });
-		COMolecule.MakeOrbitals();
 
 		return COMolecule;
 	}
@@ -157,22 +163,20 @@ namespace SCESS
 		SCESS::Atom C("C", { 0,0,0 });
 
 		SCESS::Molecule methane({ H1, H2, H3, H4, C });
-		methane.MakeOrbitals();
 
 		return methane;
 	}
 
 	Molecule GenerateEtheneMolecule()
 	{
-		SCESS::Atom C1("C", Eigen::Vector3d{ -0.6530176758, 0.0000000000, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom C2("C", Eigen::Vector3d{ 0.6530176758, 0.0000000000, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H1("H", Eigen::Vector3d{ -1.2288875372, -0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H2("H", Eigen::Vector3d{ -1.2288875372, 0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H3("H", Eigen::Vector3d{ 1.2288875372, 0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
-		SCESS::Atom H4("H", Eigen::Vector3d{ 1.2288875372, -0.9156191261, 0.0000000000 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom C1("C", Eigen::Vector3d{ -0.66754171391078,-0.57999587657014 ,-0.98766494519065 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom C2("C", Eigen::Vector3d{ -0.00280161842801,-0.00243411244334 ,-0.00414503592554 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H1("H", Eigen::Vector3d{ -0.15803343371248,-1.06435755385651 ,-1.81247599918377 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H2("H", Eigen::Vector3d{ -1.75092796040950,-0.59425022738565 ,-1.01193846765821 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H3("H", Eigen::Vector3d{ 1.08058463979347 ,  0.01182021009784 ,  0.02012843810545 }*SCESS::ANGSTROM_2_BOHR);
+		SCESS::Atom H4("H", Eigen::Vector3d{ -0.51230991333269,  0.48192756015780 ,  0.82066600985273 }*SCESS::ANGSTROM_2_BOHR);
 
 		SCESS::Molecule ethene({ C1,C2,H1,H2,H3,H4 });
-		ethene.MakeOrbitals();
 
 		return ethene;
 	}
@@ -187,7 +191,6 @@ namespace SCESS
 		Atom H3("H", Eigen::Vector3d{ -7.0127560539 ,  1.4847331233  , 0.7962183253 }*ANGSTROM_2_BOHR - NPos);
 
 		Molecule NH3({ N,H1,H2,H3 });
-		NH3.MakeOrbitals();
 
 		return NH3;
 	}

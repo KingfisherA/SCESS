@@ -81,10 +81,7 @@ namespace SCESS
 			const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
 			delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
 
-			double singleEEnergy = 2.0 * (DensityMat * Hcore).trace();
-			double singleERepulsion = 2.0 * (DensityMat * JMat).trace();
-
-			totalE = singleEEnergy + singleERepulsion + Vnn + exchangeCorreE;
+			totalE = CalculateEnergy(DensityMat, Hcore, JMat, Vnn, exchangeCorreE);
 
 			// Calculate the current energy
 			if (consoleStream) *consoleStream << "SCF(" << scfIterations << "); Delta=" << delta << ", E=" << totalE << " hartrees\n";
@@ -101,6 +98,7 @@ namespace SCESS
 
 		return totalE;
 	}
+
 	Eigen::MatrixXd DFT::ConstructDensity(const size_t Nelecs, const Eigen::MatrixXd& coeffs)
 	{
 		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(coeffs.rows(), coeffs.rows());
@@ -154,7 +152,7 @@ namespace SCESS
 
 		XCFunctional::Exchange_AlphaX(densityAlpha, densityBeta, exchangeE, exchangePotentialAlpha, exchangePotentialBeta);
 		XCFunctional::Correlation_VMW(densityAlpha, densityBeta, correlationE, correlationPotentialAlpha, correlationPotentialBeta);
-
+		
 		energyOut = weights.dot(exchangeE + correlationE);
 
 		Eigen::VectorXd wva = weights.cwiseProduct((exchangePotentialAlpha + exchangePotentialBeta
@@ -167,5 +165,23 @@ namespace SCESS
 				XCMatrix(i, j) = wva_i.dot(amplitudes.row(j));
 			}
 		}
+	}
+
+	double DFT::CalculateEnergy(const Eigen::MatrixXd& DensityMat,
+		const Eigen::MatrixXd& Hcore,
+		const Eigen::MatrixXd& JMat,
+		const double nuclearNuclearE,
+		const double exchangeCorEnergy)
+	{
+		double result = 0.0;
+		for (int i = 0; i < DensityMat.rows(); i++)
+		{
+			for (int j = 0; j < DensityMat.rows(); j++)
+			{
+				result += DensityMat(i, j) * (Hcore(i, j) + JMat(i, j));
+			}
+		}
+
+		return result * 2.0 + nuclearNuclearE + exchangeCorEnergy;
 	}
 }

@@ -50,10 +50,14 @@ namespace SCESS
 		int mSelectedMolecule = -1;
 		std::string mMoleculeName;
 		uRef<Molecule> mMolecule;
+		sRef<VertexArray> mSphereVAO;
+		bool mRenderMolecule = true;
+		float mMoleculeOpacity = 1.0f;
 
 		sRef<VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
 		bool mIsosurfaceUploaded = false, mIsoWasNull = false;
 		TriSurf mNegTrisurf, mPosTrisurf;
+		float mIsoOpacity = 1.0f;
 
 		sRef<ShaderProgram> mDiffuseProg;
 

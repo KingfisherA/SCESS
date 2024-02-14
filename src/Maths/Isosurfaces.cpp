@@ -92,8 +92,9 @@ namespace SCESS
 		{
 			for (size_t j = 0; j + 1 < max; j++)
 			{
-				if (thread->ShouldStop())
-					return;
+				if (thread != nullptr)
+					if (thread->ShouldStop())
+						return;
 				for (size_t k = 0; k + 1 < max; k++)
 				{
 					float x = i, y = j, z = k;
@@ -165,11 +166,11 @@ namespace SCESS
 
 	void TriSurf::Evaluate(bool useMultithreading)
 	{
-		auto workerFunc = [=]() {
+		auto workerFunc = [this]() {
 
 			std::unique_ptr<MarchingCubes> marchingCubes = std::make_unique<MarchingCubes>();
 
-			if (useMultithreading)
+			if (mUsingMultithreading)
 			{
 				while (true)
 				{
@@ -180,7 +181,7 @@ namespace SCESS
 			}
 
 			mTriangles.clear();
-			marchingCubes->TriangulateField(*mField, mIsoVal, mTriangles, useMultithreading ? &mThread : nullptr);
+			marchingCubes->TriangulateField(*mField, mIsoVal, mTriangles, mUsingMultithreading ? &mThread : nullptr);
 
 			//Rescale vertices
 			for (size_t i = 0; i < mTriangles.size(); i++)
@@ -191,10 +192,11 @@ namespace SCESS
 				}
 			}
 
-			if (useMultithreading) mThread.MarkAsFinished();
+			if (mUsingMultithreading) mThread.MarkAsFinished();
 			};
 
-		if (!useMultithreading)
+		mUsingMultithreading = useMultithreading;
+		if (!mUsingMultithreading)
 		{
 			workerFunc();
 			return;

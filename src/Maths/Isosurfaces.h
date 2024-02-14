@@ -493,7 +493,8 @@ namespace SCESS
 
 		void Stop()
 		{
-			mThread.Stop();
+			if (mUsingMultithreading)
+				mThread.Stop();
 		}
 
 		bool IsRunning() const
@@ -503,16 +504,19 @@ namespace SCESS
 
 		bool HasFinished() const
 		{
-			return mThread.HasFinished();
+			return  mThread.HasFinished();
 		}
 
 		void Reset()
 		{
 			if (mField != nullptr)
 				mField->Stop();
-			mThread.Stop();
-			mTriangles.clear();
-			mField.reset();
+
+			if (mUsingMultithreading) {
+				mThread.Stop();
+				mTriangles.clear();
+				mField.reset();
+			}
 		}
 
 		void operator=(const TriSurf& tri)
@@ -542,6 +546,7 @@ namespace SCESS
 		float mIsoVol = 0.0f;
 		float mIsoVal = 0.0f;
 
+		bool mUsingMultithreading = false;
 		Thread mThread;
 	};
 

@@ -19,5 +19,11 @@ namespace SCESS
 
 		static void EvaluateExchangeCorrelation(const DFTMolecularGrid& dftGrid, const Molecule& mol,
 			Eigen::MatrixXd& XCMatrix, double& energyOut);
+
+		static double CalculateEnergy(const Eigen::MatrixXd& DensityMat, 
+			const Eigen::MatrixXd& Hcore, 
+			const Eigen::MatrixXd& JMat,
+			const double nuclearNuclearE,
+			const double exchangeCorEnergy);
 	};
 }

@@ -11,7 +11,7 @@
 #include"Quantum/Molecule.h"
 #include"Quantum/Basis/Gaussian.h"
 #include"Quantum/HF/HartreeFock.h"
-#include "Quantum/DFT/DFT.h"
+#include"Quantum/DFT/DFT.h"
 
 #include"Application/Application.h"
 
@@ -54,6 +54,13 @@ namespace SCESS
 		mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 		mNegTrisurfVAO = VertexArray::Create();
 		mNegTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
+
+		mSphereVAO = VertexArray::Create();
+		sRef<Mesh> sphereMesh = Geometry::CreateQuadsphere(1.0f, 30);
+		mSphereVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh->GetVertexArray(),
+			sphereMesh->GetVertexFloatCount()));
+		mSphereVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh->GetIndiciesArray(),
+			sphereMesh->GetIndexIntCount()));
 	}
 
 	void CalculationLayer::OnDetach()
@@ -63,13 +70,39 @@ namespace SCESS
 	void CalculationLayer::OnUpdate(const sRef<SCESS::Framebuffer>& screenBuffer, const Camera& cam,
 		const glm::mat4& projectionMatrix, const glm::vec2& nearFarPlanes)
 	{
-		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDisable(GL_CULL_FACE);
 
-		mDiffuseProg->Bind();
+		glm::mat4 pvMatrix = projectionMatrix * cam.GetViewMatrix();
 
-		mDiffuseProg->UploadMatF("uMPVMatrix", projectionMatrix * cam.GetViewMatrix());
+		mDiffuseProg->Bind();
 		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
+
+		if (mRenderMolecule)
+		{
+			mDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
+			mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
+
+			if (mMolecule != nullptr)
+			{
+				mSphereVAO->Bind();
+				for (const Atom& a : mMolecule->GetAtoms())
+				{
+					const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
+					mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix * glm::translate(glm::vec3{ a.GetPos().x(), a.GetPos().y() ,a.GetPos().z() }) *
+						glm::scale(glm::vec3{ style.mRadius }));
+					mDiffuseProg->UploadVecF("uColour", style.mColour);
+
+
+					mSphereVAO->SubmitArrays();
+				}
+				mSphereVAO->Unbind();
+			}
+		}
+
+		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
+		mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
+		mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
 
 		mDiffuseProg->UploadVecF("uColour", { 1.0f, 0.0f, 0.0f });
 		mPosTrisurfVAO->Bind();
@@ -80,7 +113,6 @@ namespace SCESS
 		mNegTrisurfVAO->Bind();
 		mNegTrisurfVAO->SubmitArrays();
 		mNegTrisurfVAO->Unbind();
-
 
 		mDiffuseProg->Unbind();
 
@@ -144,7 +176,8 @@ namespace SCESS
 
 		mOrderedLabels = false;
 		mSelectedMO = -1;
-		SelectMolecule();
+
+		mMolecule->MakeOrbitals();
 		mConsoleOutput.str(std::string());
 
 		mCalculationThread.Start([this]() {
@@ -270,12 +303,40 @@ namespace SCESS
 			ImGui::BulletText("Selected Molecule: %s", mMoleculeName.c_str());
 			int selectedMolecule = -1;
 			ImGui::ListBox("##selectMoleculeLB", &selectedMolecule, moleculeNames, IM_ARRAYSIZE(moleculeNames));
+			ImGui::Checkbox("Draw Molecule", &mRenderMolecule);
+			if (mRenderMolecule)
+				ImGui::SliderFloat("##molOpacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
+
 
 			if (selectedMolecule != -1)
 			{
 				mSelectedMolecule = selectedMolecule;
 				mMoleculeName = moleculeNames[mSelectedMolecule];
+				SelectMolecule();
 			}
+
+			//if (ImGui::Button("Test"))
+			//{
+			//	mIsosurfaceVolume = 25.0f;
+			//	std::shared_ptr<ScalarField> field = std::make_shared<ScalarField>();
+			//	field->Initilise(50,
+			//		[](float x, float y, float z)->float {
+			//			return (3*z*z-x*x-y*y) * exp(-0.5 * sqrt(x * x + y * y + z * z));
+			//		},
+			//		mIsosurfaceVolume);
+			//	field->Evaluate(false);
+
+			//	mPosTrisurf.Initilise(field, mIsosurfaceVolume, mIsosurfaceVal);
+			//	mNegTrisurf.Initilise(field, mIsosurfaceVolume, -mIsosurfaceVal);
+
+			//	mPosTrisurf.Evaluate(false);
+			//	mNegTrisurf.Evaluate(false);
+
+			//	UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
+			//	UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
+			//	mPosTrisurf.Reset();
+			//	mNegTrisurf.Reset();
+			//}
 
 		}
 		ImGui::End();
@@ -486,6 +547,9 @@ namespace SCESS
 									ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
 									ImGui::Text("Isosurface Volume:");
 									ImGui::DragFloat("bohr##isoVolumeVal", &mIsosurfaceVolume, 0.5f, 0.01f, 100.0f);
+									ImGui::Text("Isosurface Opacity:");
+									ImGui::DragFloat("##isoOpacity", &mIsoOpacity, 0.0f, 0.01f, 1.0f);
+
 								}
 							}
 						}
@@ -503,6 +567,5 @@ namespace SCESS
 
 	void CalculationLayer::OnEvent(Event& e)
 	{
-
 	}
 }
