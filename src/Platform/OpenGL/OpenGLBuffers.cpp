@@ -44,7 +44,6 @@ namespace SCESS
 		glBindBuffer(GL_ARRAY_BUFFER, m_VBOID);
 		glBufferData(GL_ARRAY_BUFFER, floatCount * sizeof(float), (const void*)data, UsageToGLenum(m_Usage));
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 	}
 
 	void OpenGLVertexBuffer::UpdateData(const float* data, const size_t offset, const size_t floatCount)

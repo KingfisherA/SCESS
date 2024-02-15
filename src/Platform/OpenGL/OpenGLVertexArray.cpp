@@ -29,12 +29,18 @@ namespace SCESS
 		glBindVertexArray(0);
 	}
 
-	void OpenGLVertexArray::SubmitArrays(const GLenum drawMode)
+	void OpenGLVertexArray::SubmitArrays(const GLenum drawMode, size_t instances)
 	{
 		if (IsIndexed())
-			glDrawElements(drawMode, GetArrayElementLength(), GL_UNSIGNED_INT, nullptr);
+			if (instances > 1)
+				glDrawElementsInstanced(drawMode, GetArrayElementLength(), GL_UNSIGNED_INT, nullptr, instances);
+			else
+				glDrawElements(drawMode, GetArrayElementLength(), GL_UNSIGNED_INT, nullptr);
 		else
-			glDrawArrays(drawMode, 0, GetArrayElementLength());
+			if (instances > 1)
+				glDrawArraysInstanced(drawMode, 0, GetArrayElementLength(), instances);
+			else
+				glDrawArrays(drawMode, 0, GetArrayElementLength());
 	}
 
 	Index OpenGLVertexArray::AddVertexBuffer(const sRef<VertexBuffer>& buffer, const VertexSpecification spec)
@@ -56,7 +62,7 @@ namespace SCESS
 
 		glBindVertexArray(m_VAOId);
 		glBindBuffer(GL_ARRAY_BUFFER, glBuffer->GetGLId());
-		
+
 		glVertexAttribPointer(attribArray, (int)spec.vertexSize, GL_FLOAT, GL_FALSE, spec.vertexStride * sizeof(float), (void*)(spec.vertexOffset * sizeof(float)));
 		glVertexAttribDivisor(attribArray, spec.divisor);
 		glEnableVertexAttribArray(attribArray);
@@ -99,7 +105,7 @@ namespace SCESS
 	{
 #ifdef SM_DEBUG
 		//if (index >= m_Buffers.size())
-		if(m_Buffers.find(index) == m_Buffers.end())
+		if (m_Buffers.find(index) == m_Buffers.end())
 		{
 			UNI_FATAL(OpenGLVertexArray::GetVBuffer, "Index of buffer is not valid");
 			return nullptr;

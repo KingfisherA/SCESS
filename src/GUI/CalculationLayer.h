@@ -38,19 +38,25 @@ namespace SCESS
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
+
 	private:
 		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
 		void RenderMOIsosurface();
 		void SelectMolecule();
+		void UploadMolecule();
 
 		void ExecuteCalculation();
 		void DrawProgressScreen();
-		void SortMOLabels(std::vector<const char*>& moLabels);
+		void OrderOrbitals();
+
+		std::vector<std::string> mBasisSets;
+		int mSelectedBasisSet = 0;
 
 		int mSelectedMolecule = -1;
 		std::string mMoleculeName;
 		uRef<Molecule> mMolecule;
-		sRef<VertexArray> mSphereVAO;
+		sRef<VertexArray> mMoleculeVAO;
+		sRef<VertexBuffer> mMoleculeBuffer;
 		bool mRenderMolecule = true;
 		float mMoleculeOpacity = 1.0f;
 
@@ -60,9 +66,10 @@ namespace SCESS
 		float mIsoOpacity = 1.0f;
 
 		sRef<ShaderProgram> mDiffuseProg;
+		sRef<ShaderProgram> mMoleculeDiffuseProg;
 
 		std::stringstream mConsoleOutput;
-		bool mOrderedLabels = false;
+		bool mOrbitalsOrdered = false;
 		Thread mCalculationThread;
 
 		CalcMethod mMethod = CalcMethod::RHF;

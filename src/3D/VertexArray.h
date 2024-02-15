@@ -12,7 +12,8 @@ namespace SCESS
 		unsigned int vertexStride = 0;
 		//In floats
 		unsigned int vertexOffset = 0;
-		//In elements; e.g. how many vertices to skip
+		//In instances. Specify the number of instances 
+		// that will pass between updates of the generic attribute at slot index.
 		unsigned int divisor = 0;
 	};
 
@@ -27,7 +28,7 @@ namespace SCESS
 		virtual void Bind() = 0;
 		virtual void Unbind() = 0;
 
-		virtual void SubmitArrays(const GLenum drawMode = GL_TRIANGLES) = 0;
+		virtual void SubmitArrays(const GLenum drawMode = GL_TRIANGLES, size_t instances = 1) = 0;
 
 		virtual Index AddVertexBuffer(const sRef<VertexBuffer>& buffer, const VertexSpecification spec = { 3,0,0 }) = 0;
 		virtual void AddIndexBuffer(const sRef<IndexBuffer>& buffer) = 0;

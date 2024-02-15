@@ -77,6 +77,9 @@
       <AdditionalLibraryDirectories>..\..\Libraries\C++\glew-2.1.0\lib\Debug\x64;..\..\Libraries\C++\glfw-3.3.2\lib\x64;..\..\Libraries\C++\boost_1_83_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "C:\dev\C++\SCESS\Assets" "C:\dev\C++\SCESS\bin\SCESS\Debug-x64\Assets" /D /I /E /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -107,6 +110,9 @@
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "C:\dev\C++\SCESS\Assets" "C:\dev\C++\SCESS\bin\SCESS\Release-x64\Assets" /D /I /E /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -117,6 +123,7 @@
     <ClInclude Include="src\3D\VertexArray.h" />
     <ClInclude Include="src\3D\stb\stb_image.h" />
     <ClInclude Include="src\Application\Application.h" />
+    <ClInclude Include="src\Chemistry\PeriodicTable.h" />
     <ClInclude Include="src\Display.h" />
     <ClInclude Include="src\Events\AppEvents.h" />
     <ClInclude Include="src\Events\Events.h" />
@@ -169,6 +176,7 @@
     <ClCompile Include="src\3D\VertexArray.cpp" />
     <ClCompile Include="src\3D\stb\stb_image.cpp" />
     <ClCompile Include="src\Application\Application.cpp" />
+    <ClCompile Include="src\Chemistry\PeriodicTable.cpp" />
     <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\GUI\CalculationLayer.cpp" />
     <ClCompile Include="src\GUI\ImGuiBuild.cpp" />

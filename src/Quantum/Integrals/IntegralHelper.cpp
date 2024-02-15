@@ -21,16 +21,16 @@ namespace SCESS
 	ConfigIntegrals IntegralHelper::CalculateConfiguration(const Molecule& molecule)
 	{
 		Eigen::MatrixXd S =
-			Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+			Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 		Eigen::MatrixXd T =
-			Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+			Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 		Eigen::MatrixXd V =
-			Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+			Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 		TETensor tei;
 
-		for (size_t i = 0; i < molecule.NoOrbitals(); i++)
+		for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
 		{
-			for (size_t j = i; j < molecule.NoOrbitals(); j++)
+			for (size_t j = i; j < molecule.GetNoOrbitals(); j++)
 			{
 				const GaussianCollection& c1 = molecule.GetOrbital(i);
 				const GaussianCollection& c2 = molecule.GetOrbital(j);
@@ -60,7 +60,8 @@ namespace SCESS
 		if ((a < 0) || (b < 0) || (a - b < 0)) {
 			return 1.0;
 		}
-		return boost::math::factorial<double>(a) / (boost::math::factorial<double>(b) * boost::math::factorial<double>(a - b));
+		return boost::math::factorial<double>(a) / 
+			(boost::math::factorial<double>(b) * boost::math::factorial<double>(a - b));
 	}
 
 	double IntegralHelper::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb)
@@ -252,7 +253,7 @@ namespace SCESS
 
 	Eigen::MatrixXd IntegralHelper::CalculateNuclearMatrix(const Molecule& molecule)
 	{
-		Eigen::MatrixXd V = Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+		Eigen::MatrixXd V = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
 		for (size_t i = 0; i < V.rows(); i++)
 		{
@@ -363,7 +364,7 @@ namespace SCESS
 
 	Eigen::MatrixXd IntegralHelper::CalculateKineticMatrix(const Molecule& molecule)
 	{
-		Eigen::MatrixXd K = Eigen::MatrixXd::Zero(molecule.NoOrbitals(), molecule.NoOrbitals());
+		Eigen::MatrixXd K = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
 		//i=Rows, j=Cols
 		for (size_t i = 0; i < K.rows(); i++)
@@ -385,13 +386,13 @@ namespace SCESS
 	{
 		TETensor returnTensor;
 
-		for (size_t i = 0; i < molecule.NoOrbitals(); i++)
+		for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
 		{
-			for (size_t j = 0; j < molecule.NoOrbitals(); j++)
+			for (size_t j = 0; j < molecule.GetNoOrbitals(); j++)
 			{
-				for (size_t k = 0; k < molecule.NoOrbitals(); k++)
+				for (size_t k = 0; k < molecule.GetNoOrbitals(); k++)
 				{
-					for (size_t l = 0; l < molecule.NoOrbitals(); l++)
+					for (size_t l = 0; l < molecule.GetNoOrbitals(); l++)
 					{
 						if (!returnTensor.Exists(i, j, k, l))
 						{

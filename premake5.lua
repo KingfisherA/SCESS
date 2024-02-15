@@ -23,9 +23,9 @@ project "SCESS"
 	 pchheader("pch.h")
 	 pchsource("%{wks.location}/src/pch.cpp")
 
-     --postbuildcommands  {
-       -- ("call xcopy.exe \"%{prj.location}shaders\\\" \"%{wks.location}bin\\%{prj.name}\\Debug-x64\\assets\\\" /s /y /i /d")
-     --}
+    postbuildcommands {
+      ("call xcopy.exe \"%{prj.location}Assets\" \"%{wks.location}" & outputdir & "Assets\" /s /y /i /d")
+    }
 
      files
      {

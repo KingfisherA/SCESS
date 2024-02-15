@@ -8,6 +8,7 @@
 #include"Maths/Geometry.hpp"
 #include"Maths/Isosurfaces.h"
 
+#include "Quantum/Basis/BasisUtils.h"
 #include"Quantum/Molecule.h"
 #include"Quantum/Basis/Gaussian.h"
 #include"Quantum/HF/HartreeFock.h"
@@ -19,8 +20,6 @@
 
 #include"Utilities/PathUtils.h"
 #include"CalculationLayer.h"
-
-
 
 
 namespace SCESS
@@ -45,22 +44,38 @@ namespace SCESS
 
 	void CalculationLayer::OnAttach()
 	{
-		mDiffuseProg = ShaderProgram::CreateFromFile(PathUtils::GetAssetPath(R"(Shaders\ColourDiffuse.glsl)").string());
-		mDiffuseProg->Bind();
-		mDiffuseProg->UploadVecF("uLightPos", { 0.0f, 10.0f, 0.0f });
-		mDiffuseProg->Unbind();
+		mDiffuseProg = ShaderProgram::CreateFromFile(
+			PathUtils::GetAssetPath(R"(Shaders\ColourDiffuse.glsl)").string());
+
+		mMoleculeDiffuseProg = ShaderProgram::CreateFromFile(
+			PathUtils::GetAssetPath(R"(Shaders\MoleculeColourDiffuse.glsl)").string());
 
 		mPosTrisurfVAO = VertexArray::Create();
 		mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 		mNegTrisurfVAO = VertexArray::Create();
 		mNegTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 
-		mSphereVAO = VertexArray::Create();
+		mMoleculeVAO = VertexArray::Create();
 		sRef<Mesh> sphereMesh = Geometry::CreateQuadsphere(1.0f, 30);
-		mSphereVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh->GetVertexArray(),
+		mMoleculeVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh->GetVertexArray(),
 			sphereMesh->GetVertexFloatCount()));
-		mSphereVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh->GetIndiciesArray(),
+		mMoleculeVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh->GetIndiciesArray(),
 			sphereMesh->GetIndexIntCount()));
+
+		//All molecule data is packed in the following format:
+		//(Atom Scale; float) (Atom Translation; vec3) (Atom Colour; vec3) --
+		mMoleculeBuffer = VertexBuffer::Create(BufferUsage::DynamicUpdate);
+		//Atom Scale
+		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 1, 7, 0, 1 });
+		//Atom Translation
+		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 1, 1 });
+		//Atom Colour
+		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 4, 1 });
+
+		mBasisSets = BasisUtils::ListBasisSets();
+		mSelectedBasisSet = std::max(0, 
+			(int)std::distance(mBasisSets.begin(), 
+				std::find(mBasisSets.begin(), mBasisSets.end(), "sto-3g")));
 	}
 
 	void CalculationLayer::OnDetach()
@@ -75,34 +90,46 @@ namespace SCESS
 
 		glm::mat4 pvMatrix = projectionMatrix * cam.GetViewMatrix();
 
-		mDiffuseProg->Bind();
-		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
-
-		if (mRenderMolecule)
+		if (mMolecule != nullptr && mRenderMolecule)
 		{
-			mDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
-			mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
+			mMoleculeDiffuseProg->Bind();
+			mMoleculeDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
+			mMoleculeDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
+			mMoleculeDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
 
-			if (mMolecule != nullptr)
-			{
-				mSphereVAO->Bind();
-				for (const Atom& a : mMolecule->GetAtoms())
-				{
-					const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
-					mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix * glm::translate(glm::vec3{ a.GetPos().x(), a.GetPos().y() ,a.GetPos().z() }) *
-						glm::scale(glm::vec3{ style.mRadius }));
-					mDiffuseProg->UploadVecF("uColour", style.mColour);
+			mMoleculeVAO->Bind();
+			mMoleculeVAO->SubmitArrays(GL_TRIANGLES, mMolecule->GetNoAtoms());
+			mMoleculeVAO->Unbind();
 
-
-					mSphereVAO->SubmitArrays();
-				}
-				mSphereVAO->Unbind();
-			}
+			mMoleculeDiffuseProg->Unbind();
 		}
 
+		//if (mRenderMolecule)
+		//{
+
+		//	if (mMolecule != nullptr)
+		//	{
+		//		mSphereVAO->Bind();
+		//		for (const Atom& a : mMolecule->GetAtoms())
+		//		{
+		//			const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
+		//			mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix * glm::translate(glm::vec3{ a.GetPos().x(), a.GetPos().y() ,a.GetPos().z() }) *
+		//				glm::scale(glm::vec3{ style.mRadius }));
+		//			mDiffuseProg->UploadVecF("uColour", style.mColour);
+
+
+		//			mSphereVAO->SubmitArrays();
+		//		}
+		//		mSphereVAO->Unbind();
+		//	}
+		//}
+
 		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
-		mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
+
+		mDiffuseProg->Bind();
+		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
 		mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
+		mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
 
 		mDiffuseProg->UploadVecF("uColour", { 1.0f, 0.0f, 0.0f });
 		mPosTrisurfVAO->Bind();
@@ -148,7 +175,7 @@ namespace SCESS
 		mNegTrisurf.Evaluate(true);
 	}
 
-	constexpr const char* PROG_SCREEN_NAME = "Calc_Progress";
+	constexpr const char* PROG_SCREEN_NAME = "Calculation Progress";
 
 	void CalculationLayer::SelectMolecule()
 	{
@@ -164,6 +191,35 @@ namespace SCESS
 		};
 
 		mMolecule = std::make_unique<SCESS::Molecule>(moleculeFuncs[mSelectedMolecule]());
+		UploadMolecule();
+	}
+
+	void CalculationLayer::UploadMolecule()
+	{
+		if (mMolecule == nullptr)
+			return;
+
+		float* data = new float[mMolecule->GetAtoms().size() * 7];
+		for (size_t i = 0; i < mMolecule->GetAtoms().size(); i++)
+		{
+			const Atom& a = mMolecule->GetAtom(i);
+			const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
+
+			//Atom scale
+			data[i * 7 + 0] = style.mRadius;
+			//Atom Translation
+			data[i * 7 + 1] = a.GetPos().x();
+			data[i * 7 + 2] = a.GetPos().y();
+			data[i * 7 + 3] = a.GetPos().z();
+			//Atom colour
+			data[i * 7 + 4] = style.mColour.x;
+			data[i * 7 + 5] = style.mColour.y;
+			data[i * 7 + 6] = style.mColour.z;
+		}
+
+		mMoleculeBuffer->StoreData(data, mMolecule->GetAtoms().size() * 7);
+
+		delete[] data;
 	}
 
 	void CalculationLayer::ExecuteCalculation()
@@ -174,10 +230,11 @@ namespace SCESS
 		mPosTrisurf.Reset();
 		mNegTrisurf.Reset();
 
-		mOrderedLabels = false;
+		mOrbitalsOrdered = false;
 		mSelectedMO = -1;
 
-		mMolecule->MakeOrbitals();
+		std::string basisSetName = mBasisSets[mSelectedBasisSet];
+		mMolecule->MakeOrbitals(basisSetName);
 		mConsoleOutput.str(std::string());
 
 		mCalculationThread.Start([this]() {
@@ -231,7 +288,7 @@ namespace SCESS
 		}
 	}
 
-	void CalculationLayer::SortMOLabels(std::vector<const char*>& moLabels)
+	void CalculationLayer::OrderOrbitals()
 	{
 		auto sortCoeffs = [this](Eigen::VectorXd& Energies, Eigen::MatrixXd& Coeffs,
 			const Eigen::VectorXi& Occupation) {
@@ -274,18 +331,10 @@ namespace SCESS
 			sortCoeffs(mUHFResult->EnergiesAlpha, mUHFResult->CoeffsAlpha, mUHFResult->OccupationAlpha);
 			sortCoeffs(mUHFResult->EnergiesBeta, mUHFResult->CoeffsBeta, mUHFResult->OccupationBeta);
 		}
-
-		moLabels.clear();
-		moLabels.reserve(mMOLabels.size());
-		for (std::string& s : mMOLabels)
-		{
-			moLabels.push_back(s.c_str());
-		}
 	}
 
 	void CalculationLayer::OnImGuiRender()
 	{
-		static std::vector<const char*> moLabels;
 		static const char* moleculeNames[] =
 		{
 			"Water",
@@ -299,6 +348,7 @@ namespace SCESS
 
 		if (ImGui::Begin("Select Molecule"))
 		{
+
 			ImGui::SeparatorText("Molecules");
 			ImGui::BulletText("Selected Molecule: %s", mMoleculeName.c_str());
 			int selectedMolecule = -1;
@@ -392,6 +442,16 @@ namespace SCESS
 					mMethod = CalcMethod::DFT;
 					ExecuteCalculation();
 				}
+
+				if (ImGui::CollapsingHeader("Basis Sets", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					const char** basisSetNames = (const char**)alloca(sizeof(const char**) * mBasisSets.size());
+
+					for (uint32_t i = 0; i < mBasisSets.size(); i++)
+					{
+						ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i);
+					}
+				}
 			}
 
 			if (mCalculationThread.HasFinished())
@@ -407,13 +467,13 @@ namespace SCESS
 				{
 					if (mMethod == CalcMethod::RHF || mMethod == CalcMethod::UHF)
 					{
-						if (!mOrderedLabels)
+						if (!mOrbitalsOrdered)
 						{
-							SortMOLabels(moLabels);
-							mOrderedLabels = true;
+							OrderOrbitals();
+							mOrbitalsOrdered = true;
 						}
 
-						ImGui::BulletText("Basis Set: STO-3G");
+						ImGui::BulletText("Basis Set: %s", mBasisSets[mSelectedBasisSet].c_str());
 						ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
 							mMethod == CalcMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
 
@@ -462,9 +522,15 @@ namespace SCESS
 							int selectedOption2 = -1;
 							if (!(mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning()))
 							{
+								const char** orbitalLabels = (const char**)alloca(sizeof(const char**) * mMOLabels.size());
+
+								for (uint32_t i = 0; i < mMOLabels.size(); i++)
+									orbitalLabels[i] = mMOLabels[i].c_str();
+
+
 								ImGui::Text("Select an MO to generate an isosurface");
 								if (mMethod == CalcMethod::RHF)
-									ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], moLabels.size());
+									ImGui::ListBox("##listbox1", &selectedOption, &orbitalLabels[0], mMOLabels.size());
 								else
 								{
 									float width = ImGui::GetColumnWidth() * 0.5f;
@@ -473,9 +539,9 @@ namespace SCESS
 									ImGui::SameLine(width, 10.0f);
 									ImGui::Text("Beta (spin down) Orbitals");
 									ImGui::PushItemWidth(width);
-									ImGui::ListBox("##listbox1", &selectedOption, &moLabels[0], mUHFResult->EnergiesAlpha.rows());
+									ImGui::ListBox("##listbox1", &selectedOption, &orbitalLabels[0], mUHFResult->EnergiesAlpha.rows());
 									ImGui::SameLine();
-									ImGui::ListBox("##listbox2", &selectedOption2, &moLabels[mUHFResult->EnergiesAlpha.rows()], mUHFResult->EnergiesBeta.rows());
+									ImGui::ListBox("##listbox2", &selectedOption2, &orbitalLabels[mUHFResult->EnergiesAlpha.rows()], mUHFResult->EnergiesBeta.rows());
 									ImGui::PopItemWidth();
 								}
 							}

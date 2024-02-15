@@ -17,7 +17,7 @@ namespace SCESS
 		virtual void Bind() override;
 		virtual void Unbind() override;
 
-		virtual void SubmitArrays(const GLenum drawMode = GL_TRIANGLES) override;
+		virtual void SubmitArrays(const GLenum drawMode = GL_TRIANGLES, size_t instances = 1) override;
 
 		virtual Index AddVertexBuffer(const sRef<VertexBuffer>& buffer, const VertexSpecification spec = { 3,0,0,0 }) override;
 		virtual void AddIndexBuffer(const sRef<IndexBuffer>& buffer) override;

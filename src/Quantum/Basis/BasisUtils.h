@@ -8,5 +8,12 @@
 
 namespace SCESS::BasisUtils 
 {
+	struct BasisSet
+	{
+	public:
+
+	};
+
+	std::vector<std::string> ListBasisSets();
 	std::optional<nlohmann::json> LoadBasisSetJSON(const std::string_view jsonFilePath);
 }

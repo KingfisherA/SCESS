@@ -22,7 +22,6 @@ void main()
 #begin(fShader)
 
 in vec3 vNormal;
-in float vSign;
 //
 out vec4 fragColour;
 

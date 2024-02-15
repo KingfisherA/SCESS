@@ -1,9 +1,11 @@
 #include<pch.h>
+#include<boost/locale/conversion.hpp>
 
 #include"Molecule.h"
 #include"Basis/BasisUtils.h"
 #include"Basis/Gaussian.h"
-#include "Utilities/PathUtils.h"
+#include"Utilities/PathUtils.h"
+#include"Chemistry/PeriodicTable.h"
 
 //
 //
@@ -11,85 +13,163 @@ namespace SCESS
 {
 	std::unordered_map<std::string_view, AtomStyle> AtomStyle::sAtomStyle =
 	{
-		{"H", {{1.0f, 1.0f, 1.0f}, 0.7f}},
+		{"H", {{1.0f, 1.0f, 1.0f}, 1.0f}},
 		{"C", {{0.1f, 0.1f, 0.1f}, 2.0f}},
 		{"Li", {{0.8f, 0.9f, 1.0f}, 3.15f}},
 		{"N", {{0.0f, 0.5f, 0.5f}, 1.8f}},
 		{"O", {{1.0f, 0.0f, 0.0f}, 1.7f}}
 	};
 
-	void Molecule::MakeOrbitals()
+	void Molecule::MakeOrbitals(const std::string& basisSetName)
 	{
-		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath(R"(Basis\sto-3g.json)").string());
+		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath("Basis\\" + basisSetName + ".json").string());
 		if (!basisSetOpt.has_value())
 		{
 			throw std::exception("Basis set could not be loaded succesfully");
 		}
 		nlohmann::json& basisSet = *basisSetOpt;
-
+		std::vector<SCESS::OrbitalType> types;
 		mOrbitals.clear();
 		mNoElectrons = 0;
+
+		if (basisSetName == "sto-3g")
+		{
+			for (Atom& a : mAtoms)
+			{
+				nlohmann::json atomBasis = basisSet[a.GetAtomSymbol()];
+				a.SetCharge(atomBasis["atomic_number"].get<int>());
+				mNoElectrons += a.GetCharge();
+				nlohmann::json& cgfs = atomBasis["cgfs"];
+				for (size_t i = 0; i < cgfs.size(); i++)
+				{
+					nlohmann::json& AO = cgfs[i];
+					std::string AOType;
+					AO["type"].get_to(AOType);
+
+					types.clear();
+					if (AOType == "S")
+					{
+						types.push_back(SCESS::OrbitalType::S);
+					}
+					else if (AOType == "P")
+					{
+						types.push_back(SCESS::OrbitalType::P_X);
+						types.push_back(SCESS::OrbitalType::P_Y);
+						types.push_back(SCESS::OrbitalType::P_Z);
+					}
+					else if (AOType == "D")
+					{
+						types.push_back(SCESS::OrbitalType::D_X2);
+						types.push_back(SCESS::OrbitalType::D_Y2);
+						types.push_back(SCESS::OrbitalType::D_Z2);
+						types.push_back(SCESS::OrbitalType::D_XY);
+						types.push_back(SCESS::OrbitalType::D_XZ);
+						types.push_back(SCESS::OrbitalType::D_YZ);
+					}
+					else if (AOType == "F")
+					{
+						types.push_back(SCESS::OrbitalType::F_X3);
+						types.push_back(SCESS::OrbitalType::F_Y3);
+						types.push_back(SCESS::OrbitalType::F_Z3);
+						types.push_back(SCESS::OrbitalType::F_X2_Y);
+						types.push_back(SCESS::OrbitalType::F_X_Y2);
+						types.push_back(SCESS::OrbitalType::F_X2_Z);
+						types.push_back(SCESS::OrbitalType::F_X_Z2);
+						types.push_back(SCESS::OrbitalType::F_Y2_Z);
+						types.push_back(SCESS::OrbitalType::F_Y_Z2);
+						types.push_back(SCESS::OrbitalType::F_XYZ);
+					}
+
+					nlohmann::json& gtos = AO["gtos"];
+					for (SCESS::OrbitalType type : types)
+					{
+						GaussianCollection collection(a.GetPos());
+						for (nlohmann::json& gto : gtos)
+						{
+							double exponent, coeff = 0.0;
+							gto["alpha"].get_to(exponent);
+							gto["coeff"].get_to(coeff);
+							collection.Add(type, Gaussian(exponent, coeff));
+						}
+						mOrbitals.push_back(collection);
+					}
+				}
+			}
+			return;
+		}
+
+		PeriodicTable::OpenQuery();
+
 		for (Atom& a : mAtoms)
 		{
-			nlohmann::json& atomBasis = basisSet[a.GetAtomSymbol()];
-			a.SetCharge(atomBasis["atomic_number"].get<int>());
+			nlohmann::json atomData = PeriodicTable::QueryElementSym(a.GetAtomSymbol());
+			a.SetCharge(atomData["Atomic_Number"].get<int>());
 			mNoElectrons += a.GetCharge();
-			nlohmann::json& cgfs = atomBasis["cgfs"];
-			for (size_t i = 0; i < cgfs.size(); i++)
+
+			nlohmann::json shells = basisSet["elements"][std::to_string(a.GetCharge())]["electron_shells"];
+			for (size_t i = 0; i < shells.size(); i++)
 			{
-				nlohmann::json& AO = cgfs[i];
-				std::string AOType;
-				AO["type"].get_to(AOType);
+				nlohmann::json& shell = shells[i];
+				nlohmann::json angMomenta = shell["angular_momentum"];
+				for (size_t j = 0; j < angMomenta.size(); j++)
+				{
+					int angularMomentum = angMomenta[j].get<int>();
 
-				std::vector<SCESS::OrbitalType> types;
-				if (AOType == "S")
-				{
-					types.push_back(SCESS::OrbitalType::S);
-				}
-				else if (AOType == "P")
-				{
-					types.push_back(SCESS::OrbitalType::P_X);
-					types.push_back(SCESS::OrbitalType::P_Y);
-					types.push_back(SCESS::OrbitalType::P_Z);
-				}
-				else if (AOType == "D")
-				{
-					types.push_back(SCESS::OrbitalType::D_X2);
-					types.push_back(SCESS::OrbitalType::D_Y2);
-					types.push_back(SCESS::OrbitalType::D_Z2);
-					types.push_back(SCESS::OrbitalType::D_XY);
-					types.push_back(SCESS::OrbitalType::D_XZ);
-					types.push_back(SCESS::OrbitalType::D_YZ);
-				}
-				else if (AOType == "F")
-				{
-					types.push_back(SCESS::OrbitalType::F_X3);
-					types.push_back(SCESS::OrbitalType::F_Y3);
-					types.push_back(SCESS::OrbitalType::F_Z3);
-					types.push_back(SCESS::OrbitalType::F_X2_Y);
-					types.push_back(SCESS::OrbitalType::F_X_Y2);
-					types.push_back(SCESS::OrbitalType::F_X2_Z);
-					types.push_back(SCESS::OrbitalType::F_X_Z2);
-					types.push_back(SCESS::OrbitalType::F_Y2_Z);
-					types.push_back(SCESS::OrbitalType::F_Y_Z2);
-					types.push_back(SCESS::OrbitalType::F_XYZ);
-				}
-
-				nlohmann::json& gtos = AO["gtos"];
-				for (SCESS::OrbitalType type : types)
-				{
-					GaussianCollection collection(a.GetPos());
-					for (nlohmann::json& gto : gtos)
+					types.clear();
+					switch (angularMomentum)
 					{
-						double exponent, coeff = 0.0;
-						gto["alpha"].get_to(exponent);
-						gto["coeff"].get_to(coeff);
-						collection.Add(type, Gaussian(exponent, coeff));
+					case 0:
+						types.push_back(SCESS::OrbitalType::S);
+						break;
+					case 1:
+						types.push_back(SCESS::OrbitalType::P_X);
+						types.push_back(SCESS::OrbitalType::P_Y);
+						types.push_back(SCESS::OrbitalType::P_Z);
+						break;
+					case 2:
+						types.push_back(SCESS::OrbitalType::D_X2);
+						types.push_back(SCESS::OrbitalType::D_Y2);
+						types.push_back(SCESS::OrbitalType::D_Z2);
+						types.push_back(SCESS::OrbitalType::D_XY);
+						types.push_back(SCESS::OrbitalType::D_XZ);
+						types.push_back(SCESS::OrbitalType::D_YZ);
+						break;
+					case 3:
+						types.push_back(SCESS::OrbitalType::F_X3);
+						types.push_back(SCESS::OrbitalType::F_Y3);
+						types.push_back(SCESS::OrbitalType::F_Z3);
+						types.push_back(SCESS::OrbitalType::F_X2_Y);
+						types.push_back(SCESS::OrbitalType::F_X_Y2);
+						types.push_back(SCESS::OrbitalType::F_X2_Z);
+						types.push_back(SCESS::OrbitalType::F_X_Z2);
+						types.push_back(SCESS::OrbitalType::F_Y2_Z);
+						types.push_back(SCESS::OrbitalType::F_Y_Z2);
+						types.push_back(SCESS::OrbitalType::F_XYZ);
+						break;
 					}
-					mOrbitals.push_back(collection);
+
+					for (SCESS::OrbitalType type : types)
+					{
+						GaussianCollection collection(a.GetPos());
+						nlohmann::json exponents = shell["exponents"];
+						nlohmann::json coefficients = shell["coefficients"];
+						for (nlohmann::json& coeffCollection : coefficients)
+						{
+							for (size_t k = 0; k < coeffCollection.size(); k++)
+							{
+								std::string exponentS, coeffS;
+								coeffCollection[k].get_to(coeffS);
+								exponents[k].get_to(exponentS);
+								collection.Add(type, Gaussian(std::stod(exponentS), std::stod(coeffS)));
+							}
+						}
+						mOrbitals.push_back(collection);
+					}
 				}
 			}
 		}
+
+		PeriodicTable::CloseQuery();
 	}
 
 	double Molecule::CalculateNuclearRepulsion() const

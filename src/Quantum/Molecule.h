@@ -88,7 +88,7 @@ namespace SCESS
 			mAtoms.emplace_back(a);
 		}
 
-		void MakeOrbitals();
+		void MakeOrbitals(const std::string& basisSetName);
 
 		const Atom& GetAtom(size_t index) const
 		{
@@ -103,6 +103,11 @@ namespace SCESS
 		const std::vector<Atom>& GetAtoms() const
 		{
 			return mAtoms;
+		}
+
+		const size_t GetNoAtoms() const
+		{
+			return mAtoms.size();
 		}
 
 		std::vector<Atom>& GetAtoms()
@@ -130,7 +135,7 @@ namespace SCESS
 			return mOrbitals;
 		}
 
-		size_t NoOrbitals() const {
+		size_t GetNoOrbitals() const {
 			return mOrbitals.size();
 		}
 
@@ -151,9 +156,14 @@ namespace SCESS
 
 		static std::unordered_map<std::string_view, AtomStyle> sAtomStyle;
 
+
+
 		inline static const AtomStyle& GetStyle(const std::string_view atom)
 		{
-			return sAtomStyle.at(atom);
+			auto it = sAtomStyle.find(atom);
+			if (it != sAtomStyle.end())
+				return it->second;
+			return { {0.1, 0.1, 0.1}, 1.0f };
 		}
 
 	};
