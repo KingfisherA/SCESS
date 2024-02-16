@@ -77,6 +77,7 @@ namespace SCESS
 		sRef<UHFResult> mUHFResult;
 		double mDFTEnergy = 0.0;
 		double mMP2Energy = 0.0;
+		std::string mCalcBasiSet;
 
 		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
 		std::vector<std::string> mMOLabels;

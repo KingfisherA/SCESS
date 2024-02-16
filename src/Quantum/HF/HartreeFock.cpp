@@ -15,10 +15,11 @@ namespace SCESS
 	RHFResult HF::RestrictedHF(const Molecule& molecule,
 		const double convergeLimit,
 		const size_t scfMaxIterations,
-		std::stringstream* consoleStream)
+		std::stringstream* consoleStream,
+		const std::string_view basisSet)
 	{
 		if (consoleStream)
-			*consoleStream << "---Restricted Hartree Fock---\n Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
+			*consoleStream << "---Restricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
 
 		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
 		const Eigen::MatrixXd& S = integrals.S;
@@ -105,10 +106,10 @@ namespace SCESS
 	}
 
 	UHFResult HF::UnrestrictedHF(const Molecule& molecule, const double convergeLimit, const size_t scfMaxIterations,
-		std::stringstream* consoleStream)
+		std::stringstream* consoleStream, const std::string_view basisSet)
 	{
 		if (consoleStream != nullptr)
-			*consoleStream << "---Unrestricted Hartree Fock---\n Using STO-3G basis with " << molecule.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
+			*consoleStream << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.GetOrbitals().size() << " basis set functions\snBeginning integral evaluation...\n";
 
 		//Spin-up electrons
 		size_t alphaElectrons = molecule.GetNoElectrons() / 2;

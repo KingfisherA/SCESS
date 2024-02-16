@@ -73,8 +73,8 @@ namespace SCESS
 		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 4, 1 });
 
 		mBasisSets = BasisUtils::ListBasisSets();
-		mSelectedBasisSet = std::max(0, 
-			(int)std::distance(mBasisSets.begin(), 
+		mSelectedBasisSet = std::max(0,
+			(int)std::distance(mBasisSets.begin(),
 				std::find(mBasisSets.begin(), mBasisSets.end(), "sto-3g")));
 	}
 
@@ -233,8 +233,8 @@ namespace SCESS
 		mOrbitalsOrdered = false;
 		mSelectedMO = -1;
 
-		std::string basisSetName = mBasisSets[mSelectedBasisSet];
-		mMolecule->MakeOrbitals(basisSetName);
+		mCalcBasiSet = mBasisSets[mSelectedBasisSet];
+		mMolecule->MakeOrbitals(mCalcBasiSet);
 		mConsoleOutput.str(std::string());
 
 		mCalculationThread.Start([this]() {
@@ -242,14 +242,14 @@ namespace SCESS
 			{
 			case CalcMethod::RHF:
 				mRHFResult = std::make_shared<RHFResult>(
-					std::move(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput)));
+					std::move(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput, mCalcBasiSet)));
 				break;
 			case CalcMethod::UHF:
 				mUHFResult = std::make_shared<UHFResult>(
-					std::move(SCESS::HF::UnrestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput)));
+					std::move(SCESS::HF::UnrestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput, mCalcBasiSet)));
 				break;
 			case CalcMethod::DFT:
-				mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput);
+				mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
 				break;
 			}
 			mCalculationThread.MarkAsFinished();
@@ -355,7 +355,7 @@ namespace SCESS
 			ImGui::ListBox("##selectMoleculeLB", &selectedMolecule, moleculeNames, IM_ARRAYSIZE(moleculeNames));
 			ImGui::Checkbox("Draw Molecule", &mRenderMolecule);
 			if (mRenderMolecule)
-				ImGui::SliderFloat("##molOpacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
+				ImGui::SliderFloat("Molecule Opacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
 
 
 			if (selectedMolecule != -1)
@@ -473,7 +473,7 @@ namespace SCESS
 							mOrbitalsOrdered = true;
 						}
 
-						ImGui::BulletText("Basis Set: %s", mBasisSets[mSelectedBasisSet].c_str());
+						ImGui::BulletText("Basis Set: %s", mCalcBasiSet.c_str());
 						ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
 							mMethod == CalcMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
 

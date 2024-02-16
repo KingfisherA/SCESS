@@ -24,7 +24,8 @@ namespace SCESS
 		/// <param name="consoleStream">An optional pointer to a string stream to output progress information to</param>
 		/// <returns>A RHFResult structure with MO coefficients and energies</returns>
 		static RHFResult RestrictedHF(const Molecule& molecule, const double convergeLimit = 1E-5,
-			const size_t scfMaxIterations = 100, std::stringstream* consoleStream = nullptr);
+			const size_t scfMaxIterations = 100, std::stringstream* consoleStream = nullptr,
+			const std::string_view basisSet = "");
 
 		/// <summary>
 		/// Computes the unrestricted open-shell hartree fock energy and orbitals in the given basis set defined by the molecule.
@@ -35,7 +36,8 @@ namespace SCESS
 		/// <param name="consoleStream">An optional pointer to a string stream to output progress information to</param>
 		/// <returns>A RHFResult structure with MO coefficients and energies</returns>
 		static UHFResult UnrestrictedHF(const Molecule& molecule, const double convergeLimit = 1E-5,
-			const size_t scfMaxIterations = 100, std::stringstream* consoleStream = nullptr);
+			const size_t scfMaxIterations = 100, std::stringstream* consoleStream = nullptr, 
+			const std::string_view basisSet = "");
 
 		/// <summary>
 		/// Evaluate the energy for a given density, hamiltonian and fock matrix for a closed-shell RHF procedure.

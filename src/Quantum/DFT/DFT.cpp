@@ -11,10 +11,10 @@
 //
 namespace SCESS
 {
-	double DFT::RunDFT(const Molecule& mol, std::stringstream* consoleStream)
+	double DFT::RunDFT(const Molecule& mol, std::stringstream* consoleStream, const std::string_view basisSet)
 	{
 		if (consoleStream)
-			*consoleStream << "---Density Functional Theory---\n Using STO-3G basis with " << mol.GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
+			*consoleStream << "---Density Functional Theory---\n Using " << basisSet << " basis set with " << mol.GetOrbitals().size() << " basis set functions \n No aux basis.\nBeginning integral evaluation...\n";
 
 		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(mol);
 		const Eigen::MatrixXd& S = integrals.S;
@@ -152,7 +152,7 @@ namespace SCESS
 
 		XCFunctional::Exchange_AlphaX(densityAlpha, densityBeta, exchangeE, exchangePotentialAlpha, exchangePotentialBeta);
 		XCFunctional::Correlation_VMW(densityAlpha, densityBeta, correlationE, correlationPotentialAlpha, correlationPotentialBeta);
-		
+
 		energyOut = weights.dot(exchangeE + correlationE);
 
 		Eigen::VectorXd wva = weights.cwiseProduct((exchangePotentialAlpha + exchangePotentialBeta
