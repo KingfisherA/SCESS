@@ -174,23 +174,24 @@ namespace SCESS
 
 	void Molecule::ConstructBonding()
 	{
-		for (size_t i = 0; i < mAtoms.size()-1; i++)
+		for (size_t i = 0; i < mAtoms.size(); i++)
 		{
-			std::pair<unsigned int, unsigned int> bond;
-			bond.first = i;
-			bond.second = 0;
+			std::vector<BondPair> bonds(1);
 
-			double lastDist2 = 1E100;
-			for (size_t j = i + 1; j < mAtoms.size(); j++)
+			for (size_t j = 0; j < mAtoms.size(); j++)
 			{
+				if (i == j) continue;
 				double distance2 = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).squaredNorm();
-				if (distance2 < lastDist2)
+				if (distance2 < 7.0f)
 				{
-					bond.second = j;
-					lastDist2 = distance2;
+					bonds.push_back(BondPair{ i,j });
 				}
 			}
-			mBonds.push_back(bond);
+
+			for (BondPair& p : bonds)
+			{
+				mBonds.insert(p);
+			}
 		}
 	}
 

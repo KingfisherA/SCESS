@@ -506,6 +506,7 @@ namespace SCESS
 	sRef<Mesh> Geometry::CreateCylinder(float radius, float height, size_t segments)
 	{
 		std::vector<glm::vec3> vertices(2 * segments + 2);
+		//std::vector<glm::vec3> normals(2 * segments + 2);
 		size_t noTriangles = 4 * segments;
 		std::vector<unsigned int> indicies;
 		indicies.reserve(noTriangles * 3);
@@ -517,7 +518,9 @@ namespace SCESS
 			glm::vec3 v1(radius * cos(theta), radius * sin(theta), height * 0.5f);
 			glm::vec3 v2(v1.x, v1.y, -height * 0.5f);
 			vertices[i + 1] = v1;
+			//normals[i + 1] = glm::vec3(v1.x, v2.y, 0.0f);
 			vertices[i + 1 + segments] = v2;
+			//normals[i + 1 + segments] = glm::vec3(v1.x, v2.y, 0.0f);
 		}
 		vertices[2 * segments + 1] = { 0.0f, 0.0f, -height * 0.5f };
 
@@ -545,7 +548,7 @@ namespace SCESS
 			indicies.push_back(2 * segments + 1);
 			indicies.push_back(i == segments - 1 ? segments + 1 : i + segments + 2);
 		}
-
+		
 		sRef<Mesh> cylinderMesh = std::make_shared<Mesh>(vertices.size() * sizeof(glm::vec3) +
 			indicies.size() * sizeof(unsigned int));
 

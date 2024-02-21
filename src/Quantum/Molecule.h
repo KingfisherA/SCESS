@@ -7,6 +7,32 @@
 #include<Eigen/Core>
 #include<utility>
 #include<unordered_map>
+#include<unordered_set>
+
+namespace SCESS {
+
+	struct BondPair
+	{
+		size_t atom1 = 0;
+		size_t atom2 = 0;
+	};
+
+	inline bool operator==(const BondPair& a, const BondPair& b)
+	{
+		return (a.atom1 == b.atom1 && a.atom2 == b.atom2) ||
+			(a.atom1 == b.atom2 && a.atom2 == b.atom1);
+	}
+}
+
+template <>
+struct std::hash<SCESS::BondPair>
+{
+	std::size_t operator()(const SCESS::BondPair& k) const
+	{
+		std::hash<uint32_t> hashObj;
+		return hashObj(k.atom1) + hashObj(k.atom2);
+	}
+};
 
 namespace SCESS
 {
@@ -71,7 +97,7 @@ namespace SCESS
 	{
 	private:
 		std::vector<Atom> mAtoms;
-		std::vector<std::pair<unsigned int, unsigned int>> mBonds;
+		std::unordered_set<BondPair> mBonds;
 		std::vector<GaussianCollection> mOrbitals;
 		size_t mNoElectrons;
 	public:
@@ -122,12 +148,12 @@ namespace SCESS
 
 		void ConstructBonding();
 
-		std::vector<std::pair<unsigned int, unsigned int>>& GetBonds()
+		std::unordered_set<BondPair>& GetBonds()
 		{
 			return mBonds;
 		}
 
-		const std::vector<std::pair<unsigned int, unsigned int>>& GetBonds() const
+		const std::unordered_set<BondPair>& GetBonds() const
 		{
 			return mBonds;
 		}

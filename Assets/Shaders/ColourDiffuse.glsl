@@ -15,8 +15,9 @@ out vec3 vNormal;
 
 void main()
 {
-    vNormal = normalize(aVertex);
-    gl_Position = uPVMatrix * uTransformMatrix * vec4(aVertex, 1.0f);
+    vec4 transformedV = uTransformMatrix * vec4(aVertex, 1.0f);
+    vNormal = normalize(transformedV.xyz);
+    gl_Position = uPVMatrix * transformedV;
 }
 
 #end(vShader)

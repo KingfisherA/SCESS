@@ -75,7 +75,6 @@ namespace SCESS
 
 		sRef<ShaderProgram> mDiffuseProg;
 		sRef<ShaderProgram> mMoleculeDiffuseProg;
-		sRef<ShaderProgram> mSolidColourProg;
 
 		std::stringstream mConsoleOutput;
 		bool mOrbitalsOrdered = false;

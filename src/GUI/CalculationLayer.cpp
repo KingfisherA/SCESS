@@ -50,9 +50,6 @@ namespace SCESS
 		mMoleculeDiffuseProg = ShaderProgram::CreateFromFile(
 			PathUtils::GetAssetPath(R"(Shaders\MoleculeColourDiffuse.glsl)").string());
 
-		mSolidColourProg = ShaderProgram::CreateFromFile(
-			PathUtils::GetAssetPath(R"(Shaders\SolidColour.glsl)").string());
-
 		mPosTrisurfVAO = VertexArray::Create();
 		mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 		mNegTrisurfVAO = VertexArray::Create();
@@ -75,7 +72,7 @@ namespace SCESS
 		//Atom Colour
 		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 4, 1 });
 
-		mMoleculeBondVAO = VertexArray::Create(Geometry::CreateCylinder(0.2f, 1.0f, 50));
+		mMoleculeBondVAO = VertexArray::Create(Geometry::CreateCylinder(0.2f, 0.5f, 50));
 
 		mBasisSets = BasisUtils::ListBasisSets();
 		mSelectedBasisSet = std::max(0,
@@ -129,17 +126,19 @@ namespace SCESS
 		//	}
 		//}
 
-		if (mMolRenderStyle == MoleculeStyle::BallStick && mMolecule != nullptr)
-		{
-			mSolidColourProg->Bind();
-			mSolidColourProg->UploadMatF("uPVMatrix", pvMatrix);
-			mSolidColourProg->UploadVecF("uColour", glm::vec3(0.5f));
-			mSolidColourProg->UploadF("uOpacity", mMoleculeOpacity);
+		mDiffuseProg->Bind();
+		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
+		mDiffuseProg->UploadMatF("uPVMatrix", pvMatrix);
 
-			for (const std::pair<unsigned int, unsigned int>& bond : mMolecule->GetBonds())
+		if (mMolRenderStyle == MoleculeStyle::BallStick && mMolecule != nullptr && mRenderMolecule)
+		{
+			mDiffuseProg->UploadVecF("uColour", glm::vec3(1.0f));
+			mDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
+
+			for (const BondPair& bond : mMolecule->GetBonds())
 			{
-				const Atom& a1 = mMolecule->GetAtom(bond.first);
-				const Atom& a2 = mMolecule->GetAtom(bond.second);
+				const Atom& a1 = mMolecule->GetAtom(bond.atom1);
+				const Atom& a2 = mMolecule->GetAtom(bond.atom2);
 				glm::vec3 pos1 = glm::vec3(a1.GetPos().x(), a1.GetPos().y(), a1.GetPos().z());
 				glm::vec3 pos2 = glm::vec3(a2.GetPos().x(), a2.GetPos().y(), a2.GetPos().z());
 				glm::vec3 dirVec = pos1 - pos2;
@@ -159,11 +158,9 @@ namespace SCESS
 
 				glm::mat4 transformMat =
 					glm::translate(midpoint) *
-					glm::mat4(rotationMat) * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length() * 0.8f))
+					glm::mat4(rotationMat) * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length()));
 
-					;
-
-				mSolidColourProg->UploadMatF("uTransformMatrix", transformMat);
+				mDiffuseProg->UploadMatF("uTransformMatrix", transformMat);
 
 				mMoleculeBondVAO->Bind();
 				mMoleculeBondVAO->SubmitArrays();
@@ -171,9 +168,7 @@ namespace SCESS
 		}
 
 		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
-		mDiffuseProg->Bind();
-		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
-		mDiffuseProg->UploadMatF("uPVMatrix", pvMatrix);
+
 		mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
 		mDiffuseProg->UploadMatF("uTransformMatrix", glm::mat4(1.0f));
 
@@ -252,7 +247,7 @@ namespace SCESS
 			const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
 
 			//Atom scale
-			data[i * 7 + 0] = mMolRenderStyle == MoleculeStyle::SpaceFill ? style.mRadius : 0.5;
+			data[i * 7 + 0] = mMolRenderStyle == MoleculeStyle::SpaceFill ? style.mRadius : 0.6f;
 			//Atom Translation
 			data[i * 7 + 1] = a.GetPos().x();
 			data[i * 7 + 2] = a.GetPos().y();
@@ -401,20 +396,22 @@ namespace SCESS
 			ImGui::ListBox("##selectMoleculeLB", &selectedMolecule, moleculeNames, IM_ARRAYSIZE(moleculeNames));
 			ImGui::Checkbox("Draw Molecule", &mRenderMolecule);
 			if (mRenderMolecule)
+			{
 				ImGui::SliderFloat("Molecule Opacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
 
-			ImGui::SeparatorText("Molecule Render Style");
-			MoleculeStyle lastStyle = mMolRenderStyle;
-			ImGui::RadioButton("Spacefill", (int*)&mMolRenderStyle, 0);
-			ImGui::RadioButton("Ball & Stick", (int*)&mMolRenderStyle, 1);
+				ImGui::SeparatorText("Molecule Render Style");
+				MoleculeStyle lastStyle = mMolRenderStyle;
+				ImGui::RadioButton("Spacefill", (int*)&mMolRenderStyle, 0);
+				ImGui::RadioButton("Ball & Stick", (int*)&mMolRenderStyle, 1);
 
-			if (lastStyle != mMolRenderStyle)
-				UploadMolecule();
-			if (selectedMolecule != -1)
-			{
-				mSelectedMolecule = selectedMolecule;
-				mMoleculeName = moleculeNames[mSelectedMolecule];
-				SelectMolecule();
+				if (lastStyle != mMolRenderStyle)
+					UploadMolecule();
+				if (selectedMolecule != -1)
+				{
+					mSelectedMolecule = selectedMolecule;
+					mMoleculeName = moleculeNames[mSelectedMolecule];
+					SelectMolecule();
+				}
 			}
 
 			//if (ImGui::Button("Test"))
