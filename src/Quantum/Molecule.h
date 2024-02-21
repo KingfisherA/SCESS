@@ -71,19 +71,24 @@ namespace SCESS
 	{
 	private:
 		std::vector<Atom> mAtoms;
+		std::vector<std::pair<unsigned int, unsigned int>> mBonds;
 		std::vector<GaussianCollection> mOrbitals;
 		size_t mNoElectrons;
 	public:
 
-		Molecule() :mNoElectrons(0) {}
-		Molecule(const Molecule& m) :mAtoms(m.mAtoms), mOrbitals(m.mOrbitals), mNoElectrons(m.mNoElectrons) {}
-		Molecule(Molecule&& m) noexcept :mAtoms(std::move(m.mAtoms)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
+		Molecule() :mNoElectrons(0) { }
+		Molecule(const Molecule& m) :mAtoms(m.mAtoms), mBonds(m.mBonds), mOrbitals(m.mOrbitals), mNoElectrons(m.mNoElectrons) {}
+		Molecule(Molecule&& m) noexcept :mAtoms(std::move(m.mAtoms)), mBonds(std::move(m.mBonds)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
 		Molecule(const std::vector<Atom>& atomsIn) : mAtoms(atomsIn), mNoElectrons(0)
-		{}
+		{
+			ConstructBonding();
+		}
 		Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn)), mNoElectrons(0)
-		{}
+		{
+			ConstructBonding();
+		}
 
-		void AddAtom(const Atom& a)
+		void InsertAtom(const Atom& a)
 		{
 			mAtoms.emplace_back(a);
 		}
@@ -113,6 +118,18 @@ namespace SCESS
 		std::vector<Atom>& GetAtoms()
 		{
 			return mAtoms;
+		}
+
+		void ConstructBonding();
+
+		std::vector<std::pair<unsigned int, unsigned int>>& GetBonds()
+		{
+			return mBonds;
+		}
+
+		const std::vector<std::pair<unsigned int, unsigned int>>& GetBonds() const
+		{
+			return mBonds;
 		}
 
 		GaussianCollection& GetOrbital(uint32_t i)

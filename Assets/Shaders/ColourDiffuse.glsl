@@ -8,14 +8,15 @@
 
 layout(location = 0) in vec3 aVertex;
 //
-uniform mat4 uMPVMatrix;
+uniform mat4 uTransformMatrix;
+uniform mat4 uPVMatrix;
 //
 out vec3 vNormal;
 
 void main()
 {
     vNormal = normalize(aVertex);
-    gl_Position = uMPVMatrix * vec4(aVertex, 1.0f);
+    gl_Position = uPVMatrix * uTransformMatrix * vec4(aVertex, 1.0f);
 }
 
 #end(vShader)

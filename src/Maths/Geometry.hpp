@@ -93,10 +93,12 @@ namespace SCESS
 		//
 		static sRef<Mesh> CreateIcosahedron(float size = 1.0f);
 		static sRef<Mesh> CreateIcosphere(float radius, unsigned int subdivisions);
+		//
+		static sRef<Mesh> CreateCylinder(float radius, float height, size_t segments);
 	private:
 		//
 		static std::vector<unsigned int> DetectSphereWrappedUVCoords(const std::vector<TriangleI>& triangles, const std::vector<glm::vec2>& texCoords, unsigned int hintCount = 0);
-		static void FixSphereWrappedUV(const std::vector<unsigned int>& wrapped, std::vector<glm::vec3>& verticies, 
+		static void FixSphereWrappedUV(const std::vector<unsigned int>& wrapped, std::vector<glm::vec3>& verticies,
 			std::vector<TriangleI>& triangles, std::vector<glm::vec2>& texCoords, unsigned int hintCount = 0);
 		static void FixPoleVerticies(std::vector<glm::vec3>& verticies, std::vector<glm::vec2>& texCoords, std::vector<TriangleI>& triangles);
 		//

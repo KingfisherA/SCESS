@@ -25,6 +25,12 @@ namespace SCESS
 		DFT
 	};
 
+	enum class MoleculeStyle:int
+	{
+		SpaceFill =0,
+		BallStick = 1 
+	};
+
 	class CalculationLayer : public Layer
 	{
 	public:
@@ -57,6 +63,8 @@ namespace SCESS
 		uRef<Molecule> mMolecule;
 		sRef<VertexArray> mMoleculeVAO;
 		sRef<VertexBuffer> mMoleculeBuffer;
+		sRef<VertexArray> mMoleculeBondVAO;
+		MoleculeStyle mMolRenderStyle = MoleculeStyle::BallStick;
 		bool mRenderMolecule = true;
 		float mMoleculeOpacity = 1.0f;
 
@@ -67,6 +75,7 @@ namespace SCESS
 
 		sRef<ShaderProgram> mDiffuseProg;
 		sRef<ShaderProgram> mMoleculeDiffuseProg;
+		sRef<ShaderProgram> mSolidColourProg;
 
 		std::stringstream mConsoleOutput;
 		bool mOrbitalsOrdered = false;

@@ -172,6 +172,28 @@ namespace SCESS
 		PeriodicTable::CloseQuery();
 	}
 
+	void Molecule::ConstructBonding()
+	{
+		for (size_t i = 0; i < mAtoms.size()-1; i++)
+		{
+			std::pair<unsigned int, unsigned int> bond;
+			bond.first = i;
+			bond.second = 0;
+
+			double lastDist2 = 1E100;
+			for (size_t j = i + 1; j < mAtoms.size(); j++)
+			{
+				double distance2 = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).squaredNorm();
+				if (distance2 < lastDist2)
+				{
+					bond.second = j;
+					lastDist2 = distance2;
+				}
+			}
+			mBonds.push_back(bond);
+		}
+	}
+
 	double Molecule::CalculateNuclearRepulsion() const
 	{
 		double Vnn = 0.0;

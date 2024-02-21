@@ -7,21 +7,22 @@
 #include"Geometry.hpp"
 #include"Utilities/Assert.h"
 #include"Maths/Maths.hpp"
+#include<numbers>
 
 namespace SCESS
 {
-//
- struct hash_pair 
- {
-	template <class T1, class T2>
-	size_t operator()(const std::pair<T1, T2>& p) const
+	//
+	struct hash_pair
 	{
-		auto hash1 = std::hash<T1>{}(p.first);
-		auto hash2 = std::hash<T2>{}(p.second);
-		return hash1 ^ hash2;
-	}
-};
-//
+		template <class T1, class T2>
+		size_t operator()(const std::pair<T1, T2>& p) const
+		{
+			auto hash1 = std::hash<T1>{}(p.first);
+			auto hash2 = std::hash<T2>{}(p.second);
+			return hash1 ^ hash2;
+		}
+	};
+	//
 #pragma region Mesh
 	//
 	Mesh::Mesh(const size_t bufferByteSize) : byteBufferSize(bufferByteSize)
@@ -205,7 +206,7 @@ namespace SCESS
 			verticies.size() * sizeof(glm::vec3) * 2 + //*2 for normals
 			texCoord.size() * sizeof(glm::vec2) +
 			triangles.size() * sizeof(TriangleI)
-			);
+		);
 
 		float* verticiesSpan = sphereMesh->GetVertexArray(verticies.size() * 3);
 		float* normalsSpan = sphereMesh->GetNormalsArray(verticies.size() * 3);
@@ -309,7 +310,7 @@ namespace SCESS
 			verticiesArray.size() * sizeof(glm::vec3) * 2 /*For normals array */ +
 			trianglesArray.size() * sizeof(TriangleI) +
 			texCoordsArray.size() * sizeof(glm::vec2)
-			);
+		);
 
 		float* vertexArrayS = sphereMesh->GetVertexArray(verticiesArray.size() * 3);
 		unsigned int* indiciesArrayS = sphereMesh->GetIndiciesArray(trianglesArray.size() * 3);
@@ -335,7 +336,7 @@ namespace SCESS
 		sRef<Mesh>icosahedronMesh = make <Mesh>(
 			ICOSAHEDRON_VERTS.size() * sizeof(float) * 2 +
 			ICOSAHEDRON_TRIS.size() * sizeof(unsigned int)
-			);
+		);
 
 		float* Verticies = icosahedronMesh->GetVertexArray(ICOSAHEDRON_VERTS.size());
 		float* Normals = icosahedronMesh->GetNormalsArray(ICOSAHEDRON_VERTS.size());
@@ -359,18 +360,18 @@ namespace SCESS
 	sRef<Mesh>Geometry::CreateIcosphere(float radius, unsigned int subdivisions)
 	{
 		auto PrecomputeNoTriangles = [](unsigned int subdivisions) -> unsigned int
-		{ return 20 * Maths::IntegerPow(4ui32, subdivisions); };
+			{ return 20 * Maths::IntegerPow(4ui32, subdivisions); };
 
 		auto PrecomputeVertexAmount = [](unsigned int subdivisions)->unsigned int
-		{
-			unsigned int result = 12;
-
-			for (unsigned int i = 1; i <= subdivisions; i++)
 			{
-				result += (30 * Maths::IntegerPow((unsigned int)4, i - 1));
-			}
-			return result;
-		};
+				unsigned int result = 12;
+
+				for (unsigned int i = 1; i <= subdivisions; i++)
+				{
+					result += (30 * Maths::IntegerPow((unsigned int)4, i - 1));
+				}
+				return result;
+			};
 
 		std::vector<Vertex> icoVerticies;
 		icoVerticies.reserve(PrecomputeVertexAmount(subdivisions));
@@ -401,42 +402,42 @@ namespace SCESS
 
 		//Lamda functions for subdividing icosahedron
 		auto CalculateVertex = [&lookupTable, &icoVerticies](unsigned int first, unsigned int second) -> unsigned int
-		{
-			std::pair<unsigned int, unsigned int> key(first, second);
-			if (key.first > key.second)
 			{
-				std::swap(key.first, key.second);
-			}
-
-			auto inserted = lookupTable.insert({ key, icoVerticies.size() });
-			if (inserted.second)
-			{
-				const glm::vec3& edge0 = icoVerticies[first];
-				const glm::vec3& edge1 = icoVerticies[second];
-				icoVerticies.push_back(glm::normalize(edge0 + edge1));
-			}
-
-			return inserted.first->second;
-		};
-		auto Subdivide = [&CalculateVertex, &icoTriangles, &icoTrianglesBuffer, &icoVerticies, &lookupTable]() ->void
-		{
-			TriangleI midPointTri;
-			lookupTable.clear();
-			icoTriangles.clear();
-
-			for (TriangleI& currentTri : icoTrianglesBuffer)
-			{
-				for (int edge = 0; edge < 3; ++edge)
+				std::pair<unsigned int, unsigned int> key(first, second);
+				if (key.first > key.second)
 				{
-					midPointTri[edge] = CalculateVertex(currentTri[edge], currentTri[(edge + 1) % 3]);
+					std::swap(key.first, key.second);
 				}
 
-				icoTriangles.emplace_back(currentTri[0], midPointTri[0], midPointTri[2]);
-				icoTriangles.emplace_back(currentTri[1], midPointTri[1], midPointTri[0]);
-				icoTriangles.emplace_back(currentTri[2], midPointTri[2], midPointTri[1]);
-				icoTriangles.emplace_back(midPointTri[0], midPointTri[1], midPointTri[2]);
-			}
-		};
+				auto inserted = lookupTable.insert({ key, icoVerticies.size() });
+				if (inserted.second)
+				{
+					const glm::vec3& edge0 = icoVerticies[first];
+					const glm::vec3& edge1 = icoVerticies[second];
+					icoVerticies.push_back(glm::normalize(edge0 + edge1));
+				}
+
+				return inserted.first->second;
+			};
+		auto Subdivide = [&CalculateVertex, &icoTriangles, &icoTrianglesBuffer, &icoVerticies, &lookupTable]() ->void
+			{
+				TriangleI midPointTri;
+				lookupTable.clear();
+				icoTriangles.clear();
+
+				for (TriangleI& currentTri : icoTrianglesBuffer)
+				{
+					for (int edge = 0; edge < 3; ++edge)
+					{
+						midPointTri[edge] = CalculateVertex(currentTri[edge], currentTri[(edge + 1) % 3]);
+					}
+
+					icoTriangles.emplace_back(currentTri[0], midPointTri[0], midPointTri[2]);
+					icoTriangles.emplace_back(currentTri[1], midPointTri[1], midPointTri[0]);
+					icoTriangles.emplace_back(currentTri[2], midPointTri[2], midPointTri[1]);
+					icoTriangles.emplace_back(midPointTri[0], midPointTri[1], midPointTri[2]);
+				}
+			};
 
 		if (subdivisions > 0)
 		{
@@ -477,7 +478,7 @@ namespace SCESS
 			icoVerticies.size() * sizeof(glm::vec3) * 2 +
 			icoTriangles.size() * sizeof(TriangleI) +
 			texCoords.size() * 2 * sizeof(float)
-			);
+		);
 
 		float* icosphereVerts = icoSphereMesh->GetVertexArray(icoVerticies.size() * 3);
 		float* icosphereNorms = icoSphereMesh->GetNormalsArray(icoVerticies.size() * 3);
@@ -502,6 +503,61 @@ namespace SCESS
 		return icoSphereMesh;
 	}
 	//
+	sRef<Mesh> Geometry::CreateCylinder(float radius, float height, size_t segments)
+	{
+		std::vector<glm::vec3> vertices(2 * segments + 2);
+		size_t noTriangles = 4 * segments;
+		std::vector<unsigned int> indicies;
+		indicies.reserve(noTriangles * 3);
+
+		vertices[0] = { 0.0f, 0.0f, height * 0.5f };
+		for (size_t i = 0; i < segments; i++)
+		{
+			float theta = 2.0f * std::numbers::pi * float(i) / float(segments);
+			glm::vec3 v1(radius * cos(theta), radius * sin(theta), height * 0.5f);
+			glm::vec3 v2(v1.x, v1.y, -height * 0.5f);
+			vertices[i + 1] = v1;
+			vertices[i + 1 + segments] = v2;
+		}
+		vertices[2 * segments + 1] = { 0.0f, 0.0f, -height * 0.5f };
+
+		for (size_t i = 0; i < segments; i++)
+		{
+			indicies.push_back(i + 1);
+			indicies.push_back(0);
+			indicies.push_back(i == segments - 1 ? 1 : i + 2);
+		}
+
+		for (size_t i = 0; i < segments; i++)
+		{
+			indicies.push_back(i == segments - 1 ? 1 : i + 2);
+			indicies.push_back(i + 1);
+			indicies.push_back(segments + i + 1);
+
+			indicies.push_back(segments + i + 1);
+			indicies.push_back(i == segments - 1 ? segments + 1 : segments + i + 2);
+			indicies.push_back(i == segments - 1 ? 1 : i + 2);
+		}
+
+		for (size_t i = 0; i < segments; i++)
+		{
+			indicies.push_back(i + segments + 1);
+			indicies.push_back(2 * segments + 1);
+			indicies.push_back(i == segments - 1 ? segments + 1 : i + segments + 2);
+		}
+
+		sRef<Mesh> cylinderMesh = std::make_shared<Mesh>(vertices.size() * sizeof(glm::vec3) +
+			indicies.size() * sizeof(unsigned int));
+
+		float* vertexArray = cylinderMesh->GetVertexArray(vertices.size() * 3);
+		unsigned int* indicesArray = cylinderMesh->GetIndiciesArray(indicies.size());
+
+		memcpy(vertexArray, vertices.data(), vertices.size() * sizeof(glm::vec3));
+		memcpy(indicesArray, indicies.data(), indicies.size() * sizeof(unsigned int));
+
+		return cylinderMesh;
+	}
+	//
 	sRef<Mesh>Geometry::CreateQuad()
 	{
 		constexpr float quadVerticies[] = { -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f };
@@ -514,7 +570,7 @@ namespace SCESS
 		memcpy(quadMesh->GetVertexArray(vertexCount), &quadVerticies, vertexCount * sizeof(float));
 		memcpy(quadMesh->GetIndiciesArray(indiciesCount), &quadIndicies, indiciesCount * sizeof(unsigned int));
 		quadMesh->vertexElementSize = 2;
-		
+
 		return quadMesh;
 	}
 	//
@@ -713,12 +769,12 @@ namespace SCESS
 			{0.0f, 1.0f},
 			{0.0f, 0.0f}
 		};
-		 
+
 		sRef<Mesh> cubeMesh = make <Mesh>(
 			sizeof(cubeVerticies) +
 			sizeof(cubeNormals) +
 			sizeof(cubeUV)
-			);
+		);
 
 		float* vertSpan = cubeMesh->GetVertexArray(sizeof(cubeVerticies) / sizeof(float));
 		float* normalSpan = cubeMesh->GetNormalsArray(sizeof(cubeNormals) / sizeof(float));
@@ -854,7 +910,7 @@ namespace SCESS
 			vertexCount * sizeof(float) * 2 + //For verticies and normals
 			texCoordsCount * sizeof(float) +
 			indiciesCount * sizeof(unsigned int)
-			);
+		);
 
 		float* Vertices = torusMesh->GetVertexArray(vertexCount);
 		float* Normals = torusMesh->GetNormalsArray(vertexCount);
@@ -1039,16 +1095,16 @@ namespace SCESS
 		unsigned int verticeIndex = (unsigned int)verticies.size() - 1;
 
 		auto FixVertex = [&triangles, &texCoords, &verticies, &verticeIndex](unsigned int i, unsigned int poleIndex, unsigned int b, unsigned int c) -> void
-		{
-			const TriangleI& currentTri = triangles[i];
-			const glm::vec2& B = texCoords[currentTri[b]];
-			const glm::vec2& C = texCoords[currentTri[c]];
-			verticies.push_back(verticies[currentTri[poleIndex]]);
-			//texCoords.emplace_back((B.x + C.x) * 0.5f, texCoords[currentTri[poleIndex]].y);
-			texCoords.emplace_back(1, 1);
-			verticeIndex++;
-			triangles[i][poleIndex] = verticeIndex;
-		};
+			{
+				const TriangleI& currentTri = triangles[i];
+				const glm::vec2& B = texCoords[currentTri[b]];
+				const glm::vec2& C = texCoords[currentTri[c]];
+				verticies.push_back(verticies[currentTri[poleIndex]]);
+				//texCoords.emplace_back((B.x + C.x) * 0.5f, texCoords[currentTri[poleIndex]].y);
+				texCoords.emplace_back(1, 1);
+				verticeIndex++;
+				triangles[i][poleIndex] = verticeIndex;
+			};
 
 		for (i = 0; i < triangles.size(); i++)
 		{

@@ -50,6 +50,9 @@ namespace SCESS
 		mMoleculeDiffuseProg = ShaderProgram::CreateFromFile(
 			PathUtils::GetAssetPath(R"(Shaders\MoleculeColourDiffuse.glsl)").string());
 
+		mSolidColourProg = ShaderProgram::CreateFromFile(
+			PathUtils::GetAssetPath(R"(Shaders\SolidColour.glsl)").string());
+
 		mPosTrisurfVAO = VertexArray::Create();
 		mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 		mNegTrisurfVAO = VertexArray::Create();
@@ -71,6 +74,8 @@ namespace SCESS
 		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 1, 1 });
 		//Atom Colour
 		mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{ 3, 7, 4, 1 });
+
+		mMoleculeBondVAO = VertexArray::Create(Geometry::CreateCylinder(0.2f, 1.0f, 50));
 
 		mBasisSets = BasisUtils::ListBasisSets();
 		mSelectedBasisSet = std::max(0,
@@ -124,12 +129,53 @@ namespace SCESS
 		//	}
 		//}
 
-		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
+		if (mMolRenderStyle == MoleculeStyle::BallStick && mMolecule != nullptr)
+		{
+			mSolidColourProg->Bind();
+			mSolidColourProg->UploadMatF("uPVMatrix", pvMatrix);
+			mSolidColourProg->UploadVecF("uColour", glm::vec3(0.5f));
+			mSolidColourProg->UploadF("uOpacity", mMoleculeOpacity);
 
+			for (const std::pair<unsigned int, unsigned int>& bond : mMolecule->GetBonds())
+			{
+				const Atom& a1 = mMolecule->GetAtom(bond.first);
+				const Atom& a2 = mMolecule->GetAtom(bond.second);
+				glm::vec3 pos1 = glm::vec3(a1.GetPos().x(), a1.GetPos().y(), a1.GetPos().z());
+				glm::vec3 pos2 = glm::vec3(a2.GetPos().x(), a2.GetPos().y(), a2.GetPos().z());
+				glm::vec3 dirVec = pos1 - pos2;
+				glm::vec3 midpoint = dirVec * 0.5f + pos2;
+
+				glm::vec3 dirVecNorm = glm::normalize(dirVec);
+				glm::vec3 cylinderDir = glm::vec3(0, 0, 1);
+				glm::vec3 v = glm::cross(dirVecNorm, cylinderDir);
+				float c = glm::dot(cylinderDir, dirVecNorm);
+
+				glm::mat3 vSkew = {
+					0, -v[2], v[1],
+					v[2], 0, -v[0],
+					-v[1], v[0], 0 };
+
+				glm::mat3 rotationMat = glm::mat3(1.0f) + vSkew + vSkew * vSkew / (1 + c);
+
+				glm::mat4 transformMat =
+					glm::translate(midpoint) *
+					glm::mat4(rotationMat) * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length() * 0.8f))
+
+					;
+
+				mSolidColourProg->UploadMatF("uTransformMatrix", transformMat);
+
+				mMoleculeBondVAO->Bind();
+				mMoleculeBondVAO->SubmitArrays();
+			}
+		}
+
+		glPolygonMode(GL_FRONT_AND_BACK, mRenderStyle);
 		mDiffuseProg->Bind();
 		mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
-		mDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
+		mDiffuseProg->UploadMatF("uPVMatrix", pvMatrix);
 		mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
+		mDiffuseProg->UploadMatF("uTransformMatrix", glm::mat4(1.0f));
 
 		mDiffuseProg->UploadVecF("uColour", { 1.0f, 0.0f, 0.0f });
 		mPosTrisurfVAO->Bind();
@@ -206,7 +252,7 @@ namespace SCESS
 			const AtomStyle& style = AtomStyle::GetStyle(a.GetAtomSymbol());
 
 			//Atom scale
-			data[i * 7 + 0] = style.mRadius;
+			data[i * 7 + 0] = mMolRenderStyle == MoleculeStyle::SpaceFill ? style.mRadius : 0.5;
 			//Atom Translation
 			data[i * 7 + 1] = a.GetPos().x();
 			data[i * 7 + 2] = a.GetPos().y();
@@ -357,7 +403,13 @@ namespace SCESS
 			if (mRenderMolecule)
 				ImGui::SliderFloat("Molecule Opacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
 
+			ImGui::SeparatorText("Molecule Render Style");
+			MoleculeStyle lastStyle = mMolRenderStyle;
+			ImGui::RadioButton("Spacefill", (int*)&mMolRenderStyle, 0);
+			ImGui::RadioButton("Ball & Stick", (int*)&mMolRenderStyle, 1);
 
+			if (lastStyle != mMolRenderStyle)
+				UploadMolecule();
 			if (selectedMolecule != -1)
 			{
 				mSelectedMolecule = selectedMolecule;
