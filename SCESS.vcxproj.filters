@@ -10,6 +10,9 @@
     <Filter Include="Application">
       <UniqueIdentifier>{D9DE78AF-4594-F1A4-CE88-EB7B3A3DE8A8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Chemistry">
+      <UniqueIdentifier>{1DF715CE-8961-CA44-D29F-7BEA3E49A899}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Events">
       <UniqueIdentifier>{3A8963B1-262B-8E87-0FE6-A1DBFB2615D8}</UniqueIdentifier>
     </Filter>
@@ -40,11 +43,17 @@
     <Filter Include="Quantum\Basis">
       <UniqueIdentifier>{515A7B29-BD1A-F75F-8655-40DDF2D43B3C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Quantum\DFT">
+      <UniqueIdentifier>{FD372298-69ED-9A8D-F2E1-94645E969191}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Quantum\HF">
       <UniqueIdentifier>{0D677569-F91E-B7B6-6226-90124EFD51A7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Quantum\Integrals">
       <UniqueIdentifier>{A8A31D43-14BA-1BD9-5D31-A7FAC986EC60}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quantum\Tests">
+      <UniqueIdentifier>{5246C32A-BE06-3F61-8741-88DEF3C0833D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Scene">
       <UniqueIdentifier>{B3F7140E-1F0C-3DBF-E88D-E01E546139F0}</UniqueIdentifier>
@@ -74,6 +83,9 @@
     </ClInclude>
     <ClInclude Include="src\Application\Application.h">
       <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Chemistry\PeriodicTable.h">
+      <Filter>Chemistry</Filter>
     </ClInclude>
     <ClInclude Include="src\Display.h" />
     <ClInclude Include="src\Events\AppEvents.h">
@@ -115,11 +127,17 @@
     <ClInclude Include="src\Maths\Maths.hpp">
       <Filter>Maths</Filter>
     </ClInclude>
+    <ClInclude Include="src\Maths\Quadrature.h">
+      <Filter>Maths</Filter>
+    </ClInclude>
     <ClInclude Include="src\Platform\API Core.h">
       <Filter>Platform</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\GLFW\GLFWDisplay.h">
       <Filter>Platform\GLFW</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platform\Intrinsics.h">
+      <Filter>Platform</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLBuffers.h">
       <Filter>Platform\OpenGL</Filter>
@@ -148,6 +166,15 @@
     <ClInclude Include="src\Quantum\Basis\Gaussian.h">
       <Filter>Quantum\Basis</Filter>
     </ClInclude>
+    <ClInclude Include="src\Quantum\DFT\DFT.h">
+      <Filter>Quantum\DFT</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Quantum\DFT\DFTGrid.h">
+      <Filter>Quantum\DFT</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Quantum\DFT\XCFunctional.h">
+      <Filter>Quantum\DFT</Filter>
+    </ClInclude>
     <ClInclude Include="src\Quantum\HF\HartreeFock.h">
       <Filter>Quantum\HF</Filter>
     </ClInclude>
@@ -159,6 +186,9 @@
     </ClInclude>
     <ClInclude Include="src\Quantum\Molecule.h">
       <Filter>Quantum</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Quantum\Tests\Tests.h">
+      <Filter>Quantum\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Scene\Camera.hpp">
       <Filter>Scene</Filter>
@@ -172,20 +202,17 @@
     <ClInclude Include="src\Utilities\Memory.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="src\Utilities\PathUtils.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="src\Utilities\StringOperations.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="src\Utilities\Threading.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\Utilities\PathUtils.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="src\Quantum\Tests\Tests.h" />
-    <ClInclude Include="src\Platform\Intrinsics.h" />
-    <ClInclude Include="src\Utilities\Threading.h" />
-    <ClInclude Include="src\Quantum\DFT\DFT.h" />
-    <ClInclude Include="src\Quantum\DFT\XCFunctional.h" />
-    <ClInclude Include="src\Quantum\DFT\DFTGrid.h" />
-    <ClInclude Include="src\Maths\Quadrature.h" />
-    <ClInclude Include="src\Chemistry\PeriodicTable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
@@ -208,6 +235,9 @@
     </ClCompile>
     <ClCompile Include="src\Application\Application.cpp">
       <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Chemistry\PeriodicTable.cpp">
+      <Filter>Chemistry</Filter>
     </ClCompile>
     <ClCompile Include="src\Display.cpp" />
     <ClCompile Include="src\GUI\CalculationLayer.cpp">
@@ -232,6 +262,9 @@
       <Filter>Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Maths.cpp">
+      <Filter>Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Maths\Quadrature.cpp">
       <Filter>Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\GLFW\GLFWDisplay.cpp">
@@ -264,6 +297,15 @@
     <ClCompile Include="src\Quantum\Basis\Gaussian.cpp">
       <Filter>Quantum\Basis</Filter>
     </ClCompile>
+    <ClCompile Include="src\Quantum\DFT\DFT.cpp">
+      <Filter>Quantum\DFT</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp">
+      <Filter>Quantum\DFT</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp">
+      <Filter>Quantum\DFT</Filter>
+    </ClCompile>
     <ClCompile Include="src\Quantum\HF\HartreeFock.cpp">
       <Filter>Quantum\HF</Filter>
     </ClCompile>
@@ -286,19 +328,14 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\Quantum\DFT\DFT.cpp" />
-    <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp" />
-    <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp" />
-    <ClCompile Include="src\Maths\Quadrature.cpp" />
-    <ClCompile Include="src\Chemistry\PeriodicTable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Natvis Include="Eigen.natvis" />
+    <None Include="SCESS.APS" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SCESS.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\Icon\SCESS Icon.ico" />
+    <Natvis Include="Eigen.natvis" />
   </ItemGroup>
 </Project>

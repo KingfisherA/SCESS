@@ -3250,7 +3250,7 @@ namespace ImSpinner
         }
 
         lt = ImVec2{ centre.x - radius + offset_block / 2.f, centre.y - radius + offset_block / 2.f };
-        ti = std::size(poses) - 1;
+        ti = (int)std::size(poses) - 1;
         start = (int)ImFmod((float)ImGui::GetTime() * speed * 1.1f, 8.f);
         for (const auto& rpos : poses)
         {

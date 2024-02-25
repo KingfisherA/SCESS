@@ -29,7 +29,7 @@ struct std::hash<SCESS::BondPair>
 {
 	std::size_t operator()(const SCESS::BondPair& k) const
 	{
-		std::hash<uint32_t> hashObj;
+		std::hash<size_t> hashObj;
 		return hashObj(k.atom1) + hashObj(k.atom2);
 	}
 };
@@ -45,8 +45,6 @@ namespace SCESS
 		int mCharge;
 	public:
 
-		Atom(const char* atomID) noexcept :mSymbol(mSymbol) {}
-
 		Atom(const Atom& a) : mSymbol(a.mSymbol),
 			mCharge(a.mCharge), mPosition(a.mPosition)
 		{
@@ -58,7 +56,7 @@ namespace SCESS
 
 		Atom(const char* atomSymbol,
 			const Eigen::Vector3d& pos = { 0., 0., 0. })
-			: mSymbol(atomSymbol), mPosition(pos)
+			: mSymbol(atomSymbol), mPosition(pos), mCharge(0)
 		{
 
 		}
@@ -71,10 +69,19 @@ namespace SCESS
 
 		}
 
+		void SetPos(const Eigen::Vector3d& pos)
+		{
+			mPosition = pos;
+		}
 
 		const Eigen::Vector3d GetPos()const
 		{
 			return mPosition;
+		}
+
+		void SetAtomSymbol(const std::string& s)
+		{
+			mSymbol = s;
 		}
 
 		const std::string GetAtomSymbol() const
@@ -107,12 +114,12 @@ namespace SCESS
 		Molecule(Molecule&& m) noexcept :mAtoms(std::move(m.mAtoms)), mBonds(std::move(m.mBonds)), mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {}
 		Molecule(const std::vector<Atom>& atomsIn) : mAtoms(atomsIn), mNoElectrons(0)
 		{
-			ConstructBonding();
 		}
 		Molecule(std::vector<Atom>&& atomsIn) :mAtoms(std::move(atomsIn)), mNoElectrons(0)
 		{
-			ConstructBonding();
 		}
+
+		static Molecule LoadFromXYZ(const std::string& filePath);
 
 		void InsertAtom(const Atom& a)
 		{
@@ -146,7 +153,11 @@ namespace SCESS
 			return mAtoms;
 		}
 
-		void ConstructBonding();
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="tolerance2">The squared distance between atoms where a bond is considered in bohr radii.</param>
+		void ConstructBonding(double tolerance2 = 0.5);
 
 		std::unordered_set<BondPair>& GetBonds()
 		{
@@ -201,7 +212,7 @@ namespace SCESS
 
 
 
-		inline static const AtomStyle& GetStyle(const std::string_view atom)
+		inline static AtomStyle GetStyle(const std::string_view atom)
 		{
 			auto it = sAtomStyle.find(atom);
 			if (it != sAtomStyle.end())

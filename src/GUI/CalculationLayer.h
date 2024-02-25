@@ -50,6 +50,9 @@ namespace SCESS
 		void RenderMOIsosurface();
 		void SelectMolecule();
 		void UploadMolecule();
+		void SelectMoleculeFromFile();
+
+		glm::mat3 GenerateBondRotMatrix(const glm::vec3& bondDirNorm, const glm::vec3& startingDirNorm);
 
 		void ExecuteCalculation();
 		void DrawProgressScreen();
@@ -75,6 +78,7 @@ namespace SCESS
 
 		sRef<ShaderProgram> mDiffuseProg;
 		sRef<ShaderProgram> mMoleculeDiffuseProg;
+		sRef<ShaderProgram> mSolidColourProg;
 
 		std::stringstream mConsoleOutput;
 		bool mOrbitalsOrdered = false;
@@ -93,7 +97,7 @@ namespace SCESS
 		char mSelectedSpin = -1;
 		int mSelectedMO = -1;
 
-		float mIsosurfaceVal = 0.02;
+		float mIsosurfaceVal = 0.02f;
 		int mIsosurfaceResolution = 20;
 		float mIsosurfaceVolume = 5.0f;
 	};

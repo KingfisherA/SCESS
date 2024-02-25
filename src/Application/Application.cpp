@@ -119,10 +119,10 @@ namespace SCESS
 			if (m_viewPortPanelSize.x != this->m_lastViewportSize.x ||
 				m_viewPortPanelSize.y != this->m_lastViewportSize.y)
 			{
-				mainFramebuffer->Resize(m_viewPortPanelSize.x, m_viewPortPanelSize.y);
+				mainFramebuffer->Resize((size_t)m_viewPortPanelSize.x, (size_t)m_viewPortPanelSize.y);
 
 				for (Layer* layer : m_LayerStack)
-					layer->Resize(m_viewPortPanelSize.x, m_viewPortPanelSize.y);
+					layer->Resize((size_t)m_viewPortPanelSize.x, (size_t)m_viewPortPanelSize.y);
 				//m_PlanetLayer->Resize(m_viewPortPanelSize.x, m_viewPortPanelSize.y);
 				this->UpdateProjectionMatrix();
 				m_lastViewportSize = m_viewPortPanelSize;
@@ -326,7 +326,7 @@ namespace SCESS
 			dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FNC(OnWindowClose));
 			dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& e) -> bool
 				{
-					glViewport(0, 0, e.GetWidth(), e.GetHeight());
+					glViewport(0, 0, (GLsizei)e.GetWidth(), (GLsizei)e.GetHeight());
 					this->UpdateProjectionMatrix();
 
 					return true;

@@ -1,11 +1,13 @@
 #include<pch.h>
 #include<boost/locale/conversion.hpp>
+#include<fstream>
 
 #include"Molecule.h"
 #include"Basis/BasisUtils.h"
 #include"Basis/Gaussian.h"
 #include"Utilities/PathUtils.h"
 #include"Chemistry/PeriodicTable.h"
+#include "Utilities/StringOperations.h"
 
 //
 //
@@ -14,11 +16,39 @@ namespace SCESS
 	std::unordered_map<std::string_view, AtomStyle> AtomStyle::sAtomStyle =
 	{
 		{"H", {{1.0f, 1.0f, 1.0f}, 1.0f}},
-		{"C", {{0.1f, 0.1f, 0.1f}, 2.0f}},
+		{"C", {{0.2f, 0.2f, 0.2f}, 1.5f}},
 		{"Li", {{0.8f, 0.9f, 1.0f}, 3.15f}},
 		{"N", {{0.0f, 0.5f, 0.5f}, 1.8f}},
-		{"O", {{1.0f, 0.0f, 0.0f}, 1.7f}}
+		{"O", {{1.0f, 0.0f, 0.0f}, 1.1f}},
+		{"B", {{0.100f, 0.714f, 0.757f}, 2.4f}}
 	};
+
+	Molecule Molecule::LoadFromXYZ(const std::string& filePath)
+	{
+		std::ifstream inStream(filePath);
+		Molecule molecule;
+
+		if (inStream.is_open())
+		{
+			std::string line;
+			while (std::getline(inStream, line))
+			{
+				Atom a("");
+				size_t startIdx = line.find("  ", 0);
+				if (startIdx == line.npos)
+					continue;
+				std::vector<std::string> tokens = StringOperations::Split(line.substr(startIdx), ' ');
+				a.SetAtomSymbol(tokens[0]);
+				double x = std::stod(tokens[1]);
+				double y = std::stod(tokens[2]);
+				double z = std::stod(tokens[3]);
+				a.SetPos({ x,y,z });
+				molecule.InsertAtom(a);
+			}
+		}
+
+		return molecule;
+	}
 
 	void Molecule::MakeOrbitals(const std::string& basisSetName)
 	{
@@ -172,27 +202,42 @@ namespace SCESS
 		PeriodicTable::CloseQuery();
 	}
 
-	void Molecule::ConstructBonding()
+	void Molecule::ConstructBonding(double tolerance2)
 	{
+		std::map<double, std::vector<BondPair>> distanceMap;
+
 		for (size_t i = 0; i < mAtoms.size(); i++)
 		{
-			std::vector<BondPair> bonds(1);
-
 			for (size_t j = 0; j < mAtoms.size(); j++)
 			{
 				if (i == j) continue;
 				double distance2 = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).squaredNorm();
-				if (distance2 < 7.0f)
-				{
-					bonds.push_back(BondPair{ i,j });
-				}
-			}
 
-			for (BondPair& p : bonds)
+				auto it = distanceMap.find(distance2);
+				if (it != distanceMap.end())
+				{
+					(*it).second.push_back({ i, j });
+					continue;
+				}
+				distanceMap[distance2] = { {i,j} };
+			}
+		}
+
+
+		if (distanceMap.size() == 0)
+			return;
+
+		for(auto& it : distanceMap)
+		{
+			if (it.first > distanceMap.begin()->first + tolerance2)
+				continue;
+
+			for (const BondPair& p : it.second)
 			{
 				mBonds.insert(p);
 			}
 		}
+
 	}
 
 	double Molecule::CalculateNuclearRepulsion() const
@@ -218,6 +263,8 @@ namespace SCESS
 
 		SCESS::Molecule water({ H1, O, H2 });
 
+		water.ConstructBonding();
+
 		return water;
 	}
 
@@ -229,6 +276,7 @@ namespace SCESS
 		SCESS::Atom H2("H", { hydrogenBondLength,0.0,0.0 });
 
 		SCESS::Molecule hydrogenMol({ H1, H2 });
+		hydrogenMol.ConstructBonding(hydrogenBondLength * hydrogenBondLength + 0.1f);
 
 		return hydrogenMol;
 	}
@@ -242,6 +290,8 @@ namespace SCESS
 
 		SCESS::Molecule LiHMolecule({ H, Li });
 
+		LiHMolecule.ConstructBonding(LiHBondLength * LiHBondLength);
+
 		return LiHMolecule;
 	}
 
@@ -253,6 +303,8 @@ namespace SCESS
 		SCESS::Atom O("O", { COBondLength,0.0,0.0 });
 
 		SCESS::Molecule COMolecule({ C,O });
+
+		COMolecule.ConstructBonding(COBondLength * COBondLength + 0.1f);
 
 		return COMolecule;
 	}
@@ -266,6 +318,7 @@ namespace SCESS
 		SCESS::Atom C("C", { 0,0,0 });
 
 		SCESS::Molecule methane({ H1, H2, H3, H4, C });
+		methane.ConstructBonding(5.0f);
 
 		return methane;
 	}
@@ -280,6 +333,7 @@ namespace SCESS
 		SCESS::Atom H4("H", Eigen::Vector3d{ -0.51230991333269,  0.48192756015780 ,  0.82066600985273 }*SCESS::ANGSTROM_2_BOHR);
 
 		SCESS::Molecule ethene({ C1,C2,H1,H2,H3,H4 });
+		ethene.ConstructBonding(7.0f);
 
 		return ethene;
 	}
@@ -294,6 +348,7 @@ namespace SCESS
 		Atom H3("H", Eigen::Vector3d{ -7.0127560539 ,  1.4847331233  , 0.7962183253 }*ANGSTROM_2_BOHR - NPos);
 
 		Molecule NH3({ N,H1,H2,H3 });
+		NH3.ConstructBonding(4.0f);
 
 		return NH3;
 	}

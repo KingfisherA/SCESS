@@ -5,7 +5,7 @@
 namespace SCESS
 {
 	class Molecule;
-	class TETensor;
+	struct TETensor;
 	class DFTMolecularGrid;
 
 	class DFT

@@ -397,7 +397,7 @@ namespace SCESS
 		ScalarField() {}
 		ScalarField(const TensorTy& t) :mField(t) {}
 		ScalarField(const ScalarField& s) :mField(s.mField) {}
-		ScalarField(ScalarField&& s) :mField(std::move(s.mField)) {}
+		ScalarField(ScalarField&& s) noexcept :mField(std::move(s.mField)) {}
 
 		void Initilise(size_t dimensions,
 			const std::function<float(float, float, float)>& func,

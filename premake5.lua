@@ -9,6 +9,7 @@ workspace "SCESS"
 
 outputdir = "%{prj.name}/%{cfg.buildcfg}-x64/"
 publicLibDir = "C:/dev/Libraries/C++/"
+publicLibDirC = "C:/dev/Libraries/C/"
 libDir = "%{wks.location}/libs/"
 
 project "SCESS"
@@ -24,14 +25,18 @@ project "SCESS"
 	 pchsource("%{wks.location}/src/pch.cpp")
 
     postbuildcommands {
-      ("call xcopy.exe \"%{prj.location}Assets\" \"%{wks.location}" & outputdir & "Assets\" /s /y /i /d")
+      ("call xcopy.exe \"%{prj.location}Assets\" \"%{wks.location}" .. outputdir .. "Assets\" /s /y /i /d")
     }
 
      files
      {
           "%{wks.location}/src/**.h",
           "%{wks.location}/src/**.hpp",
-          "%{wks.location}/src/**.cpp"
+          "%{wks.location}/src/**.cpp",
+          "%{wks.location}/resource.h",
+          "%{wks.location}/SCESS.APS",
+          "%{wks.location}/SCESS.rc",
+          "%{wks.location}/Eigen.natvis"
      }
 
      includedirs
@@ -43,7 +48,9 @@ project "SCESS"
 		publicLibDir .. "json-develop/include",
 		publicLibDir .. "eigen-3.4.0",
 		publicLibDir .. "boost_1_83_0/",
-        publicLibDir .. "ImGui/"
+        publicLibDir .. "ImGui/",
+		publicLibDirC .. "libxc-6.2.2/src",
+		publicLibDirC .. "nativefiledialog/src/include"
      }
 
      defines {"UNI_OPENGL", "_CONSOLE", "GLEW_STATIC"}
@@ -71,8 +78,10 @@ project "SCESS"
         symbols "On"
         libdirs {publicLibDir .. "glew-2.1.0/lib/Debug/x64/",
          publicLibDir .. "glfw-3.3.2/lib/x64/",
-		 publicLibDir .. "boost_1_83_0/stage/lib/"}
-      links {"glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib"}
+		 publicLibDir .. "boost_1_83_0/stage/lib/",
+		 publicLibDir .. "ImGui/bin/ImGui/Debug-x64/ImGui",
+		 publicLibDirC .. "libxc-6.2.2/VS/Release"}
+      links {"glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib", "ImGui", "xc.lib", publicLibDirC .. "nativefiledialog/build/lib/Release/x64/nfd.lib"}
       staticruntime "off"
       buildoptions "/MDd"
 
@@ -81,10 +90,10 @@ project "SCESS"
         optimize "On"
         libdirs {publicLibDir .. "glew-2.1.0/lib/Release/x64/",
         publicLibDir .. "glfw-3.3.2/lib/x64/",
-		publicLibDir .. "boost_1_83_0/stage/lib/"}
-        links {"glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib"}
+		publicLibDir .. "boost_1_83_0/stage/lib/",
+		publicLibDir .. "ImGui/bin/ImGui/Release-x64/ImGui",
+		publicLibDirC .. "libxc-6.2.2/VS/Release"}
+        links {"glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib", "ImGui", "xc.lib", publicLibDirC .. "nativefiledialog/build/lib/Release/x64/nfd.lib"}
         staticruntime "off"
         buildoptions "/MD"
---
---
-include (publicLibDir .. "ImGui/")
+	

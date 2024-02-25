@@ -27,17 +27,17 @@ namespace SCESS
 		}
 
 		auto EvaluateShader = [combinedSourceCode](const char* beginStr, const char* endStr, std::string& output) -> void
-		{
-			size_t beginIndex = combinedSourceCode.find(beginStr);
-			size_t endIndex = combinedSourceCode.find(endStr);
-
-			if (beginIndex != combinedSourceCode.npos)
 			{
-				endIndex = endIndex != combinedSourceCode.npos ? endIndex : combinedSourceCode.size() - 1;
-				size_t beginNewLineIndex = combinedSourceCode.find('\n', beginIndex) + 1;
-				output = combinedSourceCode.substr(beginNewLineIndex, endIndex - beginNewLineIndex);
-			}
-		};
+				size_t beginIndex = combinedSourceCode.find(beginStr);
+				size_t endIndex = combinedSourceCode.find(endStr);
+
+				if (beginIndex != combinedSourceCode.npos)
+				{
+					endIndex = endIndex != combinedSourceCode.npos ? endIndex : combinedSourceCode.size() - 1;
+					size_t beginNewLineIndex = combinedSourceCode.find('\n', beginIndex) + 1;
+					output = combinedSourceCode.substr(beginNewLineIndex, endIndex - beginNewLineIndex);
+				}
+			};
 
 		if (vertexOutput != nullptr)
 		{
@@ -60,8 +60,7 @@ namespace SCESS
 	{
 		std::vector<std::string> onceIncludeHeaders;
 
-		std::vector<std::string> lines;
-		StringOperations::Split(sourceCode, lines, '\n');
+		std::vector<std::string> lines = StringOperations::Split(sourceCode, '\n');
 		sourceCode.clear();
 
 		for (std::string& currentLine : lines)
@@ -191,8 +190,7 @@ namespace SCESS
 				}
 				if (fileData.find("#include") != fileData.npos || pIndex != currentLine.npos)
 				{
-					std::vector<std::string> fileDataLines;
-					StringOperations::Split(fileData, fileDataLines, '\n');
+					std::vector<std::string> fileDataLines = StringOperations::Split(fileData, '\n');
 					fileData.clear();
 
 					for (std::string& line : fileDataLines)

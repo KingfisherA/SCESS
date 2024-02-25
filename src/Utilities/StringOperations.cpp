@@ -14,38 +14,44 @@ namespace SCESS::StringOperations
 		return true;
 	}
 
-	void Split(const std::string_view s, std::vector<std::string>& output,
+	std::vector<std::string> Split(const std::string_view s,
 		const char seperator)
 	{
+		std::vector<std::string> output;
 		std::string_view::size_type prev_pos = 0, pos = 0;
 
 		while ((pos = s.find(seperator, pos)) != std::string::npos)
 		{
 			std::string substring(s.substr(prev_pos, pos - prev_pos));
 
-			output.push_back(substring);
+			if (substring != "")
+				output.push_back(substring);
 
 			prev_pos = ++pos;
 		}
 
 		output.push_back(s.substr(prev_pos, pos - prev_pos).data()); // Last word
+		return output;
 	}
 
-	void Split(const std::string_view s, std::vector<std::string>& output,
+	std::vector<std::string> Split(const std::string_view s,
 		const std::string_view seperator)
 	{
+		std::vector<std::string> output;
 		std::string_view::size_type prev_pos = 0, pos = 0;
 
 		while ((pos = s.find(seperator, pos)) != std::string::npos)
 		{
 			std::string substring(s.substr(prev_pos, pos - prev_pos));
-
-			output.push_back(substring);
+			
+			if (substring != "")
+				output.push_back(substring);
 
 			prev_pos = ++pos;
 		}
 
 		output.push_back(s.substr(prev_pos, pos - prev_pos).data()); // Last word
+		return output;
 	}
 
 	void FindAll(const std::string_view str, const std::string_view searchPhrase, std::vector<size_t>& results)
