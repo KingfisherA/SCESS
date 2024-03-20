@@ -9,11 +9,11 @@ namespace SCESS
 	{
 	public:
 		FramebufferAttachment() = default;
-		FramebufferAttachment(PixelFormat format) : PixelFormat(format) { }
+		FramebufferAttachment(PixelFormat format) : mPixelFormat(format) { }
 		FramebufferAttachment(PixelFormat format, const bool isRenderbuffer) : 
-			PixelFormat(format), Renderbuffer(isRenderbuffer) { }
+			mPixelFormat(format), Renderbuffer(isRenderbuffer) { }
 
-		PixelFormat PixelFormat = PixelFormat::None;
+		PixelFormat mPixelFormat = PixelFormat::None;
 		bool Renderbuffer = false;
 	};
 

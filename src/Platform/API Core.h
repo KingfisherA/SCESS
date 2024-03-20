@@ -2,6 +2,7 @@
 #include<pch.h>
 #include"Platform/OpenGL/OpenGLCore.h"
 #include"Utilities/Assert.h"
+#include<string>
 
 enum class API
 {
@@ -10,16 +11,17 @@ enum class API
 
 constexpr API PROGRAM_API = API::OpenGL;
 
-class APICore abstract
+class APICore
 {
 public:
 	static void Initilise()
 	{
-		using namespace std::literals::string_literals;
 		switch (PROGRAM_API)
 		{
 		case API::OpenGL:
-			OpenGLCore::Initilise([](int err, const char* mes) {UNI_FATAL(OpenGLCore;  GLEW API Initilisation Error, "Unable to intilise GLEW. Error Message: "s + mes); });
+			OpenGLCore::Initilise([](int err, const char* mes) {
+				UNI_FATAL(OpenGLCore;  GLEW API Initilisation Error, std::string("Unable to intilise GLEW. Error Message: ") + mes);
+			});
 			break;
 		}
 	}

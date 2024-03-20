@@ -1,6 +1,7 @@
 #include <pch.h>
 
 #include "DFT.h"
+#include"Quantum/HF/HartreeFock.h"
 #include<Eigen/Core>
 #include "Quantum/Integrals/IntegralHelper.h"
 #include "Quantum/Molecule.h"
@@ -13,14 +14,23 @@ namespace SCESS
 {
 	double DFT::RunDFT(const Molecule& mol, std::stringstream* consoleStream, const std::string_view basisSet)
 	{
+
 		if (consoleStream)
 			*consoleStream << "---Density Functional Theory---\n Using " << basisSet << " basis set with " << mol.GetOrbitals().size() << " basis set functions \n No aux basis.\nBeginning integral evaluation...\n";
+
+		//RHFResult rhfResult = HF::RestrictedHF(mol, 1E-5, 100, consoleStream, basisSet);
+
 
 		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(mol);
 		const Eigen::MatrixXd& S = integrals.S;
 		const Eigen::MatrixXd& T = integrals.T;
 		const Eigen::MatrixXd& V = integrals.V;
 		const TETensor& tei = integrals.tei; //Two-electron tensor
+
+		//const Eigen::MatrixXd& S = rhfResult.Integrals.S;
+		//const Eigen::MatrixXd& T = rhfResult.Integrals.T;
+		//const Eigen::MatrixXd& V = rhfResult.Integrals.V;
+		//const TETensor& tei = rhfResult.Integrals.tei; //Two-electron tensor
 
 
 		DFTMolecularGrid dftGrid(mol);
@@ -41,7 +51,7 @@ namespace SCESS
 		const Eigen::MatrixXd& SEigenVects = eigensolver.eigenvectors().real();
 		Eigen::MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
 		Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
-		TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
+		//TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
 
 
 		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(S.rows(), S.rows());
@@ -61,7 +71,7 @@ namespace SCESS
 		while (delta > 1E-5 && scfIterations < scfMaxIterations)
 		{
 			KSMat = Hcore + 2.0 * JMat + XCMat;
-			KSMat = TransformMat.transpose() * KSMat * TransformMat;
+			KSMat = TransformMat * KSMat * TransformMat.transpose();
 
 			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver2(KSMat);
 			Eigen::MatrixXd CoeffsPrime = eigensolver2.eigenvectors().real();
@@ -128,7 +138,7 @@ namespace SCESS
 				{
 					for (size_t l = 0; l < J.rows(); l++)
 					{
-						J(i, j) += DensityMat(k, l) * tei(i, j, k, l);
+						J(i, j) +=  DensityMat(k, l) * tei(i, j, k, l);
 					}
 				}
 			}

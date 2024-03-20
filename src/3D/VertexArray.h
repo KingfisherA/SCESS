@@ -17,7 +17,7 @@ namespace SCESS
 		unsigned int divisor = 0;
 	};
 
-	class VertexArray abstract
+	class VertexArray
 	{
 	public:
 		virtual ~VertexArray() {}

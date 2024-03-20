@@ -1,333 +1,344 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="3D">
-      <UniqueIdentifier>{1C715900-08FD-870B-71AB-880B5D56880B}</UniqueIdentifier>
+    <Filter Include="src">
+      <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="3D\stb">
-      <UniqueIdentifier>{745DC083-60FF-EA59-49BA-FEAD35FB71AA}</UniqueIdentifier>
+    <Filter Include="src\3D">
+      <UniqueIdentifier>{D346661C-BFE8-90F2-A8A3-A44694E41743}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Application">
-      <UniqueIdentifier>{D9DE78AF-4594-F1A4-CE88-EB7B3A3DE8A8}</UniqueIdentifier>
+    <Filter Include="src\3D\stb">
+      <UniqueIdentifier>{AB361FE1-97EE-602E-00F6-398AECCCFB1E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Chemistry">
-      <UniqueIdentifier>{1DF715CE-8961-CA44-D29F-7BEA3E49A899}</UniqueIdentifier>
+    <Filter Include="src\Application">
+      <UniqueIdentifier>{701253C7-DC9D-C08B-E5AE-438051B91C8C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Events">
-      <UniqueIdentifier>{3A8963B1-262B-8E87-0FE6-A1DBFB2615D8}</UniqueIdentifier>
+    <Filter Include="src\Chemistry">
+      <UniqueIdentifier>{F458D00D-6019-4C44-2954-95C195D39020}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GUI">
-      <UniqueIdentifier>{2AEC870B-96F5-877C-1F71-9E7C8B79937C}</UniqueIdentifier>
+    <Filter Include="src\Events">
+      <UniqueIdentifier>{7162C20E-5D1A-045C-C621-DDB7B2F89E4C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Layers">
-      <UniqueIdentifier>{157446C0-0116-7196-EAD0-84EAD611F8E6}</UniqueIdentifier>
+    <Filter Include="src\GUI">
+      <UniqueIdentifier>{C1782FA9-2D58-AE44-3670-391BA2CE14A6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Maths">
-      <UniqueIdentifier>{028BA70D-6E9F-CFBE-3721-731EA3F4CBEF}</UniqueIdentifier>
+    <Filter Include="src\Layers">
+      <UniqueIdentifier>{4C4DA51D-3805-E76A-A10C-C0C68DE3815B}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platform">
-      <UniqueIdentifier>{2AC788B4-1694-E3BF-3FAD-D1672BD9184E}</UniqueIdentifier>
+    <Filter Include="src\Maths">
+      <UniqueIdentifier>{599964B3-C503-192A-0E42-CACF7AEBF67E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platform\GLFW">
-      <UniqueIdentifier>{A98C9061-154D-0C98-DE87-55154A075174}</UniqueIdentifier>
+    <Filter Include="src\Platform">
+      <UniqueIdentifier>{21CA02E5-0D2D-9289-B6B2-CA3FA2F45D0C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platform\OpenGL">
-      <UniqueIdentifier>{1E7D2C1D-8A08-9AE1-9319-1DD6FF23F6E1}</UniqueIdentifier>
+    <Filter Include="src\Platform\GLFW">
+      <UniqueIdentifier>{0002C6D8-6C18-C46E-B58F-4F9021E594F6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Platform\Windows">
-      <UniqueIdentifier>{64FBD71A-50F4-F66C-7926-DCF1657ED678}</UniqueIdentifier>
+    <Filter Include="src\Platform\OpenGL">
+      <UniqueIdentifier>{35A49437-A105-7245-2A73-B8F796D3A804}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum">
-      <UniqueIdentifier>{90FFF176-FCDE-7012-05F7-FBE87155D773}</UniqueIdentifier>
+    <Filter Include="src\Platform\Windows">
+      <UniqueIdentifier>{5B054582-4794-CE4B-F0B2-E246DC20DFF1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum\Basis">
-      <UniqueIdentifier>{515A7B29-BD1A-F75F-8655-40DDF2D43B3C}</UniqueIdentifier>
+    <Filter Include="src\Quantum">
+      <UniqueIdentifier>{A7FF2B80-13B5-A475-9CA9-9E4C085E9B79}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum\DFT">
-      <UniqueIdentifier>{FD372298-69ED-9A8D-F2E1-94645E969191}</UniqueIdentifier>
+    <Filter Include="src\Quantum\Basis">
+      <UniqueIdentifier>{A8CFB0A0-14E6-AE36-5D5D-3A58C9B27FBE}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum\HF">
-      <UniqueIdentifier>{0D677569-F91E-B7B6-6226-90124EFD51A7}</UniqueIdentifier>
+    <Filter Include="src\Quantum\DFT">
+      <UniqueIdentifier>{946BFCAF-00F7-6974-0908-ED687512C674}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum\Integrals">
-      <UniqueIdentifier>{A8A31D43-14BA-1BD9-5D31-A7FAC986EC60}</UniqueIdentifier>
+    <Filter Include="src\Quantum\HF">
+      <UniqueIdentifier>{C4037CA0-B0D1-6FA6-9965-E0CC85D24B0B}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Quantum\Tests">
-      <UniqueIdentifier>{5246C32A-BE06-3F61-8741-88DEF3C0833D}</UniqueIdentifier>
+    <Filter Include="src\Quantum\Integrals">
+      <UniqueIdentifier>{7FEC2B98-EB58-E792-B44C-7FF0207809FB}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Scene">
-      <UniqueIdentifier>{B3F7140E-1F0C-3DBF-E88D-E01E546139F0}</UniqueIdentifier>
+    <Filter Include="src\Quantum\Tests">
+      <UniqueIdentifier>{A9BBF8A1-15D2-F637-5E49-8259CA9EC7BF}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utilities">
-      <UniqueIdentifier>{010A8043-6D74-34BA-B6B2-E55F225C120F}</UniqueIdentifier>
+    <Filter Include="src\Scene">
+      <UniqueIdentifier>{0A06D2B3-7670-862A-BFAE-37D02B58647F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Utilities">
+      <UniqueIdentifier>{D86B3A83-442C-B6B9-0D67-FF3679E6FA95}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource.h" />
     <ClInclude Include="src\3D\Buffers.h">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\Framebuffer.h">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\ShaderProgram.h">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\Texture.h">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\VertexArray.h">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClInclude>
     <ClInclude Include="src\3D\stb\stb_image.h">
-      <Filter>3D\stb</Filter>
+      <Filter>src\3D\stb</Filter>
     </ClInclude>
     <ClInclude Include="src\Application\Application.h">
-      <Filter>Application</Filter>
+      <Filter>src\Application</Filter>
     </ClInclude>
     <ClInclude Include="src\Chemistry\PeriodicTable.h">
-      <Filter>Chemistry</Filter>
+      <Filter>src\Chemistry</Filter>
     </ClInclude>
-    <ClInclude Include="src\Display.h" />
+    <ClInclude Include="src\Display.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Events\AppEvents.h">
-      <Filter>Events</Filter>
+      <Filter>src\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\Events\Events.h">
-      <Filter>Events</Filter>
+      <Filter>src\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\Events\KeyEvents.h">
-      <Filter>Events</Filter>
+      <Filter>src\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\Events\MouseEvents.h">
-      <Filter>Events</Filter>
+      <Filter>src\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\Events\WindowEvents.h">
-      <Filter>Events</Filter>
+      <Filter>src\Events</Filter>
     </ClInclude>
     <ClInclude Include="src\GUI\CalculationLayer.h">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\GUI\ImGuiLayer.h">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\GUI\ImSpinner.h">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClInclude>
     <ClInclude Include="src\Layers\Layer.h">
-      <Filter>Layers</Filter>
+      <Filter>src\Layers</Filter>
     </ClInclude>
     <ClInclude Include="src\Layers\LayerStack.h">
-      <Filter>Layers</Filter>
+      <Filter>src\Layers</Filter>
     </ClInclude>
     <ClInclude Include="src\Maths\Geometry.hpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClInclude>
     <ClInclude Include="src\Maths\Isosurfaces.h">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClInclude>
     <ClInclude Include="src\Maths\Maths.hpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClInclude>
     <ClInclude Include="src\Maths\Quadrature.h">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\API Core.h">
-      <Filter>Platform</Filter>
+      <Filter>src\Platform</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\GLFW\GLFWDisplay.h">
-      <Filter>Platform\GLFW</Filter>
+      <Filter>src\Platform\GLFW</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\Intrinsics.h">
-      <Filter>Platform</Filter>
+      <Filter>src\Platform</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLBuffers.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLCore.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLFramebuffer.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLShaderProgram.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLTexture.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
     <ClInclude Include="src\Platform\Windows\Console.h">
-      <Filter>Platform\Windows</Filter>
+      <Filter>src\Platform\Windows</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Basis\BasisUtils.h">
-      <Filter>Quantum\Basis</Filter>
+      <Filter>src\Quantum\Basis</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Basis\Gaussian.h">
-      <Filter>Quantum\Basis</Filter>
+      <Filter>src\Quantum\Basis</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\DFT\DFT.h">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\DFT\DFTGrid.h">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\DFT\XCFunctional.h">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\HF\HartreeFock.h">
-      <Filter>Quantum\HF</Filter>
+      <Filter>src\Quantum\HF</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Integrals\Gamma.h">
-      <Filter>Quantum\Integrals</Filter>
+      <Filter>src\Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Integrals\IntegralHelper.h">
-      <Filter>Quantum\Integrals</Filter>
+      <Filter>src\Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Molecule.h">
-      <Filter>Quantum</Filter>
+      <Filter>src\Quantum</Filter>
     </ClInclude>
     <ClInclude Include="src\Quantum\Tests\Tests.h">
-      <Filter>Quantum\Tests</Filter>
+      <Filter>src\Quantum\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Scene\Camera.hpp">
-      <Filter>Scene</Filter>
+      <Filter>src\Scene</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\Assert.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\IO.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\Memory.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\PathUtils.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\StringOperations.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\Threading.h">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\pch.h" />
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="src\pch.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3D\Buffers.cpp">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClCompile>
     <ClCompile Include="src\3D\Framebuffer.cpp">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClCompile>
     <ClCompile Include="src\3D\ShaderProgram.cpp">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClCompile>
     <ClCompile Include="src\3D\Texture.cpp">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClCompile>
     <ClCompile Include="src\3D\VertexArray.cpp">
-      <Filter>3D</Filter>
+      <Filter>src\3D</Filter>
     </ClCompile>
     <ClCompile Include="src\3D\stb\stb_image.cpp">
-      <Filter>3D\stb</Filter>
+      <Filter>src\3D\stb</Filter>
     </ClCompile>
     <ClCompile Include="src\Application\Application.cpp">
-      <Filter>Application</Filter>
+      <Filter>src\Application</Filter>
     </ClCompile>
     <ClCompile Include="src\Chemistry\PeriodicTable.cpp">
-      <Filter>Chemistry</Filter>
+      <Filter>src\Chemistry</Filter>
     </ClCompile>
-    <ClCompile Include="src\Display.cpp" />
+    <ClCompile Include="src\Display.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\GUI\CalculationLayer.cpp">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\GUI\ImGuiBuild.cpp">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\GUI\ImGuiLayer.cpp">
-      <Filter>GUI</Filter>
+      <Filter>src\GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\Layers\Layer.cpp">
-      <Filter>Layers</Filter>
+      <Filter>src\Layers</Filter>
     </ClCompile>
     <ClCompile Include="src\Layers\LayerStack.cpp">
-      <Filter>Layers</Filter>
+      <Filter>src\Layers</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Geometry.cpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Isosurfaces.cpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Maths.cpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Quadrature.cpp">
-      <Filter>Maths</Filter>
+      <Filter>src\Maths</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\GLFW\GLFWDisplay.cpp">
-      <Filter>Platform\GLFW</Filter>
+      <Filter>src\Platform\GLFW</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffers.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLCore.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLFramebuffer.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLShaderProgram.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLTexture.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLVertexArray.cpp">
-      <Filter>Platform\OpenGL</Filter>
+      <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
     <ClCompile Include="src\Platform\Windows\Console.cpp">
-      <Filter>Platform\Windows</Filter>
+      <Filter>src\Platform\Windows</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\Basis\BasisUtils.cpp">
-      <Filter>Quantum\Basis</Filter>
+      <Filter>src\Quantum\Basis</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\Basis\Gaussian.cpp">
-      <Filter>Quantum\Basis</Filter>
+      <Filter>src\Quantum\Basis</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\DFT\DFT.cpp">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp">
-      <Filter>Quantum\DFT</Filter>
+      <Filter>src\Quantum\DFT</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\HF\HartreeFock.cpp">
-      <Filter>Quantum\HF</Filter>
+      <Filter>src\Quantum\HF</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\Integrals\Gamma.cpp">
-      <Filter>Quantum\Integrals</Filter>
+      <Filter>src\Quantum\Integrals</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\Integrals\IntegralHelper.cpp">
-      <Filter>Quantum\Integrals</Filter>
+      <Filter>src\Quantum\Integrals</Filter>
     </ClCompile>
     <ClCompile Include="src\Quantum\Molecule.cpp">
-      <Filter>Quantum</Filter>
+      <Filter>src\Quantum</Filter>
     </ClCompile>
     <ClCompile Include="src\Scene\Camera.cpp">
-      <Filter>Scene</Filter>
+      <Filter>src\Scene</Filter>
     </ClCompile>
     <ClCompile Include="src\Utilities\IO.cpp">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\Utilities\StringOperations.cpp">
-      <Filter>Utilities</Filter>
+      <Filter>src\Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\pch.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SCESS.APS" />

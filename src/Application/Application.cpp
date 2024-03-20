@@ -1,6 +1,6 @@
 #include<pch.h>
 #include"Application.h"
-#include"imgui.h"
+#include<ImGui/imgui.h>
 
 #include"Events/Events.h"
 #include"Events/KeyEvents.h"
@@ -97,7 +97,7 @@ namespace SCESS
 
 		UpdateProjectionMatrix();
 
-		TextureLoader loader(PathUtils::GetAssetPath(R"(Icon\SCESS Small.png)").string());
+		TextureLoader loader(PathUtils::GetAssetPath(R"(Icon/SCESS Small.png)").string());
 		mAppIcon = Texture2D::Create(loader);
 	}
 

@@ -1,7 +1,7 @@
 #pragma once
 #include<array>
-
 #include"Utilities/Memory.h"
+#include<glm/glm.hpp>
 
 namespace SCESS
 {
@@ -79,7 +79,7 @@ namespace SCESS
 
 
 	//
-	class Geometry final abstract
+	class Geometry
 	{
 	public:
 		using TriangleI = glm::vec<3, unsigned int>;

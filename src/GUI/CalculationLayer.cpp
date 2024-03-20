@@ -1,7 +1,7 @@
 #include<pch.h>
 #include"CalculationLayer.h"
-#include"imgui.h"
-#include<nfd.h>
+#include<ImGui/imgui.h>
+#include<nfd/nfd.h>
 
 #include"Scene/Camera.hpp"
 #include"3D/VertexArray.h"
@@ -14,7 +14,7 @@
 #include"Quantum/Basis/Gaussian.h"
 #include"Quantum/HF/HartreeFock.h"
 #include"Quantum/DFT/DFT.h"
-
+ 
 #include"Application/Application.h"
 
 #include"GUI/ImSpinner.h"
@@ -30,7 +30,7 @@ namespace SCESS
 #ifdef _DEBUG
 		if (!tri.HasFinished())
 		{
-			throw std::exception("Trisurface generation thread has not completed.");
+			throw std::runtime_error("Trisurface generation thread has not completed.");
 		}
 #endif
 
@@ -46,13 +46,13 @@ namespace SCESS
 	void CalculationLayer::OnAttach()
 	{
 		mDiffuseProg = ShaderProgram::CreateFromFile(
-			PathUtils::GetAssetPath(R"(Shaders\ColourDiffuse.glsl)").string());
+			PathUtils::GetAssetPath(R"(Shaders/ColourDiffuse.glsl)").string());
 
 		mMoleculeDiffuseProg = ShaderProgram::CreateFromFile(
-			PathUtils::GetAssetPath(R"(Shaders\MoleculeColourDiffuse.glsl)").string());
+			PathUtils::GetAssetPath(R"(Shaders/MoleculeColourDiffuse.glsl)").string());
 
 		mSolidColourProg = ShaderProgram::CreateFromFile(
-			PathUtils::GetAssetPath(R"(Shaders\SolidColour.glsl)").string());
+			PathUtils::GetAssetPath(R"(Shaders/SolidColour.glsl)").string());
 
 		mPosTrisurfVAO = VertexArray::Create();
 		mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
@@ -281,7 +281,7 @@ namespace SCESS
 
 			mMoleculeName = "Imported Molecule";
 			mSelectedMolecule = -1;
-			mMolecule->ConstructBonding(1.1);
+			mMolecule->ConstructBonding(2.0);
 			UploadMolecule();
 		}
 	}
@@ -614,7 +614,7 @@ namespace SCESS
 							int selectedOption2 = -1;
 							if (!(mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning()))
 							{
-								const char** orbitalLabels = (const char**)_malloca(sizeof(const char**) * mMOLabels.size());
+								const char** orbitalLabels = (const char**)alloca(sizeof(const char**) * mMOLabels.size());
 
 								for (uint32_t i = 0; i < mMOLabels.size(); i++)
 									orbitalLabels[i] = mMOLabels[i].c_str();
@@ -637,8 +637,6 @@ namespace SCESS
 										(int)mUHFResult->EnergiesBeta.rows());
 									ImGui::PopItemWidth();
 								}
-
-								_freea(orbitalLabels);
 							}
 
 							if (selectedOption != -1 || selectedOption2 != -1)

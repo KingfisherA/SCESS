@@ -148,7 +148,7 @@ namespace SCESS
 				return;
 			}
 
-			size_t commentIndex = currentLine.find("//", 0ui32);
+			size_t commentIndex = currentLine.find("//", 0);
 			if (commentIndex < includeIndex || commentIndex < endIndex)
 			{
 				sourceCode += (currentLine + '\n');

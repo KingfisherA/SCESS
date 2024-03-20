@@ -1,6 +1,7 @@
 #pragma once
 #include<iostream>
 
+#ifdef PLATFORM_WIN
 namespace SCESS
 {
 	enum class ConsoleColour : unsigned char
@@ -22,7 +23,7 @@ namespace SCESS
 		BrightYellow = 14
 	};
 
-	class Console abstract
+	class Console
 	{
 	public:
 		//
@@ -33,4 +34,5 @@ namespace SCESS
 		static void* cHandle;
 	};
 }
+#endif
 

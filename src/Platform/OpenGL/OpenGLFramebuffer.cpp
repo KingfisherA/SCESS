@@ -80,7 +80,7 @@ namespace SCESS
 		{
 			FramebufferAttachment currentAttach = specification.Attachments.Attachments[i];
 			unsigned int fboAttachment = 0;
-			if (PixelFormat::IsDepth(currentAttach.PixelFormat))
+			if (PixelFormat::IsDepth(currentAttach.mPixelFormat))
 			{
 				fboAttachment = GL_DEPTH_STENCIL_ATTACHMENT;
 			}
@@ -89,13 +89,13 @@ namespace SCESS
 				fboAttachment = GL_COLOR_ATTACHMENT0 + colourIndex;
 				colourIndex++;
 			}
-			UNI_ASSERT(depthAttached && PixelFormat::IsDepth(currentAttach.PixelFormat), SCESS::OpenGLFramebuffer::CreateFramebuffer, "Cannot have more than one depth attachment to an OpenGL framebuffer.");
+			UNI_ASSERT(depthAttached && PixelFormat::IsDepth(currentAttach.mPixelFormat), SCESS::OpenGLFramebuffer::CreateFramebuffer, "Cannot have more than one depth attachment to an OpenGL framebuffer.");
 
 			if (specification.Samples > 1)
 			{
 				if (currentAttach.Renderbuffer)
 				{
-					GLuint rboID = CreateMultisampledRenderbuffer(specification.Width, specification.Height, currentAttach.PixelFormat,
+					GLuint rboID = CreateMultisampledRenderbuffer(specification.Width, specification.Height, currentAttach.mPixelFormat,
 						specification.Samples);
 
 					glFramebufferRenderbuffer(GL_FRAMEBUFFER, fboAttachment, GL_RENDERBUFFER, rboID);
@@ -103,37 +103,37 @@ namespace SCESS
 				}
 				else
 				{
-					GLuint texID = CreateMultisampledTex2D(specification.Width, specification.Height, currentAttach.PixelFormat, specification.Samples);
+					GLuint texID = CreateMultisampledTex2D(specification.Width, specification.Height, currentAttach.mPixelFormat, specification.Samples);
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, fboAttachment, GL_TEXTURE_2D_MULTISAMPLE, texID, 0);
 					//textureAttachments.insert({ (unsigned int)i,  texID });
 					textureAttachments.emplace(std::piecewise_construct,
 						std::forward_as_tuple((unsigned int)i), std::forward_as_tuple(texID, 
-							Dimension2D{specification.Width, specification.Height}, currentAttach.PixelFormat));
+							Dimension2D{specification.Width, specification.Height}, currentAttach.mPixelFormat));
 				}
 			}
 			else
 			{
 				if (currentAttach.Renderbuffer)
 				{
-					GLuint rboID = CreateRenderbuffer(specification.Width, specification.Height, currentAttach.PixelFormat);
+					GLuint rboID = CreateRenderbuffer(specification.Width, specification.Height, currentAttach.mPixelFormat);
 
 					glFramebufferRenderbuffer(GL_FRAMEBUFFER, fboAttachment, GL_RENDERBUFFER, rboID);
 					renderbufferAttachments.insert({ (unsigned int)i, rboID });
 				}
 				else
 				{
-					GLuint texID = CreateTex2D(specification.Width, specification.Height, currentAttach.PixelFormat);
+					GLuint texID = CreateTex2D(specification.Width, specification.Height, currentAttach.mPixelFormat);
 
 					glFramebufferTexture2D(GL_FRAMEBUFFER, fboAttachment, GL_TEXTURE_2D, texID, 0);
 					//textureAttachments.insert({ (unsigned int)i, texID });
 					textureAttachments.emplace(std::piecewise_construct,
 						std::forward_as_tuple((unsigned int)i), std::forward_as_tuple(texID,
-							Dimension2D{ specification.Width, specification.Height }, currentAttach.PixelFormat));
+							Dimension2D{ specification.Width, specification.Height }, currentAttach.mPixelFormat));
 				}
 			}
 
-			depthAttached |= PixelFormat::IsDepth(currentAttach.PixelFormat);
+			depthAttached |= PixelFormat::IsDepth(currentAttach.mPixelFormat);
 		}
 
 		GLenum error = glCheckFramebufferStatus(GL_FRAMEBUFFER);

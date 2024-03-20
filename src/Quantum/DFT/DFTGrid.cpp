@@ -14,9 +14,9 @@ namespace SCESS
 
 	void DFTGridPoint::SetBasisFuncAmplitude(const Molecule& mol)
 	{
-		mBasisAmplitudes = Eigen::VectorXd::Zero(mol.GetOrbitals().size());
+		mBasisAmplitudes = Eigen::VectorXd::Zero(mol.GetNoOrbitals());
 
-		for (size_t i = 0; i < mol.GetOrbitals().size(); i++)
+		for (size_t i = 0; i < mol.GetNoOrbitals(); i++)
 		{
 			mBasisAmplitudes[i] = EvaluateGaussianFunction<double>(mol.GetOrbital(i), mPos.x(), mPos.y(), mPos.z());
 		}
@@ -53,9 +53,7 @@ namespace SCESS
 					Quadrature::lebedev_coefficients[j][2]);
 				p2 *= r;
 
-				mPoints.emplace_back(mAtom.GetPos() + p2, p2);
-
-				DFTGridPoint& currentP = mPoints.back();
+				DFTGridPoint& currentP = mPoints.emplace_back(mAtom.GetPos()+p2, p2);
 				currentP.SetWeight(w * Quadrature::lebedev_coefficients[j][3]);
 				currentP.SetBasisFuncAmplitude(mMolecule);
 			}
@@ -256,7 +254,7 @@ namespace SCESS
 			const Eigen::MatrixXd& atomicA = grid.GetAmplitudes();
 
 			for (size_t j = 0; j < grid.GetGridSize(); j++) {
-				for (size_t k = 0; k < mMolecule.GetOrbitals().size(); k++) {
+				for (size_t k = 0; k < mMolecule.GetNoOrbitals(); k++) {
 					amplitudes(k, i + j) = atomicA(k, j);
 				}
 			}

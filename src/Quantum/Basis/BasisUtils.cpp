@@ -13,7 +13,7 @@ namespace SCESS::BasisUtils
 	{
 		namespace fs = boost::filesystem;
 		std::vector<std::string> basisSets;
-		fs::path basisSetPath = PathUtils::GetAssetPath("Basis\\");
+		fs::path basisSetPath = PathUtils::GetAssetPath("Basis");
 		
 		fs::recursive_directory_iterator itr(basisSetPath);
 

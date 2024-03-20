@@ -35,14 +35,14 @@
 #include <cctype>
 
 #ifdef __has_include
-#if !__has_include(<imgui.h>)
+#if !__has_include(<ImGui/imgui.h>)
 #error "Couldn't find imgui.h in the header include path, please add it to the path!"
 #endif // !<imgui.h>
 #endif // __has_include
 
  // imgui headers
-#include "imgui.h"
-#include "imgui_internal.h"
+#include <ImGui/imgui.h>
+#include <ImGui/imgui_internal.h>
 
 namespace ImSpinner
 {

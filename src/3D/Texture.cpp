@@ -1,7 +1,7 @@
 #include<pch.h>
 
 #include"Platform/API Core.h"
-#include"Utilities\Assert.h"
+#include"Utilities/Assert.h"
 
 #include"Texture.h"
 #include"Platform/OpenGL/OpenGLTexture.h"

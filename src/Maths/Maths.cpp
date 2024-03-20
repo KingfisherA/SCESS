@@ -37,58 +37,6 @@ namespace SCESS::Maths
 		return glm::clamp(1 / Remap(distanceIn, minDistance, minDistance + fadeSpeed, 0.0f, 1.0f), 0.0f, 1.0f);
 	}
 	//
-	int IntegerPow(int base, int exponent)
-	{
-		if (exponent == 0) return 1;
-		int result = base;
-
-		for (unsigned int i = 1; i < exponent; i++)
-		{
-			result *= base;
-		}
-
-		return result;
-	}
-	//
-	unsigned int IntegerPow(unsigned int base, unsigned int exponent)
-	{
-		if (exponent == 0) return 1;
-		unsigned int result = base;
-
-		for (unsigned int i = 1; i < exponent; i++)
-		{
-			result *= base;
-		}
-
-		return result;
-	}
-	//
-	long IntegerPow(long base, long exponent)
-	{
-		if (exponent == 0) return 1;
-		long result = base;
-
-		for (unsigned long i = 1; i < exponent; i++)
-		{
-			result *= base;
-		}
-
-		return result;
-	}
-	//
-	unsigned long IntegerPow(unsigned long base, unsigned long exponent)
-	{
-		if (exponent == 0) return 1;
-		unsigned long result = base;
-
-		for (unsigned long i = 1; i < exponent; i++)
-		{
-			result *= base;
-		}
-
-		return result;
-	}
-	//
 	float  GetFadeValue(float distanceIn, float maxDistance, float fadeDensity, float fadeGradient)
 	{
 		return glm::clamp(exp(-pow((distanceIn - maxDistance) * fadeDensity, fadeGradient)), 0.0f, 1.0f);

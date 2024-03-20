@@ -4,6 +4,9 @@
 #include<glm/vec3.hpp>
 #include<utility>
 #include"Utilities/Threading.h"
+#include<condition_variable>
+#include<mutex>
+#include<memory>
 
 namespace SCESS
 {

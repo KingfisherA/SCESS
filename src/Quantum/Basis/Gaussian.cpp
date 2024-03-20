@@ -461,7 +461,7 @@ namespace SCESS
 	template<typename T>
 	T EvaluateGaussianFunction(const GaussianCollection& gc, T x, T y, T z)
 	{
-		T result = 0.0f;
+		T result = 0.0;
 		for (const Gaussian& g : gc.GetGaussians())
 		{
 			glm::vec<3, T> pos(

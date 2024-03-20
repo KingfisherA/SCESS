@@ -1,4 +1,6 @@
 #include<pch.h>
+
+#ifdef PLATFORM_WIN
 #include "Console.h"
 //
 //
@@ -19,3 +21,4 @@ namespace SCESS
 	}
 	//
 }
+#endif

@@ -114,10 +114,19 @@ namespace SCESS::Maths
 	/// <returns>The interpolated value</returns>
 	float GetLinearFadeValue(float distanceIn, float minDistance, float fadeSpeed);
 	//
-	int IntegerPow(int base, int exponent);
-	unsigned int IntegerPow(unsigned int base, unsigned int exponent);
-	long IntegerPow(long base, long exponent);
-	unsigned long IntegerPow(unsigned long base, unsigned long exponent);
+	template<typename T>
+	T IntegerPow(T base, T exponent)
+	{
+		if (exponent == 0) return 1;
+		T result = base;
+
+		for (size_t i = 1; i < exponent; i++)
+		{
+			result *= base;
+		}
+
+		return result;
+	}
 	//
 	inline glm::mat3 CalculateNormalMatrix(const glm::mat4& transformMatrix)
 	{

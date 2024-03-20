@@ -2,7 +2,7 @@
 #include<pch.h>
 
 
-class OpenGLCore abstract
+class OpenGLCore
 {
 public: 
 	enum class Blending

@@ -1,6 +1,7 @@
 #include<pch.h>
 #include<boost/locale/conversion.hpp>
 #include<fstream>
+#include<exception>
 
 #include"Molecule.h"
 #include"Basis/BasisUtils.h"
@@ -52,10 +53,10 @@ namespace SCESS
 
 	void Molecule::MakeOrbitals(const std::string& basisSetName)
 	{
-		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath("Basis\\" + basisSetName + ".json").string());
+		std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(PathUtils::GetAssetPath("Basis/" + basisSetName + ".json").string());
 		if (!basisSetOpt.has_value())
 		{
-			throw std::exception("Basis set could not be loaded succesfully");
+			throw std::runtime_error("Basis set could not be loaded succesfully");
 		}
 		nlohmann::json& basisSet = *basisSetOpt;
 		std::vector<SCESS::OrbitalType> types;

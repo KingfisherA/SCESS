@@ -11,7 +11,7 @@ namespace SCESS
 	class Molecule;
 	struct TETensor;
 
-	class HF abstract
+	class HF
 	{
 	public:
 

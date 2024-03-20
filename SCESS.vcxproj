@@ -42,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>bin\SCESS\Debug-x64\</OutDir>
-    <IntDir>bin-obj\SCESS\Debug-x64\</IntDir>
+    <OutDir>bin\function: 0x5c283bc0b410\Debug-x64\</OutDir>
+    <IntDir>bin-obj\function: 0x5c283bc0b410\Debug-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>bin\SCESS\Release-x64\</OutDir>
-    <IntDir>bin-obj\SCESS\Release-x64\</IntDir>
+    <OutDir>bin\function: 0x5c283bc0b410\Release-x64\</OutDir>
+    <IntDir>bin-obj\function: 0x5c283bc0b410\Release-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
@@ -60,7 +60,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\C++\glew-2.1.0\include;..\..\Libraries\C++\glfw-3.3.2\include;..\..\Libraries\C++\glm;..\..\Libraries\C++\json-develop\include;..\..\Libraries\C++\eigen-3.4.0;..\..\Libraries\C++\boost_1_83_0;..\..\Libraries\C++\ImGui;..\..\Libraries\C\libxc-6.2.2\src;..\..\Libraries\C\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -68,15 +68,19 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;ImGui.lib;xc.lib;..\..\Libraries\C\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\C++\glew-2.1.0\lib\Debug\x64;..\..\Libraries\C++\glfw-3.3.2\lib\x64;..\..\Libraries\C++\boost_1_83_0\stage\lib;..\..\Libraries\C++\ImGui\bin\ImGui\Debug-x64\ImGui;..\..\Libraries\C\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;ImGui.lib;xc.lib;C:\dev\Libraries\C\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\dev\Libraries\C++\glew-2.1.0\lib\Debug\x64;C:\dev\Libraries\C++\glfw-3.3.2\lib\x64;C:\dev\Libraries\C++\boost_1_83_0\stage\lib;C:\dev\Libraries\C++\ImGui\bin\ImGui\Debug-x64\ImGui;C:\dev\Libraries\C\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)$(ProjectName)/Debug-x64/Assets" /s /y /i /d</Command>
+      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)function: 0x5c283bc0b410/Debug-x64/Assets" /s /y /i /d</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,7 +89,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\C++\glew-2.1.0\include;..\..\Libraries\C++\glfw-3.3.2\include;..\..\Libraries\C++\glm;..\..\Libraries\C++\json-develop\include;..\..\Libraries\C++\eigen-3.4.0;..\..\Libraries\C++\boost_1_83_0;..\..\Libraries\C++\ImGui;..\..\Libraries\C\libxc-6.2.2\src;..\..\Libraries\C\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -96,16 +100,20 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>UNI_OPENGL;_CONSOLE;GLEW_STATIC;PLATFORM_WIN;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;ImGui.lib;xc.lib;..\..\Libraries\C\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\C++\glew-2.1.0\lib\Release\x64;..\..\Libraries\C++\glfw-3.3.2\lib\x64;..\..\Libraries\C++\boost_1_83_0\stage\lib;..\..\Libraries\C++\ImGui\bin\ImGui\Release-x64\ImGui;..\..\Libraries\C\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opengl32.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;ImGui.lib;xc.lib;C:\dev\Libraries\C\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\dev\Libraries\C++\glew-2.1.0\lib\Release\x64;C:\dev\Libraries\C++\glfw-3.3.2\lib\x64;C:\dev\Libraries\C++\boost_1_83_0\stage\lib;C:\dev\Libraries\C++\ImGui\bin\ImGui\Release-x64\ImGui;C:\dev\Libraries\C\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)$(ProjectName)/Release-x64/Assets" /s /y /i /d</Command>
+      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)function: 0x5c283bc0b410/Release-x64/Assets" /s /y /i /d</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

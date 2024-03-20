@@ -29,7 +29,7 @@ namespace SCESS
 		EventCategoryWindow =		BIT(5)
 	};	
 
-	#define EVENT_CLASS_FUNCTIONS(type) static EventType GetStaticType() { return EventType::##type;}\
+	#define EVENT_CLASS_FUNCTIONS(type) static EventType GetStaticType() { return EventType :: type ;}\
 									virtual EventType GetEventType() const override {return GetStaticType();}\
 									virtual std::string_view GetName() const override {return std::string_view(#type); }
 

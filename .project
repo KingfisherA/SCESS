@@ -1,0 +1,627 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>SCESS-Debug@SCESS</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.cdt.make.core.makeBuilder</name>
+			<triggers>clean,full,incremental,</triggers>
+			<arguments>
+				<dictionary>
+					<key>org.eclipse.cdt.core.errorOutputParser</key>
+					<value>org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser;</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.append_environment</key>
+					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.autoBuildTarget</key>
+					<value>all</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.arguments</key>
+					<value>-j12</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.command</key>
+					<value>/usr/bin/gmake</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.location</key>
+					<value>/media/charlie/Data/dev/C++/SCESS</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.target.auto</key>
+					<value>all</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.target.clean</key>
+					<value>clean</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.build.target.inc</key>
+					<value>all</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.buildArguments</key>
+					<value></value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.buildLocation</key>
+					<value>/media/charlie/Data/dev/C++/SCESS</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>
+					<value>clean</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.contents</key>
+					<value>org.eclipse.cdt.make.core.activeConfigSettings</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.enableAutoBuild</key>
+					<value>false</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.enableCleanBuild</key>
+					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.enableFullBuild</key>
+					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.enabledIncrementalBuild</key>
+					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.environment</key>
+					<value>VERBOSE=1|CMAKE_NO_VERBOSE=1|</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.fullBuildTarget</key>
+					<value>all</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.stopOnError</key>
+					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.useDefaultBuildCmd</key>
+					<value>false</value>
+				</dictionary>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.cdt.make.core.ScannerConfigBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.cdt.make.core.makeNature</nature>
+		<nature>org.eclipse.cdt.make.core.ScannerConfigNature</nature>
+		<nature>org.eclipse.cdt.core.ccnature</nature>
+		<nature>org.eclipse.cdt.core.cnature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>[Subprojects]</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/CMake Rules</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Object Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Object Libraries</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Precompile Header File</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Resources</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/SCESS.APS</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/SCESS.APS</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/API Core.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/API Core.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/AppEvents.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Events/AppEvents.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Application.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Application/Application.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Assert.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/Assert.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/BasisUtils.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/BasisUtils.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Buffers.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Buffers.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/CalculationLayer.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/CalculationLayer.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Camera.hpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Scene/Camera.hpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Console.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/Windows/Console.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/DFT.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFT.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/DFTGrid.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFTGrid.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Display.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Display.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Events.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Events/Events.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Framebuffer.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Framebuffer.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/GLFWDisplay.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/GLFW/GLFWDisplay.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Gamma.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/Gamma.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Gaussian.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/Gaussian.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Geometry.hpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Geometry.hpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/HartreeFock.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/HF/HartreeFock.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/IO.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/IO.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/ImGuiLayer.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiLayer.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/ImSpinner.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/ImSpinner.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/IntegralHelper.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/IntegralHelper.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Intrinsics.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/Intrinsics.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Isosurfaces.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Isosurfaces.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/KeyEvents.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Events/KeyEvents.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Layer.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Layers/Layer.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/LayerStack.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Layers/LayerStack.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Maths.hpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Maths.hpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Memory.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/Memory.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Molecule.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Molecule.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/MouseEvents.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Events/MouseEvents.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLBuffers.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLBuffers.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLCore.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLCore.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLFramebuffer.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLFramebuffer.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLShaderProgram.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLShaderProgram.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLTexture.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLTexture.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/OpenGLVertexArray.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLVertexArray.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/PathUtils.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/PathUtils.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/PeriodicTable.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Chemistry/PeriodicTable.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Quadrature.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Quadrature.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/ShaderProgram.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/ShaderProgram.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/StringOperations.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/StringOperations.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Tests.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Tests/Tests.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Texture.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Texture.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/Threading.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/Threading.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/VertexArray.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/VertexArray.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/WindowEvents.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Events/WindowEvents.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/XCFunctional.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/XCFunctional.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/pch.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/pch.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/resource.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/resource.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Header Files/stb_image.h</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/stb/stb_image.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Application.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Application/Application.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/BasisUtils.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/BasisUtils.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Buffers.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Buffers.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/CalculationLayer.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/CalculationLayer.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Camera.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Scene/Camera.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Console.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/Windows/Console.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/DFT.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFT.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/DFTGrid.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFTGrid.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Display.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Display.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Framebuffer.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Framebuffer.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/GLFWDisplay.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/GLFW/GLFWDisplay.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Gamma.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/Gamma.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Gaussian.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/Gaussian.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Geometry.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Geometry.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/HartreeFock.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/HF/HartreeFock.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/IO.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/IO.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/ImGuiBuild.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiBuild.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/ImGuiLayer.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiLayer.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/IntegralHelper.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/IntegralHelper.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Isosurfaces.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Isosurfaces.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Layer.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Layers/Layer.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/LayerStack.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Layers/LayerStack.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Maths.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Maths.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Molecule.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/Molecule.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLBuffers.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLBuffers.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLCore.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLCore.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLFramebuffer.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLFramebuffer.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLShaderProgram.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLShaderProgram.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLTexture.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLTexture.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/OpenGLVertexArray.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLVertexArray.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/PeriodicTable.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Chemistry/PeriodicTable.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Quadrature.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Maths/Quadrature.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/SCESS.rc</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/SCESS.rc</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/ShaderProgram.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/ShaderProgram.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/StringOperations.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Utilities/StringOperations.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/Texture.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/Texture.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/VertexArray.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/VertexArray.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/XCFunctional.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/XCFunctional.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/pch.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/pch.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[exe] SCESS/Source Files/stb_image.cpp</name>
+			<type>1</type>
+			<location>/media/charlie/Data/dev/C++/SCESS/src/3D/stb/stb_image.cpp</location>
+		</link>
+	</linkedResources>
+</projectDescription>

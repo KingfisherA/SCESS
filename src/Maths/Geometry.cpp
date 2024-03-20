@@ -360,7 +360,7 @@ namespace SCESS
 	sRef<Mesh>Geometry::CreateIcosphere(float radius, unsigned int subdivisions)
 	{
 		auto PrecomputeNoTriangles = [](unsigned int subdivisions) -> unsigned int
-			{ return 20 * Maths::IntegerPow(4ui32, subdivisions); };
+			{ return 20 * Maths::IntegerPow<unsigned int>(4, subdivisions); };
 
 		auto PrecomputeVertexAmount = [](unsigned int subdivisions)->unsigned int
 			{
