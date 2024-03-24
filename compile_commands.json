@@ -1,0 +1,236 @@
+[
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/Buffers.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/Buffers.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/Buffers.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/Buffers.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/Framebuffer.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/Framebuffer.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/Framebuffer.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/Framebuffer.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/ShaderProgram.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/ShaderProgram.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/ShaderProgram.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/ShaderProgram.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/Texture.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/Texture.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/Texture.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/Texture.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/VertexArray.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/VertexArray.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/VertexArray.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/VertexArray.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/3D/stb/stb_image.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/3D/stb/stb_image.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/3D/stb/stb_image.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/3D/stb/stb_image.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Application/Application.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Application/Application.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Application/Application.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Application/Application.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Chemistry/PeriodicTable.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Chemistry/PeriodicTable.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Chemistry/PeriodicTable.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Chemistry/PeriodicTable.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Display.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Display.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Display.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Display.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/GUI/CalculationLayer.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/GUI/CalculationLayer.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/GUI/CalculationLayer.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/GUI/CalculationLayer.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/GUI/ImGuiBuild.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiBuild.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiBuild.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/GUI/ImGuiBuild.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/GUI/ImGuiLayer.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiLayer.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/GUI/ImGuiLayer.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/GUI/ImGuiLayer.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Layers/Layer.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Layers/Layer.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Layers/Layer.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Layers/Layer.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Layers/LayerStack.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Layers/LayerStack.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Layers/LayerStack.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Layers/LayerStack.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Maths/Geometry.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Maths/Geometry.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Maths/Geometry.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Maths/Geometry.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Maths/Isosurfaces.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Maths/Isosurfaces.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Maths/Isosurfaces.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Maths/Isosurfaces.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Maths/Maths.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Maths/Maths.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Maths/Maths.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Maths/Maths.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Maths/Quadrature.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Maths/Quadrature.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Maths/Quadrature.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Maths/Quadrature.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/GLFW/GLFWDisplay.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/GLFW/GLFWDisplay.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/GLFW/GLFWDisplay.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/GLFW/GLFWDisplay.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLBuffers.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLBuffers.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLBuffers.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLBuffers.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLCore.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLCore.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLCore.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLCore.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLFramebuffer.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLFramebuffer.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLFramebuffer.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLFramebuffer.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLShaderProgram.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLShaderProgram.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLShaderProgram.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLShaderProgram.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLTexture.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLTexture.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLTexture.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLTexture.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLVertexArray.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLVertexArray.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/OpenGL/OpenGLVertexArray.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/OpenGL/OpenGLVertexArray.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Platform/Windows/Console.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Platform/Windows/Console.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Platform/Windows/Console.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Platform/Windows/Console.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/Basis/BasisUtils.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/BasisUtils.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/BasisUtils.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/Basis/BasisUtils.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/Basis/Gaussian.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/Gaussian.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/Basis/Gaussian.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/Basis/Gaussian.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/DFT/DFT.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFT.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFT.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/DFT/DFT.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/DFT/DFTGrid.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFTGrid.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/DFTGrid.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/DFT/DFTGrid.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/DFT/XCFunctional.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/XCFunctional.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/DFT/XCFunctional.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/DFT/XCFunctional.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/HF/HartreeFock.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/HF/HartreeFock.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/HF/HartreeFock.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/HF/HartreeFock.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/Integrals/Gamma.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/Gamma.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/Gamma.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/Integrals/Gamma.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/Integrals/IntegralHelper.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/IntegralHelper.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/Integrals/IntegralHelper.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/Integrals/IntegralHelper.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Quantum/Molecule.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Quantum/Molecule.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Quantum/Molecule.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Quantum/Molecule.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Scene/Camera.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Scene/Camera.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Scene/Camera.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Scene/Camera.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Utilities/IO.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Utilities/IO.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Utilities/IO.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Utilities/IO.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/Utilities/StringOperations.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/Utilities/StringOperations.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/Utilities/StringOperations.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/Utilities/StringOperations.cpp.o"
+},
+{
+  "directory": "/media/charlie/Data/dev/C++/SCESS",
+  "command": "/usr/bin/c++ -DCONFIG_DEBUG -DGLEW_STATIC -DUNI_OPENGL -D_CONSOLE -D_DEBUG -I/media/charlie/Data/dev/C++/SCESS/src -I/media/charlie/Data/dev/Libraries/C++/json-develop/include -I/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0 -I/media/charlie/Data/dev/Libraries/C++/glm -I/media/charlie/Data/dev/Libraries/C++/ImGui -g -std=c++20 -m64 -g -std=c++20 -o CMakeFiles/SCESS.dir/src/pch.cpp.o -c /media/charlie/Data/dev/C++/SCESS/src/pch.cpp",
+  "file": "/media/charlie/Data/dev/C++/SCESS/src/pch.cpp",
+  "output": "CMakeFiles/SCESS.dir/src/pch.cpp.o"
+}
+]

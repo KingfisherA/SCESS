@@ -119,14 +119,11 @@ target_compile_definitions("SCESS" PRIVATE
 )
 target_link_directories("SCESS" PRIVATE
 )
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK REQUIRED IMPORTED_TARGET "gtk+-3.0")
-
 target_link_libraries("SCESS"
-  $<$<CONFIG:Debug>:libglfw3.a>
-  $<$<CONFIG:Debug>:/usr/local/lib/libImGui.a>
-  $<$<CONFIG:Debug>:/usr/local/lib/libboost_filesystem.a>
-  $<$<CONFIG:Debug>:/usr/lib64/libGLEW.a>
+  $<$<CONFIG:Debug>:glfw3>
+  $<$<CONFIG:Debug>:ImGui>
+  $<$<CONFIG:Debug>:boost_filesystem>
+  $<$<CONFIG:Debug>:GLEW.a>
   $<$<CONFIG:Debug>:GL>
   $<$<CONFIG:Debug>:m>
   $<$<CONFIG:Debug>:Xrandr>
@@ -134,14 +131,13 @@ target_link_libraries("SCESS"
   $<$<CONFIG:Debug>:X11>
   $<$<CONFIG:Debug>:Xxf86vm>
   $<$<CONFIG:Debug>:pthread>
-    PkgConfig::GTK
-  $<$<CONFIG:Debug>:nfd.a>
   $<$<CONFIG:Debug>:/opt/etsf/lib/libxc.a>
-
+  $<$<CONFIG:Debug>:nfd>
+  $<$<CONFIG:Debug>:gtk-3>
+  $<$<CONFIG:Debug>:z>
+  $<$<CONFIG:Debug>:gdk-3>
+  $<$<CONFIG:Debug>:glib-2.0>
 )
-#if(CMAKE_BUILD_TYPE STREQUAL Debug)
-#  set_target_properties("SCESS" PROPERTIES COMPILE_FLAGS "$(pkg-config --cflags --libs gtk+-3.0) ")
-#endif()
 target_compile_options("SCESS" PRIVATE
   $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-m64>
   $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-g>
@@ -184,11 +180,10 @@ target_compile_definitions("SCESS" PRIVATE
 target_link_directories("SCESS" PRIVATE
 )
 target_link_libraries("SCESS"
-  $<$<CONFIG:Release>:libglfw3.a>
-  $<$<CONFIG:Release>:/usr/local/lib/libImGui.a>
-  $<$<CONFIG:Release>:/usr/local/lib/libboost_filesystem.a>
-  $<$<CONFIG:Release>:/usr/lib64/libGLEW.a>
-  $<$<CONFIG:Release>:/usr/lib64/libGLEW.so>
+  $<$<CONFIG:Release>:glfw3>
+  $<$<CONFIG:Release>:ImGui>
+  $<$<CONFIG:Release>:boost_filesystem>
+  $<$<CONFIG:Release>:GLEW.a>
   $<$<CONFIG:Release>:GL>
   $<$<CONFIG:Release>:m>
   $<$<CONFIG:Release>:Xrandr>
@@ -196,14 +191,13 @@ target_link_libraries("SCESS"
   $<$<CONFIG:Release>:X11>
   $<$<CONFIG:Release>:Xxf86vm>
   $<$<CONFIG:Release>:pthread>
-    PkgConfig::GTK
-  $<$<CONFIG:Release>:nfd.a>
   $<$<CONFIG:Release>:/opt/etsf/lib/libxc.a>
-
+  $<$<CONFIG:Release>:nfd>
+  $<$<CONFIG:Release>:gtk-3>
+  $<$<CONFIG:Release>:z>
+  $<$<CONFIG:Release>:gdk-3>
+  $<$<CONFIG:Release>:glib-2.0>
 )
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-  set_target_properties("SCESS" PROPERTIES COMPILE_FLAGS "")
-endif()
 target_compile_options("SCESS" PRIVATE
   $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-m64>
   $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-O2>

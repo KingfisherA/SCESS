@@ -87,7 +87,8 @@ project "SCESS"
 		  publicLibDir .. "glm",
 		  publicLibDir .. "ImGui"
 		}
-		buildoptions{"$(pkg-config --cflags --libs gtk+-3.0)"}
+		links { "glfw3", "ImGui", "boost_filesystem", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
+		--linkoptions { "`pkg-config --libs gtk+-3.0`" }
 
 
 	filter { "configurations:Debug", "system:Windows" }
@@ -117,11 +118,8 @@ project "SCESS"
 	filter { "configurations:Debug", "system:Linux" }
 		defines { "CONFIG_DEBUG", "_DEBUG" }
 		symbols "On"
-		links { "libglfw3.a", "/usr/local/lib/libImGui.a", "/usr/local/lib/libboost_filesystem.a", "/usr/lib64/libGLEW.a", "GL", "m", "Xrandr", "Xi", "X11","Xxf86vm", "pthread", "/usr/local/lib/nfd.a", "/usr/local/lib/libnfd.a", "/opt/etsf/lib/libxc.a" }
-		staticruntime "off"
 
 	filter { "configurations:Release", "system:Linux" }
 		defines { "CONFIG_RELEASE" }
 		optimize "On"
-		links { "libglfw3.a", "/usr/local/lib/libImGui.a", "/usr/local/lib/libboost_filesystem.a", "/usr/lib64/libGLEW.a","/usr/lib64/libGLEW.so", "GL", "m", "Xrandr", "Xi", "X11","Xxf86vm", "pthread", "/usr/local/lib/nfd.a","/usr/local/lib/libnfd.a", "/opt/etsf/lib/libxc.a" }
-		staticruntime "off"
+		symbols "Off"

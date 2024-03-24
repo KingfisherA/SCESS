@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 		system("PAUSE");
 		return -1;
 	}
-
+	
 	SCESS::Application smApp;
 	return smApp.Run();
 }
