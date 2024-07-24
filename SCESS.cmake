@@ -105,6 +105,7 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/SCESS/src>
   $<$<CONFIG:Debug>:/usr/include>
   $<$<CONFIG:Debug>:/usr/local/include>
+  $<$<CONFIG:Debug>:/opt/etsf/include>
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/json-develop/include>
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0>
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/glm>
@@ -166,6 +167,7 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/SCESS/src>
   $<$<CONFIG:Release>:/usr/include>
   $<$<CONFIG:Release>:/usr/local/include>
+  $<$<CONFIG:Release>:/opt/etsf/include>
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/json-develop/include>
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0>
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/glm>

@@ -20,8 +20,11 @@ namespace SCESS
 
 		static boost::filesystem::path GetAssetPath()
 		{
-			//return boost::filesystem::initial_path().append("\\Assets");
+#ifdef OS_LINUX
 			return boost::filesystem::path("/media/charlie/Data/dev/C++/SCESS/Assets");
+#elif OS_WIN
+			return boost::filesystem::initial_path().append("\\Assets");
+#endif
 		}
 
 		static boost::filesystem::path GetAssetPath(const std::string_view relativeAsset)

@@ -1,18 +1,18 @@
-#include<pch.h>
+#include <pch.h>
 
-#include<numbers>
-#include"DFTGrid.h"
-#include"Quantum/Molecule.h"
+#include <numbers>
+#include "DFTGrid.h"
+#include "Quantum/Molecule.h"
 #include "Maths/Quadrature.h"
 
 namespace SCESS
 {
-	DFTGridPoint::DFTGridPoint(const Eigen::Vector3d& rIn, const Eigen::Vector3d& rBeckeIn)
-		:mPos(rIn), mPosBecke(rBeckeIn)
+	DFTGridPoint::DFTGridPoint(const Eigen::Vector3d &rIn, const Eigen::Vector3d &rBeckeIn)
+		: mPos(rIn), mPosBecke(rBeckeIn)
 	{
 	}
 
-	void DFTGridPoint::SetBasisFuncAmplitude(const Molecule& mol)
+	void DFTGridPoint::SetBasisFuncAmplitude(const Molecule &mol)
 	{
 		mBasisAmplitudes = Eigen::VectorXd::Zero(mol.GetNoOrbitals());
 
@@ -22,11 +22,10 @@ namespace SCESS
 		}
 	}
 
-	void DFTGridPoint::SetDensity(const Eigen::MatrixXd& DensityMat)
+	void DFTGridPoint::SetDensity(const Eigen::MatrixXd &DensityMat)
 	{
 		mDensity = 2.0 * mBasisAmplitudes.dot(DensityMat * mBasisAmplitudes);
 	}
-
 
 	void DFTAtomicGrid::Construct(size_t radialPoints, size_t angularPoints, size_t lebedevOffset)
 	{
@@ -35,7 +34,7 @@ namespace SCESS
 
 		for (size_t i = 1; i <= radialPoints; i++)
 		{
-			//Gauss-Chebyshev
+			// Gauss-Chebyshev
 			double w = f * pow(sin(f * double(i)), 2.0);
 
 			double x = cos(f * double(i));
@@ -53,11 +52,10 @@ namespace SCESS
 					Quadrature::lebedev_coefficients[j][2]);
 				p2 *= r;
 
-				DFTGridPoint& currentP = mPoints.emplace_back(mAtom.GetPos()+p2, p2);
+				DFTGridPoint &currentP = mPoints.emplace_back(mAtom.GetPos() + p2, p2);
 				currentP.SetWeight(w * Quadrature::lebedev_coefficients[j][3]);
 				currentP.SetBasisFuncAmplitude(mMolecule);
 			}
-
 		}
 
 		for (size_t i = 0; i < mPoints.size(); i++)
@@ -66,9 +64,9 @@ namespace SCESS
 		}
 	}
 
-	void DFTAtomicGrid::SetDensity(const Eigen::MatrixXd& DensityMat)
+	void DFTAtomicGrid::SetDensity(const Eigen::MatrixXd &DensityMat)
 	{
-		for (DFTGridPoint& point : mPoints)
+		for (DFTGridPoint &point : mPoints)
 		{
 			point.SetDensity(DensityMat);
 		}
@@ -78,7 +76,7 @@ namespace SCESS
 
 	void DFTAtomicGrid::AdjustDensity(double correctionFactor)
 	{
-		for (DFTGridPoint& pnt : mPoints)
+		for (DFTGridPoint &pnt : mPoints)
 		{
 			pnt.MultiplyDensity(correctionFactor);
 		}
@@ -92,7 +90,7 @@ namespace SCESS
 		{
 			mDensity = 0.0;
 
-			for (DFTGridPoint& pnt : mPoints)
+			for (DFTGridPoint &pnt : mPoints)
 			{
 				mDensity += pnt.GetWeight() * pnt.GetDensity();
 			}
@@ -109,7 +107,7 @@ namespace SCESS
 
 		for (size_t i = 0; i < mPoints.size(); i++)
 		{
-			const DFTGridPoint& pnt = mPoints[i];
+			const DFTGridPoint &pnt = mPoints[i];
 			weights(i) = pnt.GetWeight();
 		}
 
@@ -122,7 +120,7 @@ namespace SCESS
 
 		for (size_t i = 0; i < mPoints.size(); i++)
 		{
-			const DFTGridPoint& pnt = mPoints[i];
+			const DFTGridPoint &pnt = mPoints[i];
 			densities(i) = pnt.GetDensity();
 		}
 
@@ -134,7 +132,7 @@ namespace SCESS
 		Eigen::MatrixXd positions = Eigen::MatrixXd::Zero(mPoints.size(), 3);
 		for (size_t i = 0; i < mPoints.size(); i++)
 		{
-			const DFTGridPoint& pnt = mPoints[i];
+			const DFTGridPoint &pnt = mPoints[i];
 			for (size_t j = 0; j < 3; j++)
 			{
 				positions(i, j) = pnt.GetPos()[j];
@@ -148,9 +146,11 @@ namespace SCESS
 	{
 		Eigen::MatrixXd amplitudes = Eigen::MatrixXd::Zero(mMolecule.GetOrbitals().size(), mPoints.size());
 
-		for (unsigned int i = 0; i < mPoints.size(); i++) {
+		for (unsigned int i = 0; i < mPoints.size(); i++)
+		{
 			Eigen::VectorXd basisFuncAmplitudes = mPoints[i].GetBasisAmplitudes();
-			for (unsigned int j = 0; j < mMolecule.GetOrbitals().size(); j++) {
+			for (unsigned int j = 0; j < mMolecule.GetOrbitals().size(); j++)
+			{
 				amplitudes(j, i) = basisFuncAmplitudes(j);
 			}
 		}
@@ -158,7 +158,7 @@ namespace SCESS
 		return amplitudes;
 	}
 
-	DFTMolecularGrid::DFTMolecularGrid(const Molecule& molIn) : mMolecule(molIn)
+	DFTMolecularGrid::DFTMolecularGrid(const Molecule &molIn) : mMolecule(molIn)
 	{
 	}
 
@@ -167,7 +167,8 @@ namespace SCESS
 		size_t angularPoints = Quadrature::num_lebedev_points[lebedevOrder];
 
 		size_t lebedevOffset = 0;
-		for (size_t i = 0; i < lebedevOrder; i++) {
+		for (size_t i = 0; i < lebedevOrder; i++)
+		{
 			lebedevOffset += Quadrature::num_lebedev_points[i];
 		}
 
@@ -176,15 +177,15 @@ namespace SCESS
 			mAtomicDensities.push_back(0.0);
 
 			mGrids.emplace_back(mMolecule, mMolecule.GetAtom(i));
-			DFTAtomicGrid& grid = mGrids.back();
+			DFTAtomicGrid &grid = mGrids.back();
 			grid.Construct(radialPoints, angularPoints, lebedevOffset);
 			mGridSize += grid.GetGridSize();
 		}
 	}
 
-	void DFTMolecularGrid::SetDensity(const Eigen::MatrixXd& DensityMat)
+	void DFTMolecularGrid::SetDensity(const Eigen::MatrixXd &DensityMat)
 	{
-		for (DFTAtomicGrid& grid : mGrids)
+		for (DFTAtomicGrid &grid : mGrids)
 		{
 			grid.SetDensity(DensityMat);
 		}
@@ -213,7 +214,7 @@ namespace SCESS
 	{
 		Eigen::VectorXd weights = Eigen::VectorXd::Zero(mGridSize);
 		size_t i = 0;
-		for (const DFTAtomicGrid& grid : mGrids)
+		for (const DFTAtomicGrid &grid : mGrids)
 		{
 			Eigen::VectorXd atomicW = grid.GetWeights();
 
@@ -231,7 +232,7 @@ namespace SCESS
 	{
 		Eigen::VectorXd densities = Eigen::VectorXd::Zero(mGridSize);
 		size_t i = 0;
-		for (const DFTAtomicGrid& grid : mGrids)
+		for (const DFTAtomicGrid &grid : mGrids)
 		{
 			Eigen::VectorXd atomicD = grid.GetDensities();
 
@@ -250,11 +251,14 @@ namespace SCESS
 		Eigen::MatrixXd amplitudes = Eigen::MatrixXd::Zero(mMolecule.GetOrbitals().size(), mGridSize);
 		size_t i = 0;
 
-		for (const DFTAtomicGrid& grid : mGrids) {
-			const Eigen::MatrixXd& atomicA = grid.GetAmplitudes();
+		for (const DFTAtomicGrid &grid : mGrids)
+		{
+			const Eigen::MatrixXd &atomicA = grid.GetAmplitudes();
 
-			for (size_t j = 0; j < grid.GetGridSize(); j++) {
-				for (size_t k = 0; k < mMolecule.GetNoOrbitals(); k++) {
+			for (size_t j = 0; j < grid.GetGridSize(); j++)
+			{
+				for (size_t k = 0; k < mMolecule.GetNoOrbitals(); k++)
+				{
 					amplitudes(k, i + j) = atomicA(k, j);
 				}
 			}

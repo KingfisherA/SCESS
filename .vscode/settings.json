@@ -1,0 +1,7 @@
+{
+  "editor.formatOnType": true,
+  "[commonlisp]": {
+    "editor.wordSeparators": "`|;:'\",()"
+  },
+  "C_Cpp.errorSquiggles": "enabled"
+}

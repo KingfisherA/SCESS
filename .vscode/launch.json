@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "configurations": [
   {
-    "name": "(gdb) Launch",
+    "name": "SCESS Debug Launch",
     "type": "cppdbg",
     "request": "launch",
     "program": "${workspaceFolder}/bin/linux/Debug-x64/SCESS",

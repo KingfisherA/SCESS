@@ -7,22 +7,13 @@ workspace "SCESS"
 		"Release"
 	}
 
---	system
---	{
---		"Windows",
---		"Linux"
---	}
+filter{"system:linux"}
+	defines{"OS_LINUX"}
+	publicLibDir = "/media/charlie/Data/dev/Libraries/"
 
-publicLibDir = ""
-publicLibDirC = ""
-
-filter{"system:Windows"}
-	publicLibDir = "C:/dev/Libraries/C++/"
-	publicLibDirC = "C:/dev/Libraries/C/"
-
-filter{"system:Linux"}
-	publicLibDir = "/media/charlie/Data/dev/Libraries/C++/"
-	publicLibDirC = "/media/charlie/Data/dev/Libraries/C/"
+filter{"system:windows"}
+	defines{"OS_WIN"}
+	publicLibDir = "D:/dev/Libraries/"
 
 outputdir = "%{os.host()}/%{cfg.buildcfg}-x64/"
 
@@ -47,10 +38,9 @@ project "SCESS"
 	  "%{wks.location}/SCESS.APS",
 	  "%{wks.location}/SCESS.rc",
 	}
-
-	defines { "UNI_OPENGL", "_CONSOLE", "GLEW_STATIC" }
-
-	filter { "system:Windows" }
+	
+	filter { "system:windows" }
+		defines{"GLEW_STATIC", "_CONSOLE",}
 		pchheader("pch.h")
 		pchsource("%{wks.location}/src/pch.cpp")
 		postbuildcommands {
@@ -59,29 +49,34 @@ project "SCESS"
 		files {
 		  "%{wks.location}/Eigen.natvis"
 		}
-
-
-
-		filter "system:windows"
-		defines
+		includedirs
 		{
-		  "PLATFORM_WIN"
+		  "%{wks.location}/src/",
+		  publicLibDir .. "json-develop/include",
+		  publicLibDir .. "eigen-3.4.0",
+		  publicLibDir .. "glm",
+		  publicLibDir .. "ImGui",
+		  publicLibDir .. "glew-2.1.0/include",
+		  publicLibDir .. "glfw-3.3.2/include",
+		  publicLibDir,
+		  publicLibDir .. "nativefiledialog/src/include",
+		  publicLibDir .. "boost_1_83_0",
+		  publicLibDir .. "libxc-6.2.2/src"
 		}
-
 		links
 		{
 		  "opengl32",
 		  "ImGui"
 		}
-
 		linkoptions { '/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT"' }
 		
-	filter {"system:Linux"}
+	filter {"system:linux"}
 		includedirs
 		{
 		  "%{wks.location}/src/",
 		  "/usr/include",
 		  "/usr/local/include",
+		  "/opt/etsf/include",
 		  publicLibDir .. "json-develop/include",
 		  publicLibDir .. "eigen-3.4.0",
 		  publicLibDir .. "glm",
@@ -94,12 +89,13 @@ project "SCESS"
 	filter { "configurations:Debug", "system:Windows" }
 		defines { "CONFIG_DEBUG", "_DEBUG" }
 		symbols "On"
-		libdirs { publicLibDir .. "glew-2.1.0/lib/Debug/x64/",
+		libdirs { 
+		  publicLibDir .. "glew-2.1.0/lib/Debug/x64/",
 		  publicLibDir .. "glfw-3.3.2/lib/x64/",
 		  publicLibDir .. "boost_1_83_0/stage/lib/",
-		  publicLibDir .. "ImGui/bin/ImGui/Debug-x64/ImGui",
-		  publicLibDirC .. "libxc-6.2.2/VS/Release" }
-		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib", "ImGui", "xc.lib", publicLibDirC .. "nativefiledialog/build/lib/Release/x64/nfd.lib" }
+		  publicLibDir .. "ImGui/bin/windows/Debug-x64",
+		  publicLibDir .. "libxc-6.2.2/VS/Release" }
+		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib", "ImGui", "xc.lib", publicLibDir .. "nativefiledialog/build/lib/Release/x64/nfd.lib" }
 		staticruntime "off"
 		buildoptions "/MDd"
 
@@ -109,9 +105,9 @@ project "SCESS"
 		libdirs { publicLibDir .. "glew-2.1.0/lib/Release/x64/",
 		  publicLibDir .. "glfw-3.3.2/lib/x64/",
 		  publicLibDir .. "boost_1_83_0/stage/lib/",
-		  publicLibDir .. "ImGui/bin/ImGui/Release-x64/ImGui",
-		  publicLibDirC .. "libxc-6.2.2/VS/Release" }
-		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib", "ImGui", "xc.lib", publicLibDirC .. "nativefiledialog/build/lib/Release/x64/nfd.lib" }
+		  publicLibDir .. "ImGui/bin/windows/Release-x64",
+		  publicLibDir .. "libxc-6.2.2/VS/Release" }
+		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib", "ImGui", "xc.lib", publicLibDir .. "nativefiledialog/build/lib/Release/x64/nfd.lib" }
 		staticruntime "off"
 		buildoptions "/MD"
 
