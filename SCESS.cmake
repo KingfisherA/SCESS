@@ -106,19 +106,22 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Debug>:/usr/include>
   $<$<CONFIG:Debug>:/usr/local/include>
   $<$<CONFIG:Debug>:/opt/etsf/include>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/json-develop/include>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/glm>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/C++/ImGui>
+  $<$<CONFIG:Debug>:/usr/local/include/eigen3>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/glm>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:UNI_OPENGL>
-  $<$<CONFIG:Debug>:_CONSOLE>
-  $<$<CONFIG:Debug>:GLEW_STATIC>
+  $<$<CONFIG:Debug>:OS_LINUX>
   $<$<CONFIG:Debug>:CONFIG_DEBUG>
   $<$<CONFIG:Debug>:_DEBUG>
 )
 target_link_directories("SCESS" PRIVATE
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Debug>:glfw3>
@@ -168,18 +171,21 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Release>:/usr/include>
   $<$<CONFIG:Release>:/usr/local/include>
   $<$<CONFIG:Release>:/opt/etsf/include>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/json-develop/include>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/eigen-3.4.0>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/glm>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/C++/ImGui>
+  $<$<CONFIG:Release>:/usr/local/include/eigen3>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/glm>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
-  $<$<CONFIG:Release>:UNI_OPENGL>
-  $<$<CONFIG:Release>:_CONSOLE>
-  $<$<CONFIG:Release>:GLEW_STATIC>
+  $<$<CONFIG:Release>:OS_LINUX>
   $<$<CONFIG:Release>:CONFIG_RELEASE>
 )
 target_link_directories("SCESS" PRIVATE
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Release>:glfw3>

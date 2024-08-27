@@ -72,7 +72,7 @@ namespace SCESS
 		UNI_ASSERT(s_Instance != nullptr, Application::Application, "There can only exist one instantiation of \"Application\"");
 		s_Instance = this;
 		m_Window.reset(Display::Create({"Schrodinger's Cat's Electronic System Solver", 800, 600}));
-		m_Window->BindEventCallback(BIND_EVENT_FNC(OnEvent));
+		m_Window->BindEventCallback((const Display::EventCallbackFnc &)BIND_EVENT_FNC(OnEvent));
 
 		glDisable(GL_CULL_FACE);
 		glEnable(GL_DEPTH_TEST);
@@ -118,12 +118,13 @@ namespace SCESS
 			}
 
 			if (m_viewPortPanelSize.x != this->m_lastViewportSize.x ||
-				m_viewPortPanelSize.y != this->m_lastViewportSize.y)
+			    m_viewPortPanelSize.y != this->m_lastViewportSize.y)
 			{
-				mainFramebuffer->Resize((size_t)m_viewPortPanelSize.x, (size_t)m_viewPortPanelSize.y);
+				mainFramebuffer->Resize((std::size_t)m_viewPortPanelSize.x, (std::size_t)m_viewPortPanelSize.y);
 
 				for (Layer *layer : m_LayerStack)
-					layer->Resize((size_t)m_viewPortPanelSize.x, (size_t)m_viewPortPanelSize.y);
+					layer->Resize((std::size_t)m_viewPortPanelSize.x,
+					              (std::size_t)m_viewPortPanelSize.y);
 				// m_PlanetLayer->Resize(m_viewPortPanelSize.x, m_viewPortPanelSize.y);
 				this->UpdateProjectionMatrix();
 				m_lastViewportSize = m_viewPortPanelSize;
@@ -133,7 +134,6 @@ namespace SCESS
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			// m_PlanetLayer->OnUpdate(mainFramebuffer, mCam, projectionMatrix, { NEAR_PLANE, FAR_PLANE });
 			for (Layer *layer : m_LayerStack)
 			{
 				layer->OnUpdate(mainFramebuffer, mCam, projectionMatrix, {NEAR_PLANE, FAR_PLANE});

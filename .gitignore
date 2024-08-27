@@ -27,7 +27,6 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
 
@@ -44,3 +43,8 @@ Fonts/
 Icon/
 Screenshots/
 /build/
+cmake-build-debug/
+cmake-build-release/
+CMakeFiles/
+.idea/
+.kdev4/
