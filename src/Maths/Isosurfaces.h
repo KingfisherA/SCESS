@@ -3,10 +3,11 @@
 
 #include<glm/vec3.hpp>
 #include<utility>
-#include"Utilities/Threading.h"
 #include<condition_variable>
 #include<mutex>
 #include<memory>
+
+#include "GraphicsEngine/Utilities/Threading.h"
 
 namespace SCESS
 {
@@ -387,7 +388,7 @@ namespace SCESS
 		/// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
 		void TriangulateField(
 			const ScalarField& field,
-			float isovalue, std::vector<Triangle<float>>& trianglesOut, const Thread* thread = nullptr);
+			float isovalue, std::vector<Triangle<float>>& trianglesOut, const GEng::Thread* thread = nullptr);
 	private:
 		glm::vec3 mIntersections[12];
 	};
@@ -474,7 +475,7 @@ namespace SCESS
 		std::condition_variable mHasFinished;
 
 		TensorTy mField;
-		Thread mThread;
+		GEng::Thread mThread;
 	};
 
 	class TriSurf
@@ -550,7 +551,7 @@ namespace SCESS
 		float mIsoVal = 0.0f;
 
 		bool mUsingMultithreading = false;
-		Thread mThread;
+		GEng::Thread mThread;
 	};
 
 }

@@ -1,25 +1,24 @@
 #include <pch.h>
-#include "Application.h"
+
+#include "Application/Application.h"
 #include <ImGui/imgui.h>
 
-#include "Events/Events.h"
-#include "Events/KeyEvents.h"
-#include "Events/MouseEvents.h"
-#include "3D/VertexArray.h"
-#include "Platform/Windows/Console.h"
-#include "Platform/API Core.h"
-#include "Utilities/Memory.h"
-#include "Display.h"
-#include "3D/Texture.h"
+#include "GraphicsEngine/Events/Events.h"
+#include "GraphicsEngine/Events/KeyEvents.h"
+#include "GraphicsEngine/Events/MouseEvents.h"
+#include "GraphicsEngine/3D/VertexArray.h"
+#include "GraphicsEngine/Platform/Windows/Console.h"
+#include "GraphicsEngine/Platform/GPUContext.h"
+#include "GraphicsEngine/Utilities/Memory.h"
+#include "GraphicsEngine/GUI/Display.h"
+#include "GraphicsEngine/3D/Texture.h"
+#include "GraphicsEngine/3D/Framebuffer.h"
+#include "GraphicsEngine/GUI/ImGuiLayer.h"
+#include "GraphicsEngine/Utilities/IO.h"
+#include "GraphicsEngine/Utilities/Assert.h"
 
-#include "GUI/ImGuiLayer.h"
 #include "GUI/CalculationLayer.h"
-
-#include "3D/Framebuffer.h"
-
-#include "Utilities/IO.h"
 #include <filesystem>
-#include "Utilities/PathUtils.h"
 
 #include "xc.h"
 
@@ -28,379 +27,245 @@
 
 #pragma region Entry Point
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 #ifdef PLATFORM_WIN
 	SCESS::Console::SetHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 #endif // PLATFORM_WIN
-	std::cout << "Schrodinger's Cat's Electronic System Solver\nMeow!\n";
+    std::cout << "Schrodinger's Cat's Electronic System Solver\nMeow!\n";
 
-	SCESS::PathUtils::Init();
+    std::cout << "---Libraries---\n";
+    int vmajor, vminor, vmicro;
+    xc_version(&vmajor, &vminor, &vmicro);
+    printf("Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
 
-	std::cout << "---Libraries---\n";
-	int vmajor, vminor, vmicro;
-	xc_version(&vmajor, &vminor, &vmicro);
-	printf("Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
+    SCESS::Application app;
 
-	if (!std::filesystem::exists(SCESS::PathUtils::GetAssetPath().string()))
-	{
-		std::cout << "Required assets directory not found relative to executable.\n";
-		system("PAUSE");
-		return -1;
-	}
+    if (!std::filesystem::exists(app.GetAssetsPath().string())) {
+        std::cout << "Required assets directory not found relative to executable.\n";
+        system("PAUSE");
+        return 1;
+    }
 
-	SCESS::Application smApp;
-	return smApp.Run();
+    if (!app.Init()) {
+        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+        system("PAUSE");
+        return 1;
+    }
+
+    app.Run();
+
+    return 0;
 }
 
 #pragma endregion
 
-namespace SCESS
-{
-	// Constants
-	constexpr float NEAR_PLANE = 0.1f;
-	constexpr float FAR_PLANE = 100.0f;
+namespace SCESS {
+    using namespace GEng;
+    // Constants
+    constexpr float NEAR_PLANE = 0.1f;
+    constexpr float FAR_PLANE = 100.0f;
 
-	// Static Variable Initilisation
-	Application *Application::s_Instance = nullptr;
-	glm::mat4 Application::projectionMatrix(1.0f);
+    // Static Variable Initilisation
+    Application *Application::sInstance = nullptr;
 
 #define BIND_EVENT_FNC(x) std::bind(&Application::x, this, std::placeholders::_1)
 
-	Application::Application() : m_MouseLastPos(0.0f)
-	{
-		UNI_ASSERT(s_Instance != nullptr, Application::Application, "There can only exist one instantiation of \"Application\"");
-		s_Instance = this;
-		m_Window.reset(Display::Create({"Schrodinger's Cat's Electronic System Solver", 800, 600}));
-		m_Window->BindEventCallback((const Display::EventCallbackFnc &)BIND_EVENT_FNC(OnEvent));
+    Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver", 800, 600,
+                                             FramebufferSpecification{
+                                                 800, 600, 1,
+                                                 {
+                                                     FramebufferAttachment(PixelFormat::RGBA8),
+                                                     FramebufferAttachment(PixelFormat::DEPTH24_STENCIL8)
+                                                 }
+                                             }), mProjectionMatrix(1.0f) {
+        GENG_ASSERT(sInstance != nullptr, Application::Application,
+                    "There can only exist one instantiation of \"Application\"");
+        sInstance = this;
+    }
 
-		glDisable(GL_CULL_FACE);
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+    bool Application::OnInit() {
+        this->mRenderViewport = true;
+        this->mViewportName = "Molecule View";
 
-		m_VersionStr = (const char *)glGetString(GL_VERSION);
-		m_VersionStr.insert(0, "OpenGL ");
-		m_VendorStr = (const char *)glGetString(GL_VENDOR);
-		m_ShadingLanguageStr = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-		m_ShadingLanguageStr.insert(0, "GLSL ");
+        GPUContext *ctx = GPUContext::Get();
+        ctx->SetDepthTest(false);
+        ctx->SetFaceCulling(false);
+        ctx->SetBlending(true, GPUContext::Blending::Alpha);
 
-		APICore::Initilise();
+        mCalcLayer = new CalculationLayer();
+        this->PushLayer(mCalcLayer);
 
-		m_ImGuiLayer = new SCESS::ImGuiLayer();
-		PushOverlay(m_ImGuiLayer);
+        mCam.MoveTo(glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+        UpdateProjectionMatrix();
 
-		mGraphLayer = new CalculationLayer();
-		PushLayer(mGraphLayer);
+        TextureLoader loader(GetResourcePath("Icon/SCESS Small.png").string());
+        mAppIcon = Texture2D::Create(loader);
+        return true;
+    }
 
-		mCam.MoveTo(glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+    void Application::OnDestroy() {
+        mAppIcon.reset();
+    }
 
-		mainFramebuffer = Framebuffer::Create(FramebufferSpecification{800, 600, 1, {FramebufferAttachment(PixelFormat::RGBA8), FramebufferAttachment(PixelFormat::DEPTH24_STENCIL8)}});
 
-		UpdateProjectionMatrix();
+    void Application::OnViewportResize() {
+        GraphicsApp::OnViewportResize();
+        UpdateProjectionMatrix();
+    }
 
-		TextureLoader loader(PathUtils::GetAssetPath(R"(Icon/SCESS Small.png)").string());
-		mAppIcon = Texture2D::Create(loader);
-	}
+    void Application::OnRender() {
+        mCam.UpdateCamera(m_DeltaTime * 0.1f, m_KeyDown);
 
-	Application::~Application()
-	{
-	}
+        mViewportFramebuffer->Bind();
+        mViewportFramebuffer->Clear({glm::vec3(0.01f), 1.0f});
 
-	int Application::Run()
-	{
-		while (m_IsRunning)
-		{
-			{
-				double newTime = m_Window->GetTime();
-				m_DeltaTime = newTime - m_Time;
-				m_Time = newTime;
-				mCam.UpdateCamera(m_DeltaTime * 0.1f, m_KeyDown);
-			}
+        for (Layer *layer: m_LayerStack)
+            layer->OnUpdate(mViewportFramebuffer, mCam, mProjectionMatrix, {NEAR_PLANE, FAR_PLANE});
+    }
 
-			if (m_viewPortPanelSize.x != this->m_lastViewportSize.x ||
-			    m_viewPortPanelSize.y != this->m_lastViewportSize.y)
-			{
-				mainFramebuffer->Resize((std::size_t)m_viewPortPanelSize.x, (std::size_t)m_viewPortPanelSize.y);
+    void Application::OnImGuiRender() {
+        RenderSplashScreen();
+        RenderMenuBar();
+        RenderCameraPanel();
+        RenderSceneInformation();
+    }
 
-				for (Layer *layer : m_LayerStack)
-					layer->Resize((std::size_t)m_viewPortPanelSize.x,
-					              (std::size_t)m_viewPortPanelSize.y);
-				// m_PlanetLayer->Resize(m_viewPortPanelSize.x, m_viewPortPanelSize.y);
-				this->UpdateProjectionMatrix();
-				m_lastViewportSize = m_viewPortPanelSize;
-			}
+    void Application::RenderMenuBar() {
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("About")) {
+                ImGui::MenuItem("Splash Screen", nullptr, &mSplashScreenOpen);
+                ImGui::EndMenu();
+            }
+        }
+        ImGui::EndMenuBar();
+    }
 
-			mainFramebuffer->Bind();
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    void Application::RenderSplashScreen() {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, 0, ImVec2(0.5f, 0.5f));
 
-			for (Layer *layer : m_LayerStack)
-			{
-				layer->OnUpdate(mainFramebuffer, mCam, projectionMatrix, {NEAR_PLANE, FAR_PLANE});
-			}
+        float dpiFactor = m_Window->GetContentScaling().x;
+        ImGui::SetNextWindowSize({600.0f * dpiFactor, 600.0f * dpiFactor});
+        if (ImGui::BeginPopup("splashScreenPopup")) {
+            float imgWidth = 350.0f * dpiFactor;
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
+            ImGui::Image((ImTextureID) mAppIcon->GetRendererID(), {
+                             (float) imgWidth,
+                             (float) imgWidth
+                         });
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::TextCentered("SCESS Version 1");
+            ImGui::PopFont();
+            ImGui::Text("Schrodinger's Cat's Electronic System Solver");
+            ImGui::Text("By Charlie Wheelwright; cspw2");
+            ImGui::Text("(Meow)");
+            ImGui::EndPopup();
+        }
 
-			mainFramebuffer->Unbind();
+        if (mSplashScreenOpen) {
+            ImGui::OpenPopup("splashScreenPopup");
+            mSplashScreenOpen = false;
+        }
+    }
 
-			m_ImGuiLayer->Begin();
-			RenderMenuBar();
-			RenderSplashScreen();
+    void Application::RenderCameraPanel() {
+        if (!ImGui::Begin("Camera")) {
+            ImGui::End();
+            return;
+        }
 
-			for (Layer *layer : m_LayerStack)
-				layer->OnImGuiRender();
+        if (ImGui::CollapsingHeader("Camera Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+            static glm::vec3 newPosition{0.0f};
+            static float newZoom = 0.0f;
+            const glm::vec3 &centrePos = mCam.GetCentrePosition();
+            const glm::vec3 &actualPos = mCam.GetActualPosition();
 
-			RenderViewport();
-			RenderCameraPanel();
-			RenderSceneInformation();
+            newPosition = centrePos;
+            newZoom = mCam.GetZoom();
 
-			m_ImGuiLayer->End();
+            if (ImGui::Button("Reset Camera##cam")) {
+                newPosition = {0.0f, 0.0f, 0.0f};
+                newZoom = 10.0f;
+            }
 
-			m_Window->Refresh();
-		}
+            ImGui::Text("Camera Centre Position:");
+            ImGui::DragFloat3("##cam_centre_pos", &newPosition[0]);
+            ImGui::SameLine();
+            if (ImGui::Button("Reset##cam_pos"))
+                newPosition = {0.0f, 0.0f, 0.0f};
+            if (newPosition != centrePos)
+                mCam.SetCentrePosition(newPosition);
 
-		return 0;
-	}
+            ImGui::Text("Camera Zoom:");
+            ImGui::DragFloat("##cam_zoom", &newZoom, 0.5f);
+            ImGui::SameLine();
+            if (ImGui::Button("Reset##cam_zoom"))
+                newZoom = 10.0f;
+            if (newZoom != mCam.GetZoom())
+                mCam.SetZoom(newZoom);
 
-	void Application::RenderMenuBar()
-	{
-		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("About"))
-			{
-				ImGui::MenuItem("Splash Screen", nullptr, &mSplashScreenOpen);
-				ImGui::EndMenu();
-			}
-		}
-		ImGui::EndMenuBar();
-	}
+            ImGui::Text("Camera Actual Position: X=%.2f, Y=%.2f, Z=%.2f", actualPos.x, actualPos.y, actualPos.z);
+            ImGui::Text("Pitch=%.2f, Yaw=%.2f, Roll=%.2f", mCam.GetPitch(), mCam.GetYaw(), mCam.GetRoll());
+            ImGui::Unindent();
+        }
 
-	void Application::RenderSplashScreen()
-	{
-		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-		ImGui::SetNextWindowPos(center, 0, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize({600, 600});
-		if (ImGui::BeginPopup("splashScreenPopup"))
-		{
-			constexpr float imgWidth = 350;
-			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
-			ImGui::Image((ImTextureID)mAppIcon->GetRendererID(), {(float)imgWidth,
-																  (float)imgWidth});
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			ImGui::TextCentered("SCESS Version 1");
-			ImGui::PopFont();
-			ImGui::Text("Schrodinger's Cat's Electronic System Solver");
-			ImGui::Text("By Charlie Wheelwright; cspw2");
-			ImGui::Text("(Meow)");
-			ImGui::EndPopup();
-		}
+        if (ImGui::CollapsingHeader("Render Style", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+            const char *items[] = {"Solid", "Wireframe"};
+            static int selectedItem = 0;
+            ImGui::Combo("Render Style##combo", &selectedItem, items, 2);
 
-		if (mSplashScreenOpen)
-		{
-			ImGui::OpenPopup("splashScreenPopup");
-			mSplashScreenOpen = false;
-		}
-	}
+            for (Layer *layer: m_LayerStack)
+                layer->SetRenderStyle((GPUContext::PolygonMode) selectedItem);
 
-	void Application::RenderViewport()
-	{
-		// ImGui::ShowDemoWindow(nullptr);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
-		if (ImGui::Begin("3D Viewport", nullptr))
-		{
-			m_isViewportFocused = ImGui::IsWindowFocused();
-			m_viewPortPanelSize = ImGui::GetContentRegionAvail();
-			ImGui::Image(mainFramebuffer->QueryTextureAttachment()->GetRendererID(), ImVec2{(float)mainFramebuffer->GetWidth(),
-																							(float)mainFramebuffer->GetHeight()});
-		}
-		ImGui::End();
-		ImGui::PopStyleVar();
-	}
+            ImGui::Unindent();
+        }
 
-	void Application::RenderCameraPanel()
-	{
-		if (!ImGui::Begin("Camera"))
-		{
-			ImGui::End();
-			return;
-		}
+        ImGui::End();
+    }
 
-		if (ImGui::CollapsingHeader("Camera Properties", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			ImGui::Indent();
-			static glm::vec3 newPosition{0.0f};
-			static float newZoom = 0.0f;
-			const glm::vec3 &centrePos = mCam.GetCentrePosition();
-			const glm::vec3 &actualPos = mCam.GetActualPosition();
+    void Application::RenderSceneInformation() {
+        if (!ImGui::Begin("Scene Information")) {
+            ImGui::End();
+            return;
+        }
 
-			newPosition = centrePos;
-			newZoom = mCam.GetZoom();
+        if (ImGui::CollapsingHeader("Adaptor Information", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Text("Renderer API: %s", m_VersionStr.c_str());
+            ImGui::Text("Vendor: %s", m_VendorStr.c_str());
+            ImGui::Text("Shading Language Version: %s", m_ShadingLanguageStr.c_str());
+        }
 
-			if (ImGui::Button("Reset Camera##cam"))
-			{
-				newPosition = {0.0f, 0.0f, 0.0f};
-				newZoom = 10.0f;
-			}
+        if (ImGui::CollapsingHeader("Frame Information", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const ImGuiIO &myIO = ImGui::GetIO();
+            ImGui::Text("Frame rate: %.0f fps", myIO.Framerate);
+            ImGui::Text("Frame time: %.1f ms", myIO.DeltaTime * 1000.0f);
+        }
 
-			ImGui::Text("Camera Centre Position:");
-			ImGui::DragFloat3("##cam_centre_pos", &newPosition[0]);
-			ImGui::SameLine();
-			if (ImGui::Button("Reset##cam_pos"))
-				newPosition = {0.0f, 0.0f, 0.0f};
-			if (newPosition != centrePos)
-				mCam.SetCentrePosition(newPosition);
+        ImGui::End();
+    }
 
-			ImGui::Text("Camera Zoom:");
-			ImGui::DragFloat("##cam_zoom", &newZoom, 0.5f);
-			ImGui::SameLine();
-			if (ImGui::Button("Reset##cam_zoom"))
-				newZoom = 10.0f;
-			if (newZoom != mCam.GetZoom())
-				mCam.SetZoom(newZoom);
 
-			ImGui::Text("Camera Actual Position: X=%.2f, Y=%.2f, Z=%.2f", actualPos.x, actualPos.y, actualPos.z);
-			ImGui::Text("Pitch=%.2f, Yaw=%.2f, Roll=%.2f", mCam.GetPitch(), mCam.GetYaw(), mCam.GetRoll());
-			ImGui::Unindent();
-		}
+    void Application::UpdateProjectionMatrix() {
+        mProjectionMatrix = glm::perspective<float>(glm::radians(45.0f),
+                                                    (float) mViewportFramebuffer->GetSpecification().Width / (float)
+                                                    mViewportFramebuffer->GetSpecification().Height, NEAR_PLANE,
+                                                    FAR_PLANE);
+    }
 
-		if (ImGui::CollapsingHeader("Render Style", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			ImGui::Indent();
-			const char *items[] = {"Solid", "Wireframe"};
-			static int selectedItem = 0;
-			ImGui::Combo("Render Style##combo", &selectedItem, items, 2);
 
-			for (Layer *layer : m_LayerStack)
-				layer->SetRenderStyle(selectedItem == 0 ? GL_FILL : GL_LINE);
+    bool Application::OnMouseMove(MouseMoveEvent &e) {
+        GraphicsApp::OnMouseMove(e);
+        if (mIsViewportFocused)
+            mCam.UpdateMouse((float) mDeltaMousePos.x, (float) mDeltaMousePos.y, m_MouseButtonDown, m_KeyMods);
+        return true;
+    }
 
-			ImGui::Unindent();
-		}
-
-		ImGui::End();
-	}
-
-	void Application::RenderSceneInformation()
-	{
-		if (!ImGui::Begin("Scene Information"))
-		{
-			ImGui::End();
-			return;
-		}
-
-		if (ImGui::CollapsingHeader("Adaptor Information", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			ImGui::Text("Renderer API: %s", m_VersionStr.c_str());
-			ImGui::Text("Vendor: %s", m_VendorStr.c_str());
-			ImGui::Text("Shading Language Version: %s", m_ShadingLanguageStr.c_str());
-		}
-
-		if (ImGui::CollapsingHeader("Frame Information", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			const ImGuiIO &myIO = ImGui::GetIO();
-			ImGui::Text("Frame rate: %.0f fps", myIO.Framerate);
-			ImGui::Text("Frame time: %.1f ms", myIO.DeltaTime * 1000.0f);
-		}
-
-		ImGui::End();
-	}
-
-	void Application::PushLayer(Layer *layer)
-	{
-		m_LayerStack.PushLayer(layer);
-	}
-
-	void Application::PushOverlay(Layer *overlay)
-	{
-		m_LayerStack.PushOverlay(overlay);
-	}
-
-	void Application::UpdateProjectionMatrix()
-	{
-		projectionMatrix = glm::perspective<float>(glm::radians(45.0f),
-												   (float)mainFramebuffer->GetSpecification().Width / (float)mainFramebuffer->GetSpecification().Height, NEAR_PLANE, FAR_PLANE);
-	}
-
-	void Application::OnEvent(Event &e)
-	{
-		EventDispatcher dispatcher(e);
-
-		auto DispatchApplicationEvents = [this, &dispatcher]()
-		{
-			if (dispatcher.GetEvent().IsHandled())
-				return;
-			dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FNC(OnWindowClose));
-			dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent &e) -> bool
-												   {
-					glViewport(0, 0, (GLsizei)e.GetWidth(), (GLsizei)e.GetHeight());
-					this->UpdateProjectionMatrix();
-
-					return true; });
-			dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FNC(OnKeyPressed));
-			dispatcher.Dispatch<KeyReleasedEvent>(BIND_EVENT_FNC(OnKeyReleased));
-			dispatcher.Dispatch<MouseMoveEvent>(BIND_EVENT_FNC(OnMouseMove));
-			dispatcher.Dispatch<MouseButtonPressedEvent>(BIND_EVENT_FNC(OnMouseButtonPressed));
-			dispatcher.Dispatch<MouseButtonReleasedEvent>(BIND_EVENT_FNC(OnMouseButtonReleased));
-			dispatcher.Dispatch<MouseScrollEvent>(BIND_EVENT_FNC(OnMouseScroll));
-		};
-
-		DispatchApplicationEvents();
-		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
-		{
-			if (e.IsHandled())
-				break;
-			(*it)->OnEvent(e);
-		}
-	}
-
-	bool Application::OnWindowClose(WindowCloseEvent &e)
-	{
-		m_IsRunning = false;
-		return true;
-	}
-
-	bool Application::OnKeyPressed(KeyPressedEvent &e)
-	{
-		m_KeyDown = e.GetKeyCode();
-		m_KeyMods = e.GetModifiers();
-		return false;
-	}
-
-	bool Application::OnKeyReleased(KeyReleasedEvent &e)
-	{
-		m_KeyDown = -1;
-		m_KeyMods = 0;
-		return false;
-	}
-
-	bool Application::OnMouseButtonPressed(MouseButtonPressedEvent &e)
-	{
-		m_MouseButtonDown = (int)e.GetMouseButton();
-		return true;
-	}
-
-	bool Application::OnMouseButtonReleased(MouseButtonReleasedEvent &e)
-	{
-		m_MouseButtonDown = -1;
-		return true;
-	}
-
-	bool Application::OnMouseMove(MouseMoveEvent &e)
-	{
-		const glm::dvec2 &mousePos = e.GetMousePos();
-		glm::dvec2 deltaMouse(mousePos.x - m_MouseLastPos.x, mousePos.y - m_MouseLastPos.y);
-		if (m_isViewportFocused)
-			mCam.UpdateMouse((float)deltaMouse.x, (float)deltaMouse.y, m_MouseButtonDown, m_KeyMods);
-		m_MouseLastPos = mousePos;
-		return true;
-	}
-
-	bool Application::OnMouseScroll(MouseScrollEvent &e)
-	{
-		double currentScrollTime = m_Window->GetTime();
-		double deltaScroll = glm::max(1.0 / (currentScrollTime - mLastScrollTime), 1.0) * glm::sign(e.GetYOffset());
-		mLastScrollTime = currentScrollTime;
-
-		if (m_isViewportFocused)
-			mCam.UpdateZoom(deltaScroll);
-		return false;
-	}
-
+    bool Application::OnMouseScroll(MouseScrollEvent &e) {
+        GraphicsApp::OnMouseScroll(e);
+        if (mIsViewportFocused)
+            mCam.UpdateZoom(mDeltaScroll);
+        return true;
+    }
 }

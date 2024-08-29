@@ -1,10 +1,11 @@
 #pragma once
 #include <string_view>
 #include <nlohmann/json.hpp>
-#include "Utilities/PathUtils.h"
 #include <boost/locale/conversion.hpp>
 #include <optional>
 #include <iostream>
+
+#include "Application/Application.h"
 
 namespace SCESS
 {
@@ -17,7 +18,7 @@ namespace SCESS
 		{
 			if (sPeriodicTable == nlohmann::json(nullptr))
 			{
-				std::ifstream stream(PathUtils::GetAssetPath("Data/Periodic Table Data.json").string());
+				std::ifstream stream(Application::Get().GetResourcePath("Data/Periodic Table Data.json").string());
 				sPeriodicTable = nlohmann::json::parse(stream);
 				stream.close();
 			}

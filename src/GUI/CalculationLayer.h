@@ -1,105 +1,106 @@
 #pragma once
 
-#include"Layers/Layer.h"
+#include"GraphicsEngine/Layers/Layer.h"
+#include"GraphicsEngine/3D/VertexArray.h"
+#include"GraphicsEngine/3D/ShaderProgram.h"
+#include"GraphicsEngine/Utilities/Threading.h"
 
-#include"3D/VertexArray.h"
-#include"3D/ShaderProgram.h"
-
-#include"Quantum/Molecule.h"
+#include"Chemistry/Quantum/Molecule.h"
 #include "Maths/Isosurfaces.h"
 
-#include"Utilities/Threading.h"
 
-namespace SCESS
-{
-	class Camera;
-	class GaussianCollection;
-	struct RHFResult;
-	struct UHFResult;
-	class TriSurf;
+namespace GEng {
+    class Camera3D;
+    class ShaderProgram;
+    class VertexArray;
+    class VertexBuffer;
+}
 
-	enum class CalcMethod
-	{
-		RHF,
-		UHF,
-		DFT
-	};
+namespace SCESS {
+    class GaussianCollection;
+    struct RHFResult;
+    struct UHFResult;
+    class TriSurf;
 
-	enum class MoleculeStyle:int
-	{
-		SpaceFill =0,
-		BallStick = 1 
-	};
+    enum class CalcMethod {
+        RHF = 0,
+        UHF,
+        DFT
+    };
 
-	class CalculationLayer : public Layer
-	{
-	public:
-		CalculationLayer() :Layer("Graph Layer") {}
-		//virtual ~CalculationLayer();
+    enum class MoleculeStyle:int {
+        SpaceFill = 0,
+        BallStick = 1
+    };
 
-		virtual void OnAttach() override;
-		virtual void OnDetach() override;
-		virtual void OnUpdate(const sRef<SCESS::Framebuffer>& screenBuffer, const Camera& cam,
-			const glm::mat4& projectionMatrix, const glm::vec2& nearFarPlanes) override;
-		virtual void OnImGuiRender() override;
-		virtual void OnEvent(Event& e) override;
+    class CalculationLayer : public GEng::Layer {
+    public:
+        CalculationLayer() : Layer("Graph Layer") {
+        }
 
+        //virtual ~CalculationLayer();
 
-	private:
-		void UploadTriSurface(VertexArray& vArray, const TriSurf& tri);
-		void RenderMOIsosurface();
-		void SelectMolecule();
-		void UploadMolecule();
-		void SelectMoleculeFromFile();
+        virtual void OnAttach() override;
+        virtual void OnDetach() override;
+        virtual void OnUpdate(const sRef<GEng::Framebuffer> &screenBuffer, const GEng::Camera3D &cam,
+                              const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) override;
+        virtual void OnImGuiRender() override;
+        virtual void OnEvent(GEng::Event &e) override;
 
-		glm::mat3 GenerateBondRotMatrix(const glm::vec3& bondDirNorm, const glm::vec3& startingDirNorm);
+    private:
+        void UploadTriSurface(GEng::VertexArray &vArray, const TriSurf &tri);
+        void RenderMOIsosurface();
+        void SelectMolecule();
+        void UploadMolecule();
+        void SelectMoleculeFromFile();
 
-		void ExecuteCalculation();
-		void DrawProgressScreen();
-		void OrderOrbitals();
+        glm::mat3 GenerateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm);
 
-		std::vector<std::string> mBasisSets;
-		int mSelectedBasisSet = 0;
+        void ExecuteCalculation();
+        void DrawProgressScreen();
+        void OrderOrbitals();
 
-		int mSelectedMolecule = -1;
-		std::string mMoleculeName;
-		uRef<Molecule> mMolecule;
-		sRef<VertexArray> mMoleculeVAO;
-		sRef<VertexBuffer> mMoleculeBuffer;
-		sRef<VertexArray> mMoleculeBondVAO;
-		MoleculeStyle mMolRenderStyle = MoleculeStyle::BallStick;
-		bool mRenderMolecule = true;
-		float mMoleculeOpacity = 1.0f;
+        std::vector<std::string> mBasisSets;
+        int mSelectedBasisSet = 0;
 
-		sRef<VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
-		bool mIsosurfaceUploaded = false, mIsoWasNull = false;
-		TriSurf mNegTrisurf, mPosTrisurf;
-		float mIsoOpacity = 1.0f;
+        int mSelectedMolecule = -1;
+        std::string mMoleculeName;
+        uRef<Molecule> mMolecule;
+        sRef<GEng::VertexArray> mMoleculeVAO;
+        sRef<GEng::VertexBuffer> mMoleculeBuffer;
+        sRef<GEng::VertexArray> mMoleculeBondVAO;
+        MoleculeStyle mMolRenderStyle = MoleculeStyle::BallStick;
+        bool mRenderMolecule = true;
+        float mMoleculeOpacity = 1.0f;
 
-		sRef<ShaderProgram> mDiffuseProg;
-		sRef<ShaderProgram> mMoleculeDiffuseProg;
-		sRef<ShaderProgram> mSolidColourProg;
+        sRef<GEng::VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
+        bool mIsosurfaceUploaded = false, mIsoWasNull = false;
+        TriSurf mNegTrisurf, mPosTrisurf;
+        float mIsoOpacity = 1.0f;
 
-		std::stringstream mConsoleOutput;
-		bool mOrbitalsOrdered = false;
-		Thread mCalculationThread;
+        sRef<GEng::ShaderProgram> mDiffuseProg;
+        sRef<GEng::ShaderProgram> mMoleculeDiffuseProg;
+        sRef<GEng::ShaderProgram> mSolidColourProg;
 
-		CalcMethod mMethod = CalcMethod::RHF;
-		sRef<RHFResult> mRHFResult;
-		sRef<UHFResult> mUHFResult;
-		double mDFTEnergy = 0.0;
-		double mMP2Energy = 0.0;
-		std::string mCalcBasiSet;
+        std::stringstream mConsoleOutput;
+        bool mOrbitalsOrdered = false;
+        GEng::Thread mCalculationThread;
 
-		std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
-		std::vector<std::string> mMOLabels;
+        CalcMethod mMethod = CalcMethod::RHF;
+        sRef<RHFResult> mRHFResult;
+        sRef<UHFResult> mUHFResult;
+        double mDFTEnergy = 0.0;
+        double mMP2Energy = 0.0;
+        std::string mCalcBasiSet;
 
-		char mSelectedSpin = -1;
-		int mSelectedMO = -1;
+        std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
+        std::vector<std::string> mMOLabels;
 
-		float mIsosurfaceVal = 0.02f;
-		int mIsosurfaceResolution = 20;
-		float mIsosurfaceVolume = 5.0f;
-	};
+        char mSelectedSpin = -1;
+        int mSelectedMO = -1;
 
+        float mIsosurfaceVal = 0.02f;
+        int mIsosurfaceResolution = 20;
+        float mIsosurfaceVolume = 5.0f;
+    };
 }

@@ -2,117 +2,61 @@
   "SCESS.APS"
   "SCESS.rc"
   "resource.h"
-      "src/3D/Buffers.cpp"
-      "src/3D/Buffers.h"
-      "src/3D/Framebuffer.cpp"
-      "src/3D/Framebuffer.h"
-      "src/3D/ShaderProgram.cpp"
-      "src/3D/ShaderProgram.h"
-      "src/3D/Texture.cpp"
-      "src/3D/Texture.h"
-      "src/3D/VertexArray.cpp"
-      "src/3D/VertexArray.h"
-        "src/3D/stb/stb_image.cpp"
-        "src/3D/stb/stb_image.h"
       "src/Application/Application.cpp"
       "src/Application/Application.h"
       "src/Chemistry/PeriodicTable.cpp"
       "src/Chemistry/PeriodicTable.h"
-    "src/Display.cpp"
-    "src/Display.h"
-      "src/Events/AppEvents.h"
-      "src/Events/Events.h"
-      "src/Events/KeyEvents.h"
-      "src/Events/MouseEvents.h"
-      "src/Events/WindowEvents.h"
+          "src/Chemistry/Quantum/Basis/BasisUtils.cpp"
+          "src/Chemistry/Quantum/Basis/BasisUtils.h"
+          "src/Chemistry/Quantum/Basis/Gaussian.cpp"
+          "src/Chemistry/Quantum/Basis/Gaussian.h"
+          "src/Chemistry/Quantum/DFT/DFT.cpp"
+          "src/Chemistry/Quantum/DFT/DFT.h"
+          "src/Chemistry/Quantum/DFT/DFTGrid.cpp"
+          "src/Chemistry/Quantum/DFT/DFTGrid.h"
+          "src/Chemistry/Quantum/DFT/XCFunctional.cpp"
+          "src/Chemistry/Quantum/DFT/XCFunctional.h"
+          "src/Chemistry/Quantum/HF/HartreeFock.cpp"
+          "src/Chemistry/Quantum/HF/HartreeFock.h"
+          "src/Chemistry/Quantum/Integrals/Gamma.cpp"
+          "src/Chemistry/Quantum/Integrals/Gamma.h"
+          "src/Chemistry/Quantum/Integrals/IntegralHelper.cpp"
+          "src/Chemistry/Quantum/Integrals/IntegralHelper.h"
+        "src/Chemistry/Quantum/Molecule.cpp"
+        "src/Chemistry/Quantum/Molecule.h"
+          "src/Chemistry/Quantum/Tests/Tests.h"
       "src/GUI/CalculationLayer.cpp"
       "src/GUI/CalculationLayer.h"
-      "src/GUI/ImGuiBuild.cpp"
-      "src/GUI/ImGuiLayer.cpp"
-      "src/GUI/ImGuiLayer.h"
       "src/GUI/ImSpinner.h"
-      "src/Layers/Layer.cpp"
-      "src/Layers/Layer.h"
-      "src/Layers/LayerStack.cpp"
-      "src/Layers/LayerStack.h"
-      "src/Maths/Geometry.cpp"
-      "src/Maths/Geometry.hpp"
       "src/Maths/Isosurfaces.cpp"
       "src/Maths/Isosurfaces.h"
-      "src/Maths/Maths.cpp"
-      "src/Maths/Maths.hpp"
       "src/Maths/Quadrature.cpp"
       "src/Maths/Quadrature.h"
-      "src/Platform/API Core.h"
-        "src/Platform/GLFW/GLFWDisplay.cpp"
-        "src/Platform/GLFW/GLFWDisplay.h"
       "src/Platform/Intrinsics.h"
-        "src/Platform/OpenGL/OpenGLBuffers.cpp"
-        "src/Platform/OpenGL/OpenGLBuffers.h"
-        "src/Platform/OpenGL/OpenGLCore.cpp"
-        "src/Platform/OpenGL/OpenGLCore.h"
-        "src/Platform/OpenGL/OpenGLFramebuffer.cpp"
-        "src/Platform/OpenGL/OpenGLFramebuffer.h"
-        "src/Platform/OpenGL/OpenGLShaderProgram.cpp"
-        "src/Platform/OpenGL/OpenGLShaderProgram.h"
-        "src/Platform/OpenGL/OpenGLTexture.cpp"
-        "src/Platform/OpenGL/OpenGLTexture.h"
-        "src/Platform/OpenGL/OpenGLVertexArray.cpp"
-        "src/Platform/OpenGL/OpenGLVertexArray.h"
-        "src/Platform/Windows/Console.cpp"
-        "src/Platform/Windows/Console.h"
-        "src/Quantum/Basis/BasisUtils.cpp"
-        "src/Quantum/Basis/BasisUtils.h"
-        "src/Quantum/Basis/Gaussian.cpp"
-        "src/Quantum/Basis/Gaussian.h"
-        "src/Quantum/DFT/DFT.cpp"
-        "src/Quantum/DFT/DFT.h"
-        "src/Quantum/DFT/DFTGrid.cpp"
-        "src/Quantum/DFT/DFTGrid.h"
-        "src/Quantum/DFT/XCFunctional.cpp"
-        "src/Quantum/DFT/XCFunctional.h"
-        "src/Quantum/HF/HartreeFock.cpp"
-        "src/Quantum/HF/HartreeFock.h"
-        "src/Quantum/Integrals/Gamma.cpp"
-        "src/Quantum/Integrals/Gamma.h"
-        "src/Quantum/Integrals/IntegralHelper.cpp"
-        "src/Quantum/Integrals/IntegralHelper.h"
-      "src/Quantum/Molecule.cpp"
-      "src/Quantum/Molecule.h"
-        "src/Quantum/Tests/Tests.h"
-      "src/Scene/Camera.cpp"
-      "src/Scene/Camera.hpp"
-      "src/Utilities/Assert.h"
-      "src/Utilities/IO.cpp"
-      "src/Utilities/IO.h"
-      "src/Utilities/Memory.h"
-      "src/Utilities/PathUtils.h"
-      "src/Utilities/StringOperations.cpp"
-      "src/Utilities/StringOperations.h"
-      "src/Utilities/Threading.h"
     "src/pch.cpp"
     "src/pch.h"
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
+    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
+    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/SCESS/src>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/SCESS/src>
   $<$<CONFIG:Debug>:/usr/include>
   $<$<CONFIG:Debug>:/usr/local/include>
   $<$<CONFIG:Debug>:/opt/etsf/include>
   $<$<CONFIG:Debug>:/usr/local/include/eigen3>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/eigen-3.4.0>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/glm>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/glm>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/ImGui>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:OS_LINUX>
@@ -120,10 +64,12 @@ target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:_DEBUG>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
+  $<$<CONFIG:Debug>:GraphicsEngine>
   $<$<CONFIG:Debug>:glfw3>
   $<$<CONFIG:Debug>:ImGui>
   $<$<CONFIG:Debug>:boost_filesystem>
@@ -161,33 +107,36 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
+    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
+    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/SCESS/src>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/SCESS/src>
   $<$<CONFIG:Release>:/usr/include>
   $<$<CONFIG:Release>:/usr/local/include>
   $<$<CONFIG:Release>:/opt/etsf/include>
   $<$<CONFIG:Release>:/usr/local/include/eigen3>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/eigen-3.4.0>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/glm>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/glm>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/ImGui>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Release>:OS_LINUX>
   $<$<CONFIG:Release>:CONFIG_RELEASE>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
+  $<$<CONFIG:Release>:GraphicsEngine>
   $<$<CONFIG:Release>:glfw3>
   $<$<CONFIG:Release>:ImGui>
   $<$<CONFIG:Release>:boost_filesystem>

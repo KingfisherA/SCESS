@@ -1,12 +1,15 @@
 //Adapted from https://github.com/nihaljn/marching-cubes
 
 #include<pch.h>
-#include "Isosurfaces.h"
+#include "Maths/Isosurfaces.h"
+
+#include "GraphicsEngine/Utilities/Threading.h"
 
 //
 //
 namespace SCESS
 {
+	using namespace GEng;
 
 #pragma region Marching Cubes
 

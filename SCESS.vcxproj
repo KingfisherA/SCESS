@@ -59,8 +59,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;UNI_OPENGL;_CONSOLE;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -69,27 +69,24 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;UNI_OPENGL;_CONSOLE;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;ImGui.lib;xc.lib;..\..\Libraries\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Debug\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Debug-x64;..\..\Libraries\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;nativefiledialog\build\lib\Release\x64\nfd.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Debug\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Debug-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Debug-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PostBuildEvent>
-      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)windows/Debug-x64/Assets" /s /y /i /d</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;UNI_OPENGL;_CONSOLE;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -101,114 +98,54 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;UNI_OPENGL;_CONSOLE;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;ImGui.lib;xc.lib;..\..\Libraries\nativefiledialog\build\lib\Release\x64\nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Release\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Release-x64;..\..\Libraries\libxc-6.2.2\VS\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;nativefiledialog\build\lib\Release\x64\nfd.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Release\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Release-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Release-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <PostBuildEvent>
-      <Command>call xcopy.exe "$(ProjectDir)Assets" "$(SolutionDir)windows/Release-x64/Assets" /s /y /i /d</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
-    <ClInclude Include="src\3D\Buffers.h" />
-    <ClInclude Include="src\3D\Framebuffer.h" />
-    <ClInclude Include="src\3D\ShaderProgram.h" />
-    <ClInclude Include="src\3D\Texture.h" />
-    <ClInclude Include="src\3D\VertexArray.h" />
-    <ClInclude Include="src\3D\stb\stb_image.h" />
     <ClInclude Include="src\Application\Application.h" />
     <ClInclude Include="src\Chemistry\PeriodicTable.h" />
-    <ClInclude Include="src\Display.h" />
-    <ClInclude Include="src\Events\AppEvents.h" />
-    <ClInclude Include="src\Events\Events.h" />
-    <ClInclude Include="src\Events\KeyEvents.h" />
-    <ClInclude Include="src\Events\MouseEvents.h" />
-    <ClInclude Include="src\Events\WindowEvents.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Basis\BasisUtils.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Basis\Gaussian.h" />
+    <ClInclude Include="src\Chemistry\Quantum\DFT\DFT.h" />
+    <ClInclude Include="src\Chemistry\Quantum\DFT\DFTGrid.h" />
+    <ClInclude Include="src\Chemistry\Quantum\DFT\XCFunctional.h" />
+    <ClInclude Include="src\Chemistry\Quantum\HF\HartreeFock.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Integrals\Gamma.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Integrals\IntegralHelper.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Molecule.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Tests\Tests.h" />
     <ClInclude Include="src\GUI\CalculationLayer.h" />
-    <ClInclude Include="src\GUI\ImGuiLayer.h" />
     <ClInclude Include="src\GUI\ImSpinner.h" />
-    <ClInclude Include="src\Layers\Layer.h" />
-    <ClInclude Include="src\Layers\LayerStack.h" />
-    <ClInclude Include="src\Maths\Geometry.hpp" />
     <ClInclude Include="src\Maths\Isosurfaces.h" />
-    <ClInclude Include="src\Maths\Maths.hpp" />
     <ClInclude Include="src\Maths\Quadrature.h" />
-    <ClInclude Include="src\Platform\API Core.h" />
-    <ClInclude Include="src\Platform\GLFW\GLFWDisplay.h" />
     <ClInclude Include="src\Platform\Intrinsics.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLBuffers.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLCore.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLFramebuffer.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLShaderProgram.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLTexture.h" />
-    <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h" />
-    <ClInclude Include="src\Platform\Windows\Console.h" />
-    <ClInclude Include="src\Quantum\Basis\BasisUtils.h" />
-    <ClInclude Include="src\Quantum\Basis\Gaussian.h" />
-    <ClInclude Include="src\Quantum\DFT\DFT.h" />
-    <ClInclude Include="src\Quantum\DFT\DFTGrid.h" />
-    <ClInclude Include="src\Quantum\DFT\XCFunctional.h" />
-    <ClInclude Include="src\Quantum\HF\HartreeFock.h" />
-    <ClInclude Include="src\Quantum\Integrals\Gamma.h" />
-    <ClInclude Include="src\Quantum\Integrals\IntegralHelper.h" />
-    <ClInclude Include="src\Quantum\Molecule.h" />
-    <ClInclude Include="src\Quantum\Tests\Tests.h" />
-    <ClInclude Include="src\Scene\Camera.hpp" />
-    <ClInclude Include="src\Utilities\Assert.h" />
-    <ClInclude Include="src\Utilities\IO.h" />
-    <ClInclude Include="src\Utilities\Memory.h" />
-    <ClInclude Include="src\Utilities\PathUtils.h" />
-    <ClInclude Include="src\Utilities\StringOperations.h" />
-    <ClInclude Include="src\Utilities\Threading.h" />
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\3D\Buffers.cpp" />
-    <ClCompile Include="src\3D\Framebuffer.cpp" />
-    <ClCompile Include="src\3D\ShaderProgram.cpp" />
-    <ClCompile Include="src\3D\Texture.cpp" />
-    <ClCompile Include="src\3D\VertexArray.cpp" />
-    <ClCompile Include="src\3D\stb\stb_image.cpp" />
     <ClCompile Include="src\Application\Application.cpp" />
     <ClCompile Include="src\Chemistry\PeriodicTable.cpp" />
-    <ClCompile Include="src\Display.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Basis\BasisUtils.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\DFT\DFTGrid.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\DFT\XCFunctional.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\HF\HartreeFock.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Integrals\Gamma.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Integrals\IntegralHelper.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Molecule.cpp" />
     <ClCompile Include="src\GUI\CalculationLayer.cpp" />
-    <ClCompile Include="src\GUI\ImGuiBuild.cpp" />
-    <ClCompile Include="src\GUI\ImGuiLayer.cpp" />
-    <ClCompile Include="src\Layers\Layer.cpp" />
-    <ClCompile Include="src\Layers\LayerStack.cpp" />
-    <ClCompile Include="src\Maths\Geometry.cpp" />
     <ClCompile Include="src\Maths\Isosurfaces.cpp" />
-    <ClCompile Include="src\Maths\Maths.cpp" />
     <ClCompile Include="src\Maths\Quadrature.cpp" />
-    <ClCompile Include="src\Platform\GLFW\GLFWDisplay.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLBuffers.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLCore.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLFramebuffer.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLShaderProgram.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLTexture.cpp" />
-    <ClCompile Include="src\Platform\OpenGL\OpenGLVertexArray.cpp" />
-    <ClCompile Include="src\Platform\Windows\Console.cpp" />
-    <ClCompile Include="src\Quantum\Basis\BasisUtils.cpp" />
-    <ClCompile Include="src\Quantum\Basis\Gaussian.cpp" />
-    <ClCompile Include="src\Quantum\DFT\DFT.cpp" />
-    <ClCompile Include="src\Quantum\DFT\DFTGrid.cpp" />
-    <ClCompile Include="src\Quantum\DFT\XCFunctional.cpp" />
-    <ClCompile Include="src\Quantum\HF\HartreeFock.cpp" />
-    <ClCompile Include="src\Quantum\Integrals\Gamma.cpp" />
-    <ClCompile Include="src\Quantum\Integrals\IntegralHelper.cpp" />
-    <ClCompile Include="src\Quantum\Molecule.cpp" />
-    <ClCompile Include="src\Scene\Camera.cpp" />
-    <ClCompile Include="src\Utilities\IO.cpp" />
-    <ClCompile Include="src\Utilities\StringOperations.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

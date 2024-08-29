@@ -1,96 +1,78 @@
 #pragma once
+
 #include<pch.h>
-#include<ImGui/imgui.h>
-#include"Utilities/Memory.h"
-#include"Display.h"
-#include"Scene/Camera.hpp"
-#include"Events/WindowEvents.h"
 
-#include"Layers/LayerStack.h"
-#include"GUI/ImGuiLayer.h"
+#include "GraphicsEngine/Application/GraphicsApp.h"
+#include"GraphicsEngine/Utilities/Memory.h"
+#include"GraphicsEngine/GUI/Display.h"
+#include"GraphicsEngine/Scene/Camera3D.h"
+#include"GraphicsEngine/Events/WindowEvents.h"
+#include"GraphicsEngine/Layers/LayerStack.h"
+#include"GraphicsEngine/GUI/ImGuiLayer.h"
 
-namespace SCESS
-{
-	class KeyPressedEvent;
-	class KeyReleasedEvent;
-	class MouseMoveEvent;
-	class MouseButtonPressedEvent;
-	class MouseButtonReleasedEvent;
-	class MouseScrollEvent;
-	class CalculationLayer;
+#include<boost/filesystem.hpp>
 
-	class Framebuffer;
+namespace GEng {
+    class KeyPressedEvent;
+    class KeyReleasedEvent;
+    class MouseMoveEvent;
+    class MouseButtonPressedEvent;
+    class MouseButtonReleasedEvent;
+    class MouseScrollEvent;
+    class CalculationLayer;
+    class Framebuffer;
+    class Texture2D;
+}
 
-	class Texture2D;
+namespace SCESS {
+    class CalculationLayer;
 
-	class Application
-	{
-	public:
-		Application();
-		~Application();
+    class Application : public GEng::GraphicsApp {
+    public:
+        Application();
+        ~Application() override = default;
 
-		int Run();
 
-		void OnEvent(Event& e);
+        [[nodiscard]] static Application &Get() { return *sInstance; }
 
-		void PushLayer(Layer* layer);
-		void PushOverlay(Layer* overlay);
+        [[nodiscard]] const GEng::Camera3D &GetCamera() const { return mCam; }
+        [[nodiscard]] GEng::Camera3D &GetCamera() { return mCam; }
 
-		void UpdateProjectionMatrix();
+        void UpdateProjectionMatrix();
+        [[nodiscard]] glm::mat4 &GetProjectionMatrix() { return mProjectionMatrix; }
+        [[nodiscard]] const glm::mat4 &GetProjectionMatrix() const { return mProjectionMatrix; }
 
-		inline glm::mat4& GetProjectionMatrix() { return projectionMatrix; }
+        [[nodiscard]] const boost::filesystem::path &GetAssetsPath() const { return mAssetsPath; }
+        [[nodiscard]] boost::filesystem::path GetResourcePath(const std::string& resource) {
+            return boost::filesystem::path(mAssetsPath).append(resource);
+        };
 
-		static inline Application& Get() { return *s_Instance; }
-		const inline Display& GetDisplay() const { return *m_Window; }
-		constexpr double GetDeltaTime() const { return m_DeltaTime; }
-		constexpr double GetTime() const { return m_Time; }
-		const Camera& GetCamera() const { return mCam; }
-		Camera& GetCamera() { return mCam; }
+    private:
+        void OnViewportResize() override;
+        void OnRender() override;
+        void OnImGuiRender() override;
+        bool OnInit() override;
+        void OnDestroy() override;
 
-	private:
-		bool OnWindowClose(WindowCloseEvent& e);
-		bool OnKeyPressed(KeyPressedEvent& e);
-		bool OnKeyReleased(KeyReleasedEvent& e);
-		bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
-		bool OnMouseButtonReleased(MouseButtonReleasedEvent& e);
-		bool OnMouseMove(MouseMoveEvent& e);
-		bool OnMouseScroll(MouseScrollEvent& e);
-		bool m_isViewportFocused = false;
+        bool OnMouseMove(GEng::MouseMoveEvent &e) override;
+        bool OnMouseScroll(GEng::MouseScrollEvent &e) override;
 
-		void RenderMenuBar();
-		void RenderSplashScreen();
-		void RenderViewport();
-		void RenderCameraPanel();
-		void RenderSceneInformation();
+        void RenderMenuBar();
+        void RenderSplashScreen();
+        void RenderCameraPanel();
+        void RenderSceneInformation();
 
-		std::string m_VersionStr, m_VendorStr, m_ShadingLanguageStr;
+        CalculationLayer *mCalcLayer = nullptr;
 
-		bool m_IsRunning = true;
-		uRef<Display> m_Window;
-		sRef<Framebuffer> mainFramebuffer = nullptr;
-		ImVec2 m_viewPortPanelSize = { 0,0 };
-		ImVec2 m_lastViewportSize = { 0,0 };
+        GEng::Camera3D mCam;
 
-		SCESS::ImGuiLayer* m_ImGuiLayer = nullptr;
-		SCESS::CalculationLayer* mGraphLayer = nullptr;
-		LayerStack m_LayerStack;
+        static Application *sInstance;
+        glm::mat4 mProjectionMatrix;
 
-		double m_Time = 0.0;
-		double m_DeltaTime = 0.0;
-		glm::dvec2 m_MouseLastPos;
-		int m_MouseButtonDown = -1;
-		int m_KeyDown = -1;
-		int m_KeyMods = 0;
+        sRef<GEng::Texture2D> mAppIcon;
 
-		double mLastScrollTime = 0.0;
+        boost::filesystem::path mAssetsPath = "../../../Assets";
 
-		Camera mCam;
-
-		static Application* s_Instance;
-		static glm::mat4 projectionMatrix;
-
-		sRef<Texture2D> mAppIcon;
-
-		bool mSplashScreenOpen = true;
-	};
+        bool mSplashScreenOpen = true;
+    };
 }

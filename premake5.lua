@@ -37,38 +37,7 @@ project "SCESS"
 	  "%{wks.location}/SCESS.APS",
 	  "%{wks.location}/SCESS.rc",
 	}
-	
-	filter { "system:windows" }
-		defines{"GLEW_STATIC", "_CONSOLE",}
-		pchheader("pch.h")
-		pchsource("%{wks.location}/src/pch.cpp")
-		postbuildcommands {
-		  ("call xcopy.exe \"%{prj.location}Assets\" \"%{wks.location}" .. outputdir .. "Assets\" /s /y /i /d")
-		}
-		files {
-		  "%{wks.location}/Eigen.natvis"
-		}
-        publicLibDir = "/media/charlie/Data/dev/Libraries/"
-		includedirs
-		{
-		  "%{wks.location}/src/",
-		  "D:/dev/Libraries/json-develop/include",
-		  "D:/dev/Libraries/eigen-3.4.0",
-		  "D:/dev/Libraries/glm",
-		  "D:/dev/Libraries/ImGui",
-		  "D:/dev/Libraries/glew-2.1.0/include",
-		  "D:/dev/Libraries/glfw-3.3.2/include",
-		  "D:/dev/Libraries/",
-		  "D:/dev/Libraries/nativefiledialog/src/include",
-		  "D:/dev/Libraries/boost_1_83_0",
-		  "D:/dev/Libraries/libxc-6.2.2/src"
-		}
-		links
-		{
-		  "opengl32",
-		  "ImGui"
-		}
-		linkoptions { '/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT"' }
+
 		
 	filter {"system:linux"}
 		includedirs
@@ -78,44 +47,87 @@ project "SCESS"
 		  "/usr/local/include",
 		  "/opt/etsf/include",
           "/usr/local/include/eigen3",
-		  "/media/charlie/Data/dev/Libraries/json-develop/include",
-		  "/media/charlie/Data/dev/Libraries/eigen-3.4.0",
-		  "/media/charlie/Data/dev/Libraries/glm",
-          "/media/charlie/Data/dev/Libraries/",
-		  "/media/charlie/Data/dev/Libraries/ImGui",
-          "/media/charlie/Data/dev/Libraries/nativefiledialog/src/include"
+          "../../C++/GraphicsEngine/src",
+		  "../../Libraries/json-develop/include",
+		  "../../Libraries/eigen-3.4.0",
+		  "../../Libraries/glm",
+          "../../Libraries/",
+		  "../../Libraries/ImGui",
+          "../../Libraries/nativefiledialog/src/include"
 		}
         libdirs
         {
-            "/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64",
-            "/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64"
+            "../../Libraries/ImGui/bin/linux/Release-x64",
+            "../../Libraries/nativefiledialog/build/lib/Release/x64"
         }
-		links { "glfw3", "ImGui", "boost_filesystem", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
-		--linkoptions { "`pkg-config --libs gtk+-3.0`" }
+		links { "GraphicsEngine", "glfw3","ImGui", "boost_filesystem", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
 
+
+	filter { "system:linux", "configurations:Debug" }
+		libdirs { "../../C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine" }
+
+
+	filter { "system:linux", "configurations:Release" }
+		libdirs { "../../C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine" }
+
+	filter { "system:windows" }
+		defines{"GLEW_STATIC", "GENG_STATIC"}
+		pchheader("pch.h")
+		pchsource("%{wks.location}/src/pch.cpp")
+		files {
+		  "%{wks.location}/Eigen.natvis"
+		}
+		includedirs
+		{
+		  "%{wks.location}/src/",
+		  "../../Libraries/json-develop/include",
+		  "../../Libraries/eigen-3.4.0",
+		  "../../C++/GraphicsEngine/src",
+		  "../../Libraries/glm",
+		  "../../Libraries/ImGui",
+		  "../../Libraries/glew-2.1.0/include",
+		  "../../Libraries/glfw-3.3.2/include",
+		  "../../Libraries/",
+		  "../../Libraries/nativefiledialog/src/include",
+		  "../../Libraries/boost_1_83_0",
+		  "../../Libraries/libxc-6.2.2/src"
+		}
+		links
+		{
+          "GraphicsEngine",
+		  "opengl32",
+		  "ImGui",
+		  "xc.lib",
+		  "nativefiledialog/build/lib/Release/x64/nfd.lib"
+		}
+		linkoptions { '/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT"' }
 
 	filter { "configurations:Debug", "system:Windows" }
 		defines { "CONFIG_DEBUG", "_DEBUG" }
 		symbols "On"
 		libdirs { 
-		    "D:/dev/Libraries/glew-2.1.0/lib/Debug/x64/",
-		    "D:/dev/Libraries/glfw-3.3.2/lib/x64/",
-		    "D:/dev/Libraries/boost_1_83_0/stage/lib/",
-		    "D:/dev/Libraries/ImGui/bin/windows/Debug-x64",
-		    "D:/dev/Libraries/libxc-6.2.2/VS/Release" }
-		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib", "ImGui", "xc.lib",   "nativefiledialog/build/lib/Release/x64/nfd.lib" }
+		    "../../Libraries/glew-2.1.0/lib/Debug/x64/",
+		    "../../Libraries/glfw-3.3.2/lib/x64/",
+		    "../../Libraries/boost_1_83_0/stage/lib/",
+		    "../../Libraries/ImGui/bin/windows/Debug-x64",
+		    "../../Libraries/libxc-6.2.2/VS/Release",
+		    "../../C++/GraphicsEngine/bin/windows/Debug-x64/GraphicsEngine"
+		     }
+		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib" }
 		staticruntime "off"
 		buildoptions "/MDd"
 
 	filter { "configurations:Release", "system:Windows" }
 		defines "CONFIG_RELEASE"
 		optimize "On"
-		libdirs {   "D:/dev/Libraries/glew-2.1.0/lib/Release/x64/",
-		    "D:/dev/Libraries/glfw-3.3.2/lib/x64/",
-		    "D:/dev/Libraries/boost_1_83_0/stage/lib/",
-		    "D:/dev/Libraries/ImGui/bin/windows/Release-x64",
-		    "D:/dev/Libraries/libxc-6.2.2/VS/Release" }
-		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib", "ImGui", "xc.lib",   "nativefiledialog/build/lib/Release/x64/nfd.lib" }
+		libdirs {   "../../Libraries/glew-2.1.0/lib/Release/x64/",
+		    "../../Libraries/glfw-3.3.2/lib/x64/",
+		    "../../Libraries/boost_1_83_0/stage/lib/",
+		    "../../Libraries/ImGui/bin/windows/Release-x64",
+		    "../../Libraries/libxc-6.2.2/VS/Release",
+		     "../../C++/GraphicsEngine/bin/windows/Release-x64/GraphicsEngine"
+		     }
+		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib"}
 		staticruntime "off"
 		buildoptions "/MD"
 
