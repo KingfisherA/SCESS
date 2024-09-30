@@ -42,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>bin\windows\Debug-x64\</OutDir>
-    <IntDir>bin-obj\windows\Debug-x64\</IntDir>
+    <OutDir>bin\linux\Debug-x64\</OutDir>
+    <IntDir>bin-obj\linux\Debug-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>bin\windows\Release-x64\</OutDir>
-    <IntDir>bin-obj\windows\Release-x64\</IntDir>
+    <OutDir>bin\linux\Release-x64\</OutDir>
+    <IntDir>bin-obj\linux\Release-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
@@ -60,7 +60,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -70,7 +70,7 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -86,7 +86,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -99,7 +99,7 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.0;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -116,6 +116,7 @@
     <ClInclude Include="src\Chemistry\PeriodicTable.h" />
     <ClInclude Include="src\Chemistry\Quantum\Basis\BasisUtils.h" />
     <ClInclude Include="src\Chemistry\Quantum\Basis\Gaussian.h" />
+    <ClInclude Include="src\Chemistry\Quantum\CC\CoupledCluster.h" />
     <ClInclude Include="src\Chemistry\Quantum\DFT\DFT.h" />
     <ClInclude Include="src\Chemistry\Quantum\DFT\DFTGrid.h" />
     <ClInclude Include="src\Chemistry\Quantum\DFT\XCFunctional.h" />
@@ -129,6 +130,7 @@
     <ClInclude Include="src\Maths\Isosurfaces.h" />
     <ClInclude Include="src\Maths\Quadrature.h" />
     <ClInclude Include="src\Platform\Intrinsics.h" />
+    <ClInclude Include="src\Utilities\Utilities.h" />
     <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -136,6 +138,7 @@
     <ClCompile Include="src\Chemistry\PeriodicTable.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Basis\BasisUtils.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\CC\CoupledCluster.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFTGrid.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\XCFunctional.cpp" />
@@ -146,6 +149,7 @@
     <ClCompile Include="src\GUI\CalculationLayer.cpp" />
     <ClCompile Include="src\Maths\Isosurfaces.cpp" />
     <ClCompile Include="src\Maths\Quadrature.cpp" />
+    <ClCompile Include="src\Utilities\Utilities.cpp" />
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

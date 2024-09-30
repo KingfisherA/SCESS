@@ -38,7 +38,7 @@ namespace SCESS {
         }
     }
 
-    void CalculationLayer::OnAttach() {
+    void CalculationLayer::OnInit() {
         mDiffuseProg = ShaderProgram::CreateFromFile(
             Application::Get().GetResourcePath(R"(Shaders/ColourDiffuse.glsl)").string());
 
@@ -54,11 +54,11 @@ namespace SCESS {
         mNegTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
 
         mMoleculeVAO = VertexArray::Create();
-        sRef<Mesh> sphereMesh = Geometry::CreateQuadsphere(1.0f, 30);
-        mMoleculeVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh->GetVertexArray(),
-                                                           sphereMesh->GetVertexFloatCount()));
-        mMoleculeVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh->GetIndiciesArray(),
-                                                         sphereMesh->GetIndexIntCount()));
+        Mesh_F32 sphereMesh = Geometry::CreateQuadsphere(1.0f, 30);
+        mMoleculeVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh.GetVertexArray().data(),
+                                                           sphereMesh.GetVertexFloatCount()));
+        mMoleculeVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh.GetIndicesArray().data(),
+                                                         sphereMesh.GetIndexIntCount()));
 
         // All molecule data is packed in the following format:
         //(Atom Scale; float) (Atom Translation; vec3) (Atom Colour; vec3) --
@@ -78,7 +78,7 @@ namespace SCESS {
                                                          std::find(mBasisSets.begin(), mBasisSets.end(), "sto-3g")));
     }
 
-    void CalculationLayer::OnDetach() {
+    void CalculationLayer::OnDestroy() {
     }
 
     void CalculationLayer::OnUpdate(const sRef<SCESS::Framebuffer> &screenBuffer, const Camera3D &cam,
@@ -96,7 +96,7 @@ namespace SCESS {
             mMoleculeDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
 
             mMoleculeVAO->Bind();
-            mMoleculeVAO->SubmitArrays(VertexArray::DrawMode::Triangles, mMolecule->GetNoAtoms());
+            mMoleculeVAO->SubmitArrays(Primitive::Triangles, mMolecule->GetNoAtoms());
             mMoleculeVAO->Unbind();
 
             mMoleculeDiffuseProg->Unbind();
@@ -468,7 +468,7 @@ namespace SCESS {
                     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0) * 0.5);
                     if (ImGui::Button("Calculate MP2 Energy", {200, 0})) {
                         if (mMethod == CalcMethod::RHF) {
-                            mMP2Energy = HF::CalculateMP2Energy(*mRHFResult);
+                            mMP2Energy = HF::MP2ClosedShell(*mRHFResult);
                         }
                     }
 

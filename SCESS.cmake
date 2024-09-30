@@ -10,6 +10,8 @@
           "src/Chemistry/Quantum/Basis/BasisUtils.h"
           "src/Chemistry/Quantum/Basis/Gaussian.cpp"
           "src/Chemistry/Quantum/Basis/Gaussian.h"
+          "src/Chemistry/Quantum/CC/CoupledCluster.cpp"
+          "src/Chemistry/Quantum/CC/CoupledCluster.h"
           "src/Chemistry/Quantum/DFT/DFT.cpp"
           "src/Chemistry/Quantum/DFT/DFT.h"
           "src/Chemistry/Quantum/DFT/DFTGrid.cpp"
@@ -33,6 +35,8 @@
       "src/Maths/Quadrature.cpp"
       "src/Maths/Quadrature.h"
       "src/Platform/Intrinsics.h"
+      "src/Utilities/Utilities.cpp"
+      "src/Utilities/Utilities.h"
     "src/pch.cpp"
     "src/pch.h"
 )
@@ -52,7 +56,7 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Debug>:/usr/local/include/eigen3>
   $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
   $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/eigen-3.4.90>
   $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/glm>
   $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries>
   $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/ImGui>
@@ -120,7 +124,7 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Release>:/usr/local/include/eigen3>
   $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
   $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/eigen-3.4.0>
+  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/eigen-3.4.90>
   $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/glm>
   $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries>
   $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/ImGui>

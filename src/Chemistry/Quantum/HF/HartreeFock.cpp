@@ -24,14 +24,14 @@ namespace SCESS {
         const Eigen::MatrixXd &S = integrals.S;
         const Eigen::MatrixXd &T = integrals.T;
         const Eigen::MatrixXd &V = integrals.V;
-        const TETensor &tei = integrals.tei; //Two-electron tensor
+        const TEITensor &tei = integrals.tei; //Two-electron tensor
 
         if (consoleStream)
             *consoleStream << "Integral evaluation completed\n";
 
         const Eigen::Index dimensions = S.rows();
         double delta = 1.0;
-        size_t scfCount = 0;
+        Eigen::Index scfCount = 0;
         double Vnn = molecule.CalculateNuclearRepulsion();
         double currentE = 0.0;
 
@@ -80,8 +80,9 @@ namespace SCESS {
             currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
 
             //Calculate the current energy
-            if (consoleStream) *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
-                               " hartrees\n";
+            if (consoleStream)
+                *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
+                        " hartrees\n";
         }
 
         currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
@@ -108,26 +109,26 @@ namespace SCESS {
                                  std::stringstream *consoleStream, const std::string_view basisSet) {
         if (consoleStream != nullptr)
             *consoleStream << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
-                    GetOrbitals().size() << " basis set functions\snBeginning integral evaluation...\n";
+                    GetOrbitals().size() << " basis set functions\nBeginning integral evaluation...\n";
 
         //Spin-up electrons
-        size_t alphaElectrons = molecule.GetNoElectrons() / 2;
+        Eigen::Index alphaElectrons = molecule.GetNoElectrons() / 2;
         //Spin-down electrons
-        size_t betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
+        Eigen::Index betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
 
         ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
         const Eigen::MatrixXd &S = integrals.S;
         const Eigen::MatrixXd &T = integrals.T;
         const Eigen::MatrixXd &V = integrals.V;
-        const TETensor &tei = integrals.tei;
+        const TEITensor &tei = integrals.tei;
 
-        const size_t dimensions = S.rows();
+        const Eigen::Index dimensions = S.rows();
 
         if (consoleStream)
             *consoleStream << "Integral evaluation completed\n";
 
         double delta = 1.0;
-        size_t scfCount = 0;
+        Eigen::Index scfCount = 0;
         double Vnn = molecule.CalculateNuclearRepulsion();
         double currentE = 0.0;
 
@@ -172,9 +173,9 @@ namespace SCESS {
 
             DensityAlpha = Eigen::MatrixXd::Zero(Hcore.rows(), Hcore.rows());
             DensityBeta = Eigen::MatrixXd::Zero(Hcore.rows(), Hcore.rows());
-            for (size_t i = 0; i < Hcore.rows(); ++i) {
-                for (size_t j = 0; j < Hcore.cols(); ++j) {
-                    size_t k = 0;
+            for (Eigen::Index i = 0; i < Hcore.rows(); ++i) {
+                for (Eigen::Index j = 0; j < Hcore.cols(); ++j) {
+                    Eigen::Index k = 0;
                     for (k = 0; k < alphaElectrons; ++k) {
                         DensityAlpha(i, j) += CoeffsAlpha(i, k) * CoeffsAlpha(j, k);
                     }
@@ -197,8 +198,9 @@ namespace SCESS {
                                           FockAlpha,
                                           FockBeta) + Vnn;
 
-            if (consoleStream) *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
-                               " hartrees\n";
+            if (consoleStream)
+                *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
+                        " hartrees\n";
 
             scfCount++;
         }
@@ -233,7 +235,7 @@ namespace SCESS {
     }
 
     Eigen::MatrixXd HF::ConstructGRHF(const Eigen::MatrixXd &Density,
-                                      const TETensor &teiTensor) {
+                                      const TEITensor &teiTensor) {
         Eigen::MatrixXd G = Eigen::MatrixXd::Zero(Density.rows(), Density.rows());
 
         for (Eigen::DenseIndex i = 0; i < G.rows(); i++) {
@@ -255,14 +257,14 @@ namespace SCESS {
 
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd> HF::ConstructGUHF(const Eigen::MatrixXd &DensityAlpha,
                                                                   const Eigen::MatrixXd &DensityBeta,
-                                                                  const TETensor &teiTensor) {
+                                                                  const TEITensor &teiTensor) {
         Eigen::MatrixXd GAlpha = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
         Eigen::MatrixXd GBeta = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
 
-        for (size_t i = 0; i < DensityAlpha.rows(); i++) {
-            for (size_t j = 0; j < DensityAlpha.rows(); j++) {
-                for (size_t k = 0; k < DensityAlpha.rows(); k++) {
-                    for (size_t l = 0; l < DensityAlpha.rows(); l++) {
+        for (Eigen::Index i = 0; i < DensityAlpha.rows(); i++) {
+            for (Eigen::Index j = 0; j < DensityAlpha.rows(); j++) {
+                for (Eigen::Index k = 0; k < DensityAlpha.rows(); k++) {
+                    for (Eigen::Index l = 0; l < DensityAlpha.rows(); l++) {
                         const double J = teiTensor(i, j, k, l);
                         const double K = teiTensor(i, l, k, j);
                         GAlpha(i, j) += DensityAlpha(k, l) * (J - K) + DensityBeta(k, l) * J;
@@ -275,7 +277,7 @@ namespace SCESS {
     }
 
     Eigen::MatrixXd HF::ConstructDensityRHF(const Eigen::MatrixXd &Coeffs,
-                                            const size_t Nelecs) {
+                                            const Eigen::Index Nelecs) {
         Eigen::MatrixXd Density = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
         for (int i = 0; i < Density.rows(); i++) {
             for (int j = 0; j < Density.rows(); j++) {
@@ -319,8 +321,8 @@ namespace SCESS {
         const Eigen::MatrixXd &FockAlpha,
         const Eigen::MatrixXd &FockBeta) {
         double energy = 0.0;
-        for (size_t i = 0; i < Hcore.rows(); i++) {
-            for (size_t j = 0; j < Hcore.cols(); j++) {
+        for (Eigen::Index i = 0; i < Hcore.rows(); i++) {
+            for (Eigen::Index j = 0; j < Hcore.cols(); j++) {
                 energy += (DensityAlpha(i, j) + DensityBeta(i, j)) * Hcore(i, j);
                 energy += DensityAlpha(i, j) * FockAlpha(i, j) + DensityBeta(i, j) * FockBeta(i, j);
             }
@@ -329,48 +331,36 @@ namespace SCESS {
         return energy;
     }
 
-    double HF::CalculateMP2Energy(const RHFResult &result) {
+    double HF::MP2ClosedShell(const RHFResult &result) {
+        //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
+        const TEITensor moTEI = IntegralHelper::CalculateMolecularTEI(result.Integrals.tei, result.Coeffs);
+        return MP2ClosedShell(result, moTEI);
+    }
+
+    double HF::MP2ClosedShell(const RHFResult& result, const TEITensor &moTEI) {
         const Eigen::VectorXi &occ = result.Occupation;
         const Eigen::VectorXd &energies = result.Energies;
         const Eigen::MatrixXd &coeffs = result.Coeffs;
-        const TETensor &tei = result.Integrals.tei;
 
         double MP2_E = 0.0;
 
-        size_t LUMOIndex = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
-
-        //<ab | ij > [MO Basis] = [AO Basis] <ab|ij>
-        auto teiAOToMOBasis = [&tei, &coeffs](size_t i, size_t j, size_t a, size_t b)-> double {
-            double result = 0.0;
-            for (size_t mu = 0; mu < coeffs.rows(); mu++) {
-                for (size_t nu = 0; nu < coeffs.rows(); nu++) {
-                    for (size_t kappa = 0; kappa < coeffs.rows(); kappa++) {
-                        for (size_t lam = 0; lam < coeffs.rows(); lam++) {
-                            result += coeffs(mu, i) * coeffs(nu, j) * tei(mu, kappa, nu, lam) * coeffs(lam, b) * coeffs(
-                                kappa, a);
-                        }
-                    }
-                }
-            }
-            return result;
-        };
-
+        Eigen::Index LUMOIndex = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
 
         //i and j run over the occupied orbitals
-        for (size_t i = 0; i < LUMOIndex; i++) {
-            for (size_t j = 0; j < LUMOIndex; j++) {
+        for (Eigen::Index i = 0; i < LUMOIndex; i++) {
+            for (Eigen::Index j = 0; j < LUMOIndex; j++) {
                 //a and b run over the virtual orbitals
-                for (size_t a = LUMOIndex; a < occ.size(); a++) {
-                    for (size_t b = LUMOIndex; b < occ.size(); b++) {
-                        double intIJAB = teiAOToMOBasis(i, j, a, b);
-                        double intIJBA = teiAOToMOBasis(i, j, b, a);
-                        double epsilonIJAB = energies[i] + energies[j] - energies[a] - energies[b];
+                for (Eigen::Index a = LUMOIndex; a < occ.size(); a++) {
+                    for (Eigen::Index b = LUMOIndex; b < occ.size(); b++) {
+                        double intIJAB = moTEI(i,a,j,b);//moTEI(i, j,a,b);
+                        double intIJBA = moTEI(i,b,j,a);//moTEI(i, j,b,a);
+                        double epsilonIJAB = energies[a] + energies[b] - energies[i] - energies[j];
                         MP2_E += intIJAB * (2.0 * intIJAB - intIJBA) / epsilonIJAB;
                     }
                 }
             }
         }
 
-        return MP2_E;
+        return -MP2_E;
     }
 }

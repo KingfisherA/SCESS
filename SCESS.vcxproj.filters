@@ -16,6 +16,9 @@
     <Filter Include="src\Chemistry\Quantum\Basis">
       <UniqueIdentifier>{AF8DE9C4-1B9B-17AB-A481-1396108EE361}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Chemistry\Quantum\CC">
+      <UniqueIdentifier>{8326ABCB-6F4B-FA4B-9896-DFDB841AF969}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\Chemistry\Quantum\DFT">
       <UniqueIdentifier>{DBFB0F41-47BE-43CB-906E-D257FC6F1CA9}</UniqueIdentifier>
     </Filter>
@@ -37,6 +40,9 @@
     <Filter Include="src\Platform">
       <UniqueIdentifier>{21CA02E5-0D2D-9289-B6B2-CA3FA2F45D0C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Utilities">
+      <UniqueIdentifier>{D86B3A83-442C-B6B9-0D67-FF3679E6FA95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -51,6 +57,9 @@
     </ClInclude>
     <ClInclude Include="src\Chemistry\Quantum\Basis\Gaussian.h">
       <Filter>src\Chemistry\Quantum\Basis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Chemistry\Quantum\CC\CoupledCluster.h">
+      <Filter>src\Chemistry\Quantum\CC</Filter>
     </ClInclude>
     <ClInclude Include="src\Chemistry\Quantum\DFT\DFT.h">
       <Filter>src\Chemistry\Quantum\DFT</Filter>
@@ -91,6 +100,9 @@
     <ClInclude Include="src\Platform\Intrinsics.h">
       <Filter>src\Platform</Filter>
     </ClInclude>
+    <ClInclude Include="src\Utilities\Utilities.h">
+      <Filter>src\Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="src\pch.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -107,6 +119,9 @@
     </ClCompile>
     <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp">
       <Filter>src\Chemistry\Quantum\Basis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Chemistry\Quantum\CC\CoupledCluster.cpp">
+      <Filter>src\Chemistry\Quantum\CC</Filter>
     </ClCompile>
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp">
       <Filter>src\Chemistry\Quantum\DFT</Filter>
@@ -137,6 +152,9 @@
     </ClCompile>
     <ClCompile Include="src\Maths\Quadrature.cpp">
       <Filter>src\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utilities\Utilities.cpp">
+      <Filter>src\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="src\pch.cpp">
       <Filter>src</Filter>

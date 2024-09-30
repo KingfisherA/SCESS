@@ -21,9 +21,35 @@
 #include <filesystem>
 
 #include "xc.h"
+#include "Chemistry/Quantum/CC/CoupledCluster.h"
+#include "Chemistry/Quantum/HF/HartreeFock.h"
 
 // #define IMSPINNER_DEMO
 // #include "GUI/ImSpinner.h"
+
+
+void TestCoupledCluster() {
+    using namespace SCESS;
+
+    std::cout << "---Performing Hartree Fock Calculation on water---\n";
+
+    constexpr const char *BASIS_SET_NAME = "sto-3g";
+
+    Molecule waterMolecule = GenerateWaterMolecule();
+    waterMolecule.MakeOrbitals(BASIS_SET_NAME);
+
+
+    std::stringstream ss;
+    RHFResult rhfResult = HF::RestrictedHF(waterMolecule, 1e-05, 100, &ss, BASIS_SET_NAME);
+    std::cout << ss.str();
+    ss.clear();
+    ss.str("");
+
+    CoupledCluster::CCSD(rhfResult);
+
+    std::cout << "Press any key to continue..\n";
+    std::cin.get();
+}
 
 #pragma region Entry Point
 
@@ -46,13 +72,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!app.Init()) {
-        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
-        system("PAUSE");
-        return 1;
-    }
+    TestCoupledCluster();
 
-    app.Run();
+    // if (!app.Init()) {
+    //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+    //     system("PAUSE");
+    //     return 1;
+    // }
+    //
+    // app.Run();
 
     return 0;
 }

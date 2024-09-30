@@ -25,7 +25,7 @@ namespace SCESS
 		const Eigen::MatrixXd &S = integrals.S;
 		const Eigen::MatrixXd &T = integrals.T;
 		const Eigen::MatrixXd &V = integrals.V;
-		const TETensor &tei = integrals.tei; // Two-electron tensor
+		const TEITensor &tei = integrals.tei; // Two-electron tensor
 
 		// const Eigen::MatrixXd& S = rhfResult.Integrals.S;
 		// const Eigen::MatrixXd& T = rhfResult.Integrals.T;
@@ -60,7 +60,7 @@ namespace SCESS
 			   Vnn = mol.CalculateNuclearRepulsion(),
 			   totalE = 0.0,
 			   exchangeCorreE = 0.0;
-		size_t scfIterations = 0, scfMaxIterations = 200;
+		Eigen::Index scfIterations = 0, scfMaxIterations = 200;
 
 		if (consoleStream)
 			*consoleStream << "Beginning SCF iterations...\n";
@@ -107,15 +107,15 @@ namespace SCESS
 		return totalE;
 	}
 
-	Eigen::MatrixXd DFT::ConstructDensity(const size_t Nelecs, const Eigen::MatrixXd &coeffs)
+	Eigen::MatrixXd DFT::ConstructDensity(const Eigen::Index Nelecs, const Eigen::MatrixXd &coeffs)
 	{
 		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(coeffs.rows(), coeffs.rows());
 
-		for (size_t i = 0; i < DensityMat.rows(); i++)
+		for (Eigen::Index i = 0; i < DensityMat.rows(); i++)
 		{
-			for (size_t j = 0; j < DensityMat.cols(); j++)
+			for (Eigen::Index j = 0; j < DensityMat.cols(); j++)
 			{
-				for (size_t k = 0; k < Nelecs / 2; k++)
+				for (Eigen::Index k = 0; k < Nelecs / 2; k++)
 				{
 					DensityMat(i, j) += coeffs(i, k) * coeffs(j, k);
 				}
@@ -125,16 +125,16 @@ namespace SCESS
 		// Mix the old and new density matrices??
 		return DensityMat;
 	}
-	Eigen::MatrixXd DFT::ConstructCoulombMatrix(const Eigen::MatrixXd &DensityMat, const TETensor &tei)
+	Eigen::MatrixXd DFT::ConstructCoulombMatrix(const Eigen::MatrixXd &DensityMat, const TEITensor &tei)
 	{
 		Eigen::MatrixXd J = Eigen::MatrixXd::Zero(DensityMat.rows(), DensityMat.rows());
-		for (size_t i = 0; i < J.rows(); i++)
+		for (Eigen::Index i = 0; i < J.rows(); i++)
 		{
-			for (size_t j = 0; j < J.rows(); j++)
+			for (Eigen::Index j = 0; j < J.rows(); j++)
 			{
-				for (size_t k = 0; k < J.rows(); k++)
+				for (Eigen::Index k = 0; k < J.rows(); k++)
 				{
-					for (size_t l = 0; l < J.rows(); l++)
+					for (Eigen::Index l = 0; l < J.rows(); l++)
 					{
 						J(i, j) += DensityMat(k, l) * tei(i, j, k, l);
 					}
@@ -165,11 +165,11 @@ namespace SCESS
 
 		Eigen::VectorXd wva = weights.cwiseProduct((exchangePotentialAlpha + exchangePotentialBeta + correlationPotentialAlpha + correlationPotentialBeta) * 0.5);
 
-		for (size_t i = 0; i < mol.GetOrbitals().size(); i++)
+		for (Eigen::Index i = 0; i < mol.GetOrbitals().size(); i++)
 		{
 			Eigen::VectorXd row = amplitudes.row(i);
 			Eigen::VectorXd wva_i = wva.cwiseProduct(row);
-			for (size_t j = 0; j < mol.GetOrbitals().size(); j++)
+			for (Eigen::Index j = 0; j < mol.GetOrbitals().size(); j++)
 			{
 				XCMatrix(i, j) = wva_i.dot(amplitudes.row(j));
 			}

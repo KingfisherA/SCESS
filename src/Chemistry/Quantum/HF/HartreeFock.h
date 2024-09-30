@@ -9,7 +9,6 @@ namespace SCESS
 	struct RHFResult;
 	struct UHFResult;
 	class Molecule;
-	struct TETensor;
 
 	class HF
 	{
@@ -70,16 +69,17 @@ namespace SCESS
 		/// </summary>
 		/// <param name="result">The data from a RHF computation</param>
 		/// <returns>The MP2 correction energy</returns>
-		static double CalculateMP2Energy(const RHFResult& result);
+		static double MP2ClosedShell(const RHFResult& result);
+		static double MP2ClosedShell(const RHFResult& result, const TEITensor& moTEI);
 
 	private:
-		static Eigen::MatrixXd ConstructGRHF(const Eigen::MatrixXd& Density, const TETensor& teiTensor);
+		static Eigen::MatrixXd ConstructGRHF(const Eigen::MatrixXd& Density, const TEITensor& teiTensor);
 		static std::pair< Eigen::MatrixXd, Eigen::MatrixXd> ConstructGUHF(const Eigen::MatrixXd& DensityAlpha,
-			const Eigen::MatrixXd& DensityBeta, const TETensor& teiTensor);
+			const Eigen::MatrixXd& DensityBeta, const TEITensor& teiTensor);
 
 
 		static Eigen::MatrixXd ConstructDensityRHF(const Eigen::MatrixXd& Coeffs,
-			const size_t Nelecs);
+			const Eigen::Index Nelecs);
 
 		static double CalculateDelta(const Eigen::MatrixXd& oldDensity,
 			const Eigen::MatrixXd& density);

@@ -2,10 +2,11 @@
 #include<strstream>
 #include<Eigen/Core>
 
+#include "Chemistry/Quantum/Integrals/IntegralHelper.h"
+
 namespace SCESS
 {
 	class Molecule;
-	struct TETensor;
 	class DFTMolecularGrid;
 
 	class DFT
@@ -13,9 +14,9 @@ namespace SCESS
 	public:
 		static double RunDFT(const Molecule& mol, std::stringstream* consoleStream = nullptr, const std::string_view basisSet = "");
 
-		static Eigen::MatrixXd ConstructDensity(const size_t Nelecs, const Eigen::MatrixXd& coeffs);
+		static Eigen::MatrixXd ConstructDensity(const Eigen::Index Nelecs, const Eigen::MatrixXd& coeffs);
 
-		static Eigen::MatrixXd ConstructCoulombMatrix(const Eigen::MatrixXd& DensityMat, const TETensor& tei);
+		static Eigen::MatrixXd ConstructCoulombMatrix(const Eigen::MatrixXd& DensityMat, const TEITensor& tei);
 
 		static void EvaluateExchangeCorrelation(const DFTMolecularGrid& dftGrid, const Molecule& mol,
 			Eigen::MatrixXd& XCMatrix, double& energyOut);

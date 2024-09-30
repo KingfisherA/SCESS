@@ -40,8 +40,8 @@ namespace SCESS {
 
         //virtual ~CalculationLayer();
 
-        virtual void OnAttach() override;
-        virtual void OnDetach() override;
+        virtual void OnInit() override;
+        virtual void OnDestroy() override;
         virtual void OnUpdate(const sRef<GEng::Framebuffer> &screenBuffer, const GEng::Camera3D &cam,
                               const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) override;
         virtual void OnImGuiRender() override;

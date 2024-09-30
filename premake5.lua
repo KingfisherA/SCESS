@@ -49,7 +49,7 @@ project "SCESS"
           "/usr/local/include/eigen3",
           "../../C++/GraphicsEngine/src",
 		  "../../Libraries/json-develop/include",
-		  "../../Libraries/eigen-3.4.0",
+		  "../../Libraries/eigen-3.4.90",
 		  "../../Libraries/glm",
           "../../Libraries/",
 		  "../../Libraries/ImGui",
@@ -81,7 +81,7 @@ project "SCESS"
 		{
 		  "%{wks.location}/src/",
 		  "../../Libraries/json-develop/include",
-		  "../../Libraries/eigen-3.4.0",
+		  "../../Libraries/eigen-3.4.90",
 		  "../../C++/GraphicsEngine/src",
 		  "../../Libraries/glm",
 		  "../../Libraries/ImGui",
