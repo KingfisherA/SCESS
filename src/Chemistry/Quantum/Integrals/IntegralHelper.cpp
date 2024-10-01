@@ -71,7 +71,34 @@ namespace SCESS {
             for (Eigen::Index q = 0; q < transformed.dimension(1); ++q)
                 for (Eigen::Index r = 0; r < transformed.dimension(2); ++r)
                     for (Eigen::Index s = 0; s < transformed.dimension(3); ++s)
-                        transformed(p, q, r, s) = tei(p,r,q,s) - tei(p,s,q,r);
+                        transformed(p, q, r, s) = tei(p, r, q, s) - tei(p, s, q, r);
+
+        return transformed;
+    }
+
+    TEITensor IntegralHelper::AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
+        Eigen::DSizes<Eigen::Index, 4> dimensions = moTEI.dimensions();
+
+        //Make the tensor twice as big to hold the spin-integrated integrals
+        //Each integral in the moTEI actually represents two electrons
+        for (Eigen::Index &dim: dimensions)
+            dim *= 2;
+
+        TEITensor transformed(dimensions);
+
+        for (Eigen::Index p = 0; p < transformed.dimension(0); ++p)
+            for (Eigen::Index q = 0; q < transformed.dimension(1); ++q)
+                for (Eigen::Index r = 0; r < transformed.dimension(2); ++r)
+                    for (Eigen::Index s = 0; s < transformed.dimension(3); ++s) {
+                        //Only allow the integral to exist if the alpha is integrated with an alpha
+                        //or beta with a beta (spin function orthogonality)
+                        Eigen::Index coloumbMask = (p % 2 == r % 2) * (q % 2 == s % 2);
+                        Eigen::Index exchangeMask = (p % 2 == s % 2) * (q % 2 == r % 2);
+
+                        transformed(p, q, r, s) =
+                                moTEI(p / 2, r / 2, q / 2, s / 2) * (double) coloumbMask
+                                - moTEI(p / 2, s / 2, q / 2, r / 2) * (double) exchangeMask;
+                    }
 
         return transformed;
     }

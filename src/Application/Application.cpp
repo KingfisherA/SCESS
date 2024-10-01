@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 #ifdef PLATFORM_WIN
 	SCESS::Console::SetHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 #endif // PLATFORM_WIN
-    std::cout << "Schrodinger's Cat's Electronic System Solver\nMeow!\n";
+    std::cout << "Schrodinger's Cat's Electronic System Solver\n By Charlie Wheelwright (cspw2) \n Meow!\n";
 
     std::cout << "---Libraries---\n";
     int vmajor, vminor, vmicro;

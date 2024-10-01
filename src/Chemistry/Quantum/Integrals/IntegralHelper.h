@@ -110,6 +110,7 @@ namespace SCESS {
     public:
         static TEITensor CalculateMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
         static TEITensor AntisymmetriseTEI(const TEITensor& tei);
+        static TEITensor AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor& moTEI);
         //For conversion from chemists' to physicists' notation
         static TEITensor ConvertChemistsToPhysicists(const TEITensor& tei);
 

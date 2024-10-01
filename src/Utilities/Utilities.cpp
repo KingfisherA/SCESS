@@ -15,4 +15,15 @@ namespace SCESS {
             std::cout << " |\n";
         }
     }
+
+    void Utilities::PrintTensorMatrix(const Eigen::Tensor<double, 2> &matrix) {
+        std::cout << std::fixed << std::setprecision(2);
+        for (Eigen::Index row = 0; row < matrix.dimension(0); ++row) {
+            std::cout << "| ";
+            for (Eigen::Index col = 0; col < matrix.dimension(1); ++col) {
+                std::cout << matrix(row, col) << ' ';
+            }
+            std::cout << " |\n";
+        }
+    }
 }
