@@ -2,7 +2,7 @@
 #include<strstream>
 #include<Eigen/Core>
 
-#include "Chemistry/Quantum/Integrals/IntegralHelper.h"
+#include "Chemistry/Quantum/Integrals/Integrals.h"
 
 namespace SCESS
 {

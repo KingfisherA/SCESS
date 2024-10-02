@@ -20,13 +20,29 @@ namespace SCESS {
     class GaussianCollection;
     struct RHFResult;
     struct UHFResult;
+    struct CCSDResult;
     class TriSurf;
 
-    enum class CalcMethod {
+    enum class SCFMethod:int {
         RHF = 0,
-        UHF,
-        DFT
+        UHF = 1,
+        DFT = 2
     };
+
+    enum class CorrelationMethod:int {
+        None = 0,
+        MP2 = 1,
+        CCSD = 2
+    };
+
+    inline const char *CorrelationMethodToStr(CorrelationMethod method) {
+        switch (method) {
+            case CorrelationMethod::None: return "";
+            case CorrelationMethod::MP2: return "MP2";
+            case CorrelationMethod::CCSD: return "CCSD";
+            default: return "";
+        }
+    }
 
     enum class MoleculeStyle:int {
         SpaceFill = 0,
@@ -52,19 +68,22 @@ namespace SCESS {
         void RenderMOIsosurface();
         void SelectMolecule();
         void UploadMolecule();
-        void SelectMoleculeFromFile();
+        bool SelectMoleculeFromFile();
 
         glm::mat3 GenerateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm);
 
         void ExecuteCalculation();
         void DrawProgressScreen();
         void OrderOrbitals();
+        void DrawResultsPanel();
+        void DrawQuantumCalcPanel();
+        void DrawMolSelectPanel();
+        void DrawConsolePanel();
 
         std::vector<std::string> mBasisSets;
         int mSelectedBasisSet = 0;
 
         int mSelectedMolecule = -1;
-        std::string mMoleculeName;
         uRef<Molecule> mMolecule;
         sRef<GEng::VertexArray> mMoleculeVAO;
         sRef<GEng::VertexBuffer> mMoleculeBuffer;
@@ -86,11 +105,15 @@ namespace SCESS {
         bool mOrbitalsOrdered = false;
         GEng::Thread mCalculationThread;
 
-        CalcMethod mMethod = CalcMethod::RHF;
+        SCFMethod mSCFMethod = SCFMethod::RHF;
+        CorrelationMethod mCorrelationMethod = CorrelationMethod::None;
         sRef<RHFResult> mRHFResult;
         sRef<UHFResult> mUHFResult;
+        bool mUseLastSCF = false;
+        sRef<CCSDResult> mCCSDResult;
+        std::optional<double> mMP2Energy;
+
         double mDFTEnergy = 0.0;
-        double mMP2Energy = 0.0;
         std::string mCalcBasiSet;
 
         std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;

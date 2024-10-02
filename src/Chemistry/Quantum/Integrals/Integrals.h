@@ -95,9 +95,9 @@ namespace SCESS {
                                                        tei(intIn.tei) {
         }
         ConfigIntegrals(ConfigIntegrals &&intIn) noexcept: S(std::move(intIn.S)),
-                                                  T(std::move(intIn.T)),
-                                                  V(std::move(intIn.V)),
-                                                  tei(std::move(intIn.tei)) {
+                                                           T(std::move(intIn.T)),
+                                                           V(std::move(intIn.V)),
+                                                           tei(std::move(intIn.tei)) {
         }
 
         // S = Overlap, T = Kinetic, V = Nuclear
@@ -106,13 +106,41 @@ namespace SCESS {
         TEITensor tei;
     };
 
-    class IntegralHelper {
+
+    class Integrals {
     public:
-        static TEITensor CalculateMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
-        static TEITensor AntisymmetriseTEI(const TEITensor& tei);
-        static TEITensor AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor& moTEI);
-        //For conversion from chemists' to physicists' notation
-        static TEITensor ConvertChemistsToPhysicists(const TEITensor& tei);
+        class Transforms {
+        public:
+            /**
+             * Transform the two-electron integrals (in chemist's notation) from the atomic orbital to the molecular orbital basis set
+             * @param tei Two-electron integral tensor in atomic orbital basis (in chemist's notation)
+             * @param C Wavefunction coefficients
+             * @return Transformed TEI tensor (in chemist's notation)
+             */
+            static TEITensor ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
+            /**
+             * Produce a tensor with < i j || k l>=<i j | k l> - <i j | l k>
+             * Automatically converts chemist's to physicists notation
+             * @param tei Two-electron integral tensor (in chemist's notation)
+             * @return Two-electron integral tensor with antisymmetric integrals (in physicists' notation)
+             */
+            static TEITensor AntisymmetriseTEI(const TEITensor &tei);
+            /**
+             * Transforms a molecular two electron integral tensor (in chemist's notation) into a tensor of antisymmetric
+             * two-electron integrals with the spin functions integrated out.
+             * A closed-shell wavefunction is assumed such that alpha and beta functions alternate.
+             * @param moTEI The TEI tensor transformed into the MO basis (in chemist's notation)
+             * @return A tensor with elements < i j || k l>= <i j | k l><alpha/beta ...> - <i j | l k><alpha/beta ...>
+             */
+            static TEITensor AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI);
+            //
+            /**
+             *Converts tei from chemists' to physicists' notation i.e. <i j | k l> = ( i k | j l)
+             * @param tei The TEI tensor in chemist's notation
+             * @return The TEI tensor in physicists' notation
+             */
+            static TEITensor ConvertChemistsToPhysicists(const TEITensor &tei);
+        };
 
         //Helper functions
         static double Binomial(int a, int b);
@@ -121,6 +149,14 @@ namespace SCESS {
         static Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,
                                               const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2);
 
+        static size_t TEIYoshimineIdx(size_t i, size_t j, size_t k, size_t l);
+
+        /**
+         * Evaluate all the required integrals for a qunatum calculation on a given molecule.
+         * These include the overlap, kinetic, potential and two-electron integrals.
+         * @param molecule The molecule to evaluate the integrals on
+         * @return Configuration integrals
+         */
         static ConfigIntegrals CalculateConfiguration(const Molecule &molecule);
 
         //Overlap Integrals
@@ -157,6 +193,11 @@ namespace SCESS {
         static double EvaluateKinetic(const GaussianCollection &c1, const GaussianCollection &c2);
         static Eigen::MatrixXd CalculateKineticMatrix(const Molecule &molecule);
 
+        /**
+         * Evaluate the two-electron integral (tei) tensor for a molecule in chemist's notation
+         * @param molecule The molecule to evaluate the tei for
+         * @return The tei in chemist's notation
+         */
         static TEITensor CalculateTwoElectronTensor(const Molecule &molecule);
         static double EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
                                           const GaussianCollection &c3, const GaussianCollection &c4);

@@ -2,32 +2,39 @@
 
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 #include"Chemistry/Quantum/Basis/Gaussian.h"
-#include"Chemistry/Quantum/Integrals/IntegralHelper.h"
+#include"Chemistry/Quantum/Integrals/Integrals.h"
 #include"Chemistry/Quantum/Molecule.h"
 
+#include<chrono>
 #include<algorithm>
 
 
 //
 //
 namespace SCESS {
-    RHFResult HF::RestrictedHF(const Molecule &molecule,
-                               const double convergeLimit,
-                               const size_t scfMaxIterations,
-                               std::stringstream *consoleStream,
-                               const std::string_view basisSet) {
-        if (consoleStream)
-            *consoleStream << "---Restricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
+    RHFResult HartreeFock::Restricted(const Molecule &molecule,
+                                      const double convergeLimit,
+                                      const size_t scfMaxIterations,
+                                      std::stringstream *console,
+                                      const std::string_view basisSet) {
+        using namespace std::chrono;
+
+        if (console)
+            *console << "---Restricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
                     GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
 
-        ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
+        auto integralStartTP = high_resolution_clock::now();
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule);
+        auto integralEndTP = high_resolution_clock::now();
+
         const Eigen::MatrixXd &S = integrals.S;
         const Eigen::MatrixXd &T = integrals.T;
         const Eigen::MatrixXd &V = integrals.V;
         const TEITensor &tei = integrals.tei; //Two-electron tensor
 
-        if (consoleStream)
-            *consoleStream << "Integral evaluation completed\n";
+        if (console)
+            *console << "Integral evaluation completed in " <<
+                    duration_cast<milliseconds>(integralEndTP - integralStartTP).count() << " milliseconds\n";
 
         const Eigen::Index dimensions = S.rows();
         double delta = 1.0;
@@ -48,8 +55,8 @@ namespace SCESS {
         Eigen::MatrixXd Fock, Coeffs, Energies, OldDensity;
         Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(dimensions, dimensions);
 
-        if (consoleStream)
-            *consoleStream << "Beginning SCF iterations...\n";
+        if (console)
+            *console << "Beginning SCF iterations...\n";
 
 
         while (delta > convergeLimit && scfCount < scfMaxIterations) {
@@ -80,19 +87,17 @@ namespace SCESS {
             currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
 
             //Calculate the current energy
-            if (consoleStream)
-                *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
-                        " hartrees\n";
+            if (console)
+                *console << "   RHF(" << scfCount << "): E = " << currentE << "      dE = " << delta << '\n';
         }
 
         currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
-        if (consoleStream) {
+        if (console) {
             if (scfCount < scfMaxIterations)
-                *consoleStream << "SCF procedure achieved required convergence criteria!\n SCF converged after " <<
-                        scfCount << " iterations.\n Restricted Hartree Fock Energy=" << currentE << " hartrees\n";
+                *console << "---- RHF procedure converged! ----\nRHF converged after " <<
+                        scfCount << " iterations.\nE(RHF) = " << currentE << " hartrees\n\n\n";
             else
-                *consoleStream << "SCF procedure failed to achieve convergence criteria in " << scfMaxIterations <<
-                        " iterations \n";
+                *console << "!!! RHF procedure failed to converge !!!\n\n\n";
         }
 
         Eigen::VectorXi Occupation = Eigen::VectorXi::Zero(Hcore.rows());
@@ -102,13 +107,16 @@ namespace SCESS {
         }
 
 
-        return RHFResult(Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, integrals, currentE);
+        return {Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, integrals, currentE};
     }
 
-    UHFResult HF::UnrestrictedHF(const Molecule &molecule, const double convergeLimit, const size_t scfMaxIterations,
-                                 std::stringstream *consoleStream, const std::string_view basisSet) {
-        if (consoleStream != nullptr)
-            *consoleStream << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
+    UHFResult HartreeFock::Unrestricted(const Molecule &molecule, const double convergeLimit,
+                                        const size_t scfMaxIterations,
+                                        std::stringstream *console, const std::string_view basisSet) {
+        using namespace std::chrono;
+
+        if (console != nullptr)
+            *console << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
                     GetOrbitals().size() << " basis set functions\nBeginning integral evaluation...\n";
 
         //Spin-up electrons
@@ -116,16 +124,21 @@ namespace SCESS {
         //Spin-down electrons
         Eigen::Index betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
 
-        ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(molecule);
+        auto integralStartTP = high_resolution_clock::now();
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule);
+        auto integralEndTP = high_resolution_clock::now();
+
         const Eigen::MatrixXd &S = integrals.S;
         const Eigen::MatrixXd &T = integrals.T;
         const Eigen::MatrixXd &V = integrals.V;
-        const TEITensor &tei = integrals.tei;
+        const TEITensor &tei = integrals.tei; //Two-electron tensor
+
+        if (console)
+            *console << "Integral evaluation completed in " <<
+                    duration_cast<milliseconds>(integralEndTP - integralStartTP).count() << " milliseconds\n";
 
         const Eigen::Index dimensions = S.rows();
 
-        if (consoleStream)
-            *consoleStream << "Integral evaluation completed\n";
 
         double delta = 1.0;
         Eigen::Index scfCount = 0;
@@ -198,9 +211,8 @@ namespace SCESS {
                                           FockAlpha,
                                           FockBeta) + Vnn;
 
-            if (consoleStream)
-                *consoleStream << "SCF(" << scfCount << "); Delta=" << delta << ", E=" << currentE <<
-                        " hartrees\n";
+            if (console)
+                *console << "   UHF(" << scfCount << "): E = " << currentE << "      dE = " << delta << '\n';
 
             scfCount++;
         }
@@ -211,13 +223,12 @@ namespace SCESS {
                                       FockAlpha,
                                       FockBeta) + Vnn;
 
-        if (consoleStream) {
+        if (console) {
             if (scfCount < scfMaxIterations)
-                *consoleStream << "SCF procedure achieved required convergence criteria!\n SCF converged after " <<
-                        scfCount << " iterations.\n Unrestricted Hartree Fock Energy=" << currentE << " hartrees\n";
+                *console << "---- UHF procedure converged! ----\nRHF converged after " <<
+                        scfCount << " iterations.\nE(UHF) = " << currentE << " hartrees\n\n\n";
             else
-                *consoleStream << "SCF procedure failed to achieve convergence criteria in " << scfMaxIterations <<
-                        " iterations \n";
+                *console << "!!! UHF procedure failed to converge !!!\n\n\n";
         }
 
         Eigen::VectorXi OccupationAlpha = Eigen::VectorXi::Zero(Hcore.rows());
@@ -229,13 +240,15 @@ namespace SCESS {
             OccupationBeta(i) = 1;
         }
 
-        return UHFResult(FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta,
-                         CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta,
-                         integrals, currentE);
+        return {
+            FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta,
+            CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta,
+            integrals, currentE
+        };
     }
 
-    Eigen::MatrixXd HF::ConstructGRHF(const Eigen::MatrixXd &Density,
-                                      const TEITensor &teiTensor) {
+    Eigen::MatrixXd HartreeFock::ConstructGRHF(const Eigen::MatrixXd &Density,
+                                               const TEITensor &teiTensor) {
         Eigen::MatrixXd G = Eigen::MatrixXd::Zero(Density.rows(), Density.rows());
 
         for (Eigen::DenseIndex i = 0; i < G.rows(); i++) {
@@ -255,9 +268,9 @@ namespace SCESS {
         return G;
     }
 
-    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> HF::ConstructGUHF(const Eigen::MatrixXd &DensityAlpha,
-                                                                  const Eigen::MatrixXd &DensityBeta,
-                                                                  const TEITensor &teiTensor) {
+    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> HartreeFock::ConstructGUHF(const Eigen::MatrixXd &DensityAlpha,
+                                                                           const Eigen::MatrixXd &DensityBeta,
+                                                                           const TEITensor &teiTensor) {
         Eigen::MatrixXd GAlpha = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
         Eigen::MatrixXd GBeta = Eigen::MatrixXd::Zero(DensityAlpha.rows(), DensityAlpha.rows());
 
@@ -276,8 +289,8 @@ namespace SCESS {
         return {GAlpha, GBeta};
     }
 
-    Eigen::MatrixXd HF::ConstructDensityRHF(const Eigen::MatrixXd &Coeffs,
-                                            const Eigen::Index Nelecs) {
+    Eigen::MatrixXd HartreeFock::ConstructDensityRHF(const Eigen::MatrixXd &Coeffs,
+                                                     const Eigen::Index Nelecs) {
         Eigen::MatrixXd Density = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
         for (int i = 0; i < Density.rows(); i++) {
             for (int j = 0; j < Density.rows(); j++) {
@@ -289,8 +302,8 @@ namespace SCESS {
         return Density;
     }
 
-    double HF::CalculateDelta(const Eigen::MatrixXd &oldDensity,
-                              const Eigen::MatrixXd &density) {
+    double HartreeFock::CalculateDelta(const Eigen::MatrixXd &oldDensity,
+                                       const Eigen::MatrixXd &density) {
         double delta = 0.0;
         for (int i = 0; i < density.rows(); i++) {
             for (int j = 0; j < density.rows(); j++) {
@@ -301,8 +314,8 @@ namespace SCESS {
         return std::sqrt(delta);
     }
 
-    double HF::CalculateEnergyRHF(const Eigen::MatrixXd &Density,
-                                  const Eigen::MatrixXd &Hcore, const Eigen::MatrixXd &Fock) {
+    double HartreeFock::CalculateEnergyRHF(const Eigen::MatrixXd &Density,
+                                           const Eigen::MatrixXd &Hcore, const Eigen::MatrixXd &Fock) {
         double result = 0.0;
 
         for (int i = 0; i < Fock.rows(); i++) {
@@ -314,7 +327,7 @@ namespace SCESS {
         return 0.5 * result;
     }
 
-    double HF::CalculateEnergyUHF(
+    double HartreeFock::CalculateEnergyUHF(
         const Eigen::MatrixXd &DensityAlpha,
         const Eigen::MatrixXd &DensityBeta,
         const Eigen::MatrixXd &Hcore,
@@ -331,36 +344,50 @@ namespace SCESS {
         return energy;
     }
 
-    double HF::MP2ClosedShell(const RHFResult &result) {
+    double HartreeFock::MP2ClosedShell(const RHFResult &result, std::stringstream *console) {
         //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
-        const TEITensor moTEI = IntegralHelper::CalculateMolecularTEI(result.Integrals.tei, result.Coeffs);
-        return MP2ClosedShell(result, moTEI);
+        const TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(result.Integrals.tei, result.Coeffs);
+        return MP2ClosedShell(result, moTEI, console);
     }
 
-    double HF::MP2ClosedShell(const RHFResult& result, const TEITensor &moTEI) {
+    double HartreeFock::MP2ClosedShell(const RHFResult &result, const TEITensor &moTEI,
+                                       std::stringstream *console) {
         const Eigen::VectorXi &occ = result.Occupation;
         const Eigen::VectorXd &energies = result.Energies;
-        const Eigen::MatrixXd &coeffs = result.Coeffs;
 
         double MP2_E = 0.0;
 
-        Eigen::Index LUMOIndex = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
+        //Number of doubly-occupied molecular orbitals
+        Eigen::Index nOcc = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
 
-        //i and j run over the occupied orbitals
-        for (Eigen::Index i = 0; i < LUMOIndex; i++) {
-            for (Eigen::Index j = 0; j < LUMOIndex; j++) {
-                //a and b run over the virtual orbitals
-                for (Eigen::Index a = LUMOIndex; a < occ.size(); a++) {
-                    for (Eigen::Index b = LUMOIndex; b < occ.size(); b++) {
-                        double intIJAB = moTEI(i,a,j,b);//moTEI(i, j,a,b);
-                        double intIJBA = moTEI(i,b,j,a);//moTEI(i, j,b,a);
-                        double epsilonIJAB = energies[a] + energies[b] - energies[i] - energies[j];
-                        MP2_E += intIJAB * (2.0 * intIJAB - intIJBA) / epsilonIJAB;
-                    }
-                }
-            }
+        if (console) {
+            *console << std::setprecision(12);
+            *console << "--- Moller Plesset Order 2 Correction ---\n";
         }
 
-        return -MP2_E;
+        //i and j run over the occupied orbitals
+        for (Eigen::Index i = 0; i < nOcc; i++)
+            for (Eigen::Index j = 0; j < nOcc; j++)
+                //a and b run over the virtual orbitals
+                for (Eigen::Index a = nOcc; a < occ.size(); a++)
+                    for (Eigen::Index b = nOcc; b < occ.size(); b++) {
+                        //Note that integrals are in chemist's notation
+                        double intIJAB = moTEI(i, a, j, b);
+                        double intIJBA = moTEI(i, b, j, a);
+                        double epsilonIJAB = energies[a] + energies[b] - energies[i] - energies[j];
+
+                        //MP2 formula below already integrates spin out for a closed shell
+                        //configuration
+                        MP2_E += intIJAB * (2.0 * intIJAB - intIJBA) / epsilonIJAB;
+                    }
+
+        MP2_E = -MP2_E;
+
+        if (console) {
+            *console << "MP2 Correction Energy: " << MP2_E << '\n';
+            *console << "E(Hartree Fock) + E(MP2) = " << result.Energy + MP2_E << " hartrees\n\n\n";
+        }
+
+        return MP2_E;
     }
 }

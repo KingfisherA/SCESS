@@ -1,6 +1,6 @@
 //Class for performing integral calculations
 #include<pch.h>
-#include"IntegralHelper.h"
+#include"Integrals.h"
 
 #include<boost/math/special_functions/binomial.hpp>
 #include<boost/math/special_functions/factorials.hpp>
@@ -10,10 +10,11 @@
 #include"Chemistry/Quantum/Molecule.h"
 
 namespace SCESS {
-#pragma region Helper Functions
-
-
-    TEITensor IntegralHelper::CalculateMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C) {
+    //
+#pragma region Transforms
+    //
+    //
+    TEITensor Integrals::Transforms::ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C) {
         //Note that the tei tensors are in chemists’ notation
 
         TEITensor transformed1(tei.dimensions());
@@ -64,7 +65,7 @@ namespace SCESS {
         return transformed4;
     }
 
-    TEITensor IntegralHelper::AntisymmetriseTEI(const TEITensor &tei) {
+    TEITensor Integrals::Transforms::AntisymmetriseTEI(const TEITensor &tei) {
         TEITensor transformed(tei.dimensions());
 
         for (Eigen::Index p = 0; p < transformed.dimension(0); ++p)
@@ -76,7 +77,7 @@ namespace SCESS {
         return transformed;
     }
 
-    TEITensor IntegralHelper::AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
+    TEITensor Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
         Eigen::DSizes<Eigen::Index, 4> dimensions = moTEI.dimensions();
 
         //Make the tensor twice as big to hold the spin-integrated integrals
@@ -93,17 +94,19 @@ namespace SCESS {
                         //Only allow the integral to exist if the alpha is integrated with an alpha
                         //or beta with a beta (spin function orthogonality)
                         Eigen::Index coloumbMask = (p % 2 == r % 2) * (q % 2 == s % 2);
+                        //One if the spin functions commute. Zero otherwise
                         Eigen::Index exchangeMask = (p % 2 == s % 2) * (q % 2 == r % 2);
 
+                        //Convert from chemist's to physicists' notation and apply spin integration
                         transformed(p, q, r, s) =
-                                moTEI(p / 2, r / 2, q / 2, s / 2) * (double) coloumbMask
-                                - moTEI(p / 2, s / 2, q / 2, r / 2) * (double) exchangeMask;
+                                moTEI(p / 2, r / 2, q / 2, s / 2) * static_cast<double>(coloumbMask)
+                                - moTEI(p / 2, s / 2, q / 2, r / 2) * static_cast<double>(exchangeMask);
                     }
 
         return transformed;
     }
 
-    TEITensor IntegralHelper::ConvertChemistsToPhysicists(const TEITensor &tei) {
+    TEITensor Integrals::Transforms::ConvertChemistsToPhysicists(const TEITensor &tei) {
         TEITensor transformed(tei.dimensions());
         Eigen::Index dim = tei.dimension(0);
 
@@ -116,19 +119,40 @@ namespace SCESS {
         return transformed;
     }
 
-    Eigen::Vector3d IntegralHelper::GaussianCenter(double exponent1, double exponent2,
-                                                   const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
+#pragma endregion
+
+#pragma region Helper Functions
+
+    Eigen::Vector3d Integrals::GaussianCenter(double exponent1, double exponent2,
+                                              const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
         return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
     }
 
-    ConfigIntegrals IntegralHelper::CalculateConfiguration(const Molecule &molecule) {
+    size_t Integrals::TEIYoshimineIdx(size_t i, size_t j, size_t k, size_t l) {
+        if (i < j) {
+            std::swap(i, j);
+        }
+        if (k < l) {
+            std::swap(k, l);
+        }
+
+        size_t ij = i * (i + 1) / 2 + j;
+        size_t kl = k * (k + 1) / 2 + l;
+
+        if (ij < kl) {
+            std::swap(ij, kl);
+        }
+
+        return ij * (ij + 1) / 2 + kl;
+    }
+
+    ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule) {
         Eigen::MatrixXd S =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
         Eigen::MatrixXd T =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
         Eigen::MatrixXd V =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
-        TEITensor tei;
 
         for (size_t i = 0; i < molecule.GetNoOrbitals(); i++) {
             for (size_t j = i; j < molecule.GetNoOrbitals(); j++) {
@@ -149,12 +173,12 @@ namespace SCESS {
             }
         }
 
-        tei = CalculateTwoElectronTensor(molecule);
+        TEITensor tei = CalculateTwoElectronTensor(molecule);
 
         return ConfigIntegrals{S, T, V, tei};
     }
 
-    double IntegralHelper::Binomial(int a, int b) {
+    double Integrals::Binomial(int a, int b) {
         if ((a < 0) || (b < 0) || (a - b < 0)) {
             return 1.0;
         }
@@ -162,7 +186,7 @@ namespace SCESS {
                (boost::math::factorial<double>(b) * boost::math::factorial<double>(a - b));
     }
 
-    double IntegralHelper::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
+    double Integrals::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
         double result = 0.0;
 
         for (int t = 0; t < s + 1; t++) {
@@ -181,9 +205,9 @@ namespace SCESS {
 
 #pragma region Overlap
 
-    double IntegralHelper::Overlap1D(double gamma,
-                                     int angX1, double posX1,
-                                     int angX2, double posX2) {
+    double Integrals::Overlap1D(double gamma,
+                                int angX1, double posX1,
+                                int angX2, double posX2) {
         // Only even values of i and j will persist
         // Note that(Px - Ax) terms reduce to zero if the posX coords are relative to the centre
         double result = 0.0;
@@ -195,7 +219,7 @@ namespace SCESS {
         return result;
     }
 
-    double IntegralHelper::OverlapGaussianParam(
+    double Integrals::OverlapGaussianParam(
         double exponent1, double exponent2,
         const Eigen::Vector3i &angular1, const Eigen::Vector3i &angular2,
         const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
@@ -215,14 +239,14 @@ namespace SCESS {
         return Eab * wx * wy * wz;
     }
 
-    double IntegralHelper::OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2) {
+    double Integrals::OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2) {
         return OverlapGaussianParam(
             gto1.mExponent, gto2.mExponent,
             gto1.mAngular, gto2.mAngular,
             gto1.mPosition, gto2.mPosition);
     }
 
-    double IntegralHelper::EvaluateOverlap(const GaussianCollection &c1, const GaussianCollection &c2) {
+    double Integrals::EvaluateOverlap(const GaussianCollection &c1, const GaussianCollection &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -230,14 +254,14 @@ namespace SCESS {
                 const Gaussian &g1 = c1.Get(i);
                 const Gaussian &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * IntegralHelper::OverlapGaussian(g1, g2);
+                        g2.mCoeff * Integrals::OverlapGaussian(g1, g2);
             }
         }
 
         return result;
     }
 
-    Eigen::MatrixXd IntegralHelper::CalculateOverlapMatrix(const Molecule &molecule) {
+    Eigen::MatrixXd Integrals::CalculateOverlapMatrix(const Molecule &molecule) {
         Eigen::MatrixXd S = Eigen::MatrixXd::Zero(molecule.GetOrbitals().size(), molecule.GetOrbitals().size());
 
         for (size_t i = 0; i < S.rows(); i++) {
@@ -253,8 +277,8 @@ namespace SCESS {
 
 #pragma region Nuclear
 
-    double IntegralHelper::AFactor(const int i, const int r, const int u, const int ang1, const int ang2,
-                                   const double posA_P, double posB_P, double posNuc_P, double gamma) {
+    double Integrals::AFactor(const int i, const int r, const int u, const int ang1, const int ang2,
+                              const double posA_P, double posB_P, double posNuc_P, double gamma) {
         double numerator = std::pow(-1, i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * std::pow(-1, u) *
                            boost::math::factorial<double>(i) * std::pow(posNuc_P, i - 2 * r - 2 * u) * std::pow(
                                0.25 / gamma, r + u);
@@ -265,9 +289,9 @@ namespace SCESS {
     }
 
     //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
-    std::vector<double> IntegralHelper::GenerateACoeffs(int ang1,
-                                                        int ang2, double posA_P, double posB_P, double posNuc_P,
-                                                        double gamma) {
+    std::vector<double> Integrals::GenerateACoeffs(int ang1,
+                                                   int ang2, double posA_P, double posB_P, double posNuc_P,
+                                                   double gamma) {
         int iRange = ang1 + ang2 + 1;
         std::vector<double> coeff(iRange, 0);
 
@@ -283,10 +307,10 @@ namespace SCESS {
         return coeff;
     }
 
-    double IntegralHelper::NuclearGaussianParam(double exp1, double exp2, const Eigen::Vector3d &pos1,
-                                                const Eigen::Vector3d &pos2,
-                                                const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
-                                                const Eigen::Vector3d &nuclearPos) {
+    double Integrals::NuclearGaussianParam(double exp1, double exp2, const Eigen::Vector3d &pos1,
+                                           const Eigen::Vector3d &pos2,
+                                           const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
+                                           const Eigen::Vector3d &nuclearPos) {
         double gamma = exp1 + exp2;
         Eigen::Vector3d p = GaussianCenter(exp1, exp2, pos1, pos2);
 
@@ -314,14 +338,14 @@ namespace SCESS {
     }
 
 
-    double IntegralHelper::NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2,
-                                           const Eigen::Vector3d &nuclearPos) {
+    double Integrals::NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2,
+                                      const Eigen::Vector3d &nuclearPos) {
         return NuclearGaussianParam(gto1.mExponent, gto2.mExponent,
                                     gto1.mPosition, gto2.mPosition, gto1.mAngular, gto2.mAngular, nuclearPos);
     }
 
-    double IntegralHelper::EvaluateNuclear(const GaussianCollection &c1, const GaussianCollection &c2,
-                                           const Eigen::Vector3d &nuclearPos, const int charge) {
+    double Integrals::EvaluateNuclear(const GaussianCollection &c1, const GaussianCollection &c2,
+                                      const Eigen::Vector3d &nuclearPos, const int charge) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -329,14 +353,14 @@ namespace SCESS {
                 const Gaussian &g1 = c1.Get(i);
                 const Gaussian &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * IntegralHelper::NuclearGaussian(g1, g2, nuclearPos);
+                        g2.mCoeff * Integrals::NuclearGaussian(g1, g2, nuclearPos);
             }
         }
 
         return result * (double) charge;
     }
 
-    Eigen::MatrixXd IntegralHelper::CalculateNuclearMatrix(const Molecule &molecule) {
+    Eigen::MatrixXd Integrals::CalculateNuclearMatrix(const Molecule &molecule) {
         Eigen::MatrixXd V = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
         for (size_t i = 0; i < V.rows(); i++) {
@@ -356,7 +380,7 @@ namespace SCESS {
 
 #pragma region Kinetic
 
-    double IntegralHelper::KineticGaussian(const Gaussian &gto1, const Gaussian &gto2) {
+    double Integrals::KineticGaussian(const Gaussian &gto1, const Gaussian &gto2) {
         //double result = 0.0;
         //Eigen::Vector3i newAngular1;
         //Eigen::Vector3i newAngular2;
@@ -435,7 +459,7 @@ namespace SCESS {
         return term0 + term1 + term2;
     }
 
-    double IntegralHelper::EvaluateKinetic(const GaussianCollection &c1, const GaussianCollection &c2) {
+    double Integrals::EvaluateKinetic(const GaussianCollection &c1, const GaussianCollection &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -443,14 +467,14 @@ namespace SCESS {
                 const Gaussian &g1 = c1.Get(i);
                 const Gaussian &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * IntegralHelper::KineticGaussian(g1, g2);
+                        g2.mCoeff * Integrals::KineticGaussian(g1, g2);
             }
         }
 
         return result;
     }
 
-    Eigen::MatrixXd IntegralHelper::CalculateKineticMatrix(const Molecule &molecule) {
+    Eigen::MatrixXd Integrals::CalculateKineticMatrix(const Molecule &molecule) {
         Eigen::MatrixXd K = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
         //i=Rows, j=Cols
@@ -467,7 +491,7 @@ namespace SCESS {
 
 #pragma region Two Electron Integrals
 
-    TEITensor IntegralHelper::CalculateTwoElectronTensor(const Molecule &molecule) {
+    TEITensor Integrals::CalculateTwoElectronTensor(const Molecule &molecule) {
         TEITensor returnTensor((Eigen::Index) molecule.GetNoOrbitals(),
                                (Eigen::Index) molecule.GetNoOrbitals(),
                                (Eigen::Index) molecule.GetNoOrbitals(),
@@ -490,8 +514,8 @@ namespace SCESS {
         return returnTensor;
     }
 
-    double IntegralHelper::EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
-                                               const GaussianCollection &c3, const GaussianCollection &c4) {
+    double Integrals::EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
+                                          const GaussianCollection &c3, const GaussianCollection &c4) {
         double result = 0.0;
 
         for (unsigned int i = 0; i < c1.Size(); i++) {
@@ -513,8 +537,8 @@ namespace SCESS {
         return result;
     }
 
-    double IntegralHelper::TwoElectronGaussian(const Gaussian &gto1, const Gaussian &gto2,
-                                               const Gaussian &gto3, const Gaussian &gto4) {
+    double Integrals::TwoElectronGaussian(const Gaussian &gto1, const Gaussian &gto2,
+                                          const Gaussian &gto3, const Gaussian &gto4) {
         return TwoElectronGaussian(
             gto1.mPosition, gto1.mAngular[0], gto1.mAngular[1], gto1.mAngular[2], gto1.mExponent,
             gto2.mPosition, gto2.mAngular[0], gto2.mAngular[1], gto2.mAngular[2], gto2.mExponent,
@@ -522,7 +546,7 @@ namespace SCESS {
             gto4.mPosition, gto4.mAngular[0], gto4.mAngular[1], gto4.mAngular[2], gto4.mExponent);
     }
 
-    double IntegralHelper::TwoElectronGaussian(
+    double Integrals::TwoElectronGaussian(
         const Eigen::Vector3d &a, const int la, const int ma, const int na, const double alphaa,
         const Eigen::Vector3d &b, const int lb, const int mb, const int nb, const double alphab,
         const Eigen::Vector3d &c, const int lc, const int mc, const int nc, const double alphac,
@@ -558,10 +582,10 @@ namespace SCESS {
                std::exp(-alphac * alphad * rcd2 / gamma2) * sum;
     }
 
-    std::vector<double> IntegralHelper::B_array(const int l1, const int l2, const int l3, const int l4,
-                                                const double p, const double a, const double b, const double q,
-                                                const double c, const double d,
-                                                const double g1, const double g2, const double delta) {
+    std::vector<double> Integrals::B_array(const int l1, const int l2, const int l3, const int l4,
+                                           const double p, const double a, const double b, const double q,
+                                           const double c, const double d,
+                                           const double g1, const double g2, const double delta) {
         int imax = l1 + l2 + l3 + l4 + 1;
         std::vector<double> arrB(imax, 0);
 
@@ -581,11 +605,11 @@ namespace SCESS {
         return arrB;
     }
 
-    double IntegralHelper::B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
-                                  const int l2, const int l3, const int l4,
-                                  const double px, const double ax, const double bx, const double qx, const double cx,
-                                  const double dx, const double gamma1,
-                                  const double gamma2, const double delta) {
+    double Integrals::B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
+                             const int l2, const int l3, const int l4,
+                             const double px, const double ax, const double bx, const double qx, const double cx,
+                             const double dx, const double gamma1,
+                             const double gamma2, const double delta) {
         return fB(i1, l1, l2, px, ax, bx, r1, gamma1) *
                pow(-1, i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
                pow(-1, u) * fact_ratio2(i1 + i2 - 2 * (r1 + r2), u) *
@@ -593,19 +617,20 @@ namespace SCESS {
                pow(delta, i1 + i2 - 2 * (r1 + r2) - u);
     }
 
-    double IntegralHelper::fB(const int i, const int l1, const int l2, const double p, const double a, const double b,
-                              const int r, const double g) {
+    double Integrals::fB(const int i, const int l1, const int l2, const double p, const double a, const double b,
+                         const int r, const double g) {
         return PolynomialCoeff(i, l1, l2, p - a, p - b) * B0(i, r, g);
     }
 
-    double IntegralHelper::B0(int i, int r, double g) {
+    double Integrals::B0(int i, int r, double g) {
         return fact_ratio2(i, r) * pow(4 * g, r - i);
     }
 
-    double IntegralHelper::fact_ratio2(const int a, const int b) {
+    double Integrals::fact_ratio2(const int a, const int b) {
         return boost::math::factorial<double>(a) / boost::math::factorial<double>(b) / boost::math::factorial<
                    double>(a - 2 * b);
     }
 
 #pragma endregion
+    //
 }

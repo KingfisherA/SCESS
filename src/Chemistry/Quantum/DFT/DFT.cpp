@@ -3,7 +3,7 @@
 #include "DFT.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 #include <Eigen/Core>
-#include "Chemistry/Quantum/Integrals/IntegralHelper.h"
+#include "Chemistry/Quantum/Integrals/Integrals.h"
 #include "Chemistry/Quantum/Molecule.h"
 #include "XCFunctional.h"
 #include "DFTGrid.h"
@@ -21,7 +21,7 @@ namespace SCESS
 
 		// RHFResult rhfResult = HF::RestrictedHF(mol, 1E-5, 100, consoleStream, basisSet);
 
-		ConfigIntegrals integrals = IntegralHelper::CalculateConfiguration(mol);
+		ConfigIntegrals integrals = Integrals::CalculateConfiguration(mol);
 		const Eigen::MatrixXd &S = integrals.S;
 		const Eigen::MatrixXd &T = integrals.T;
 		const Eigen::MatrixXd &V = integrals.V;

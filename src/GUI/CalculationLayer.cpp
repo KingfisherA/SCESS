@@ -17,6 +17,7 @@
 #include "Maths/Isosurfaces.h"
 
 #include "Application/Application.h"
+#include "Chemistry/Quantum/CC/CoupledCluster.h"
 
 #include "GUI/ImSpinner.h"
 
@@ -168,7 +169,6 @@ namespace SCESS {
         mNegTrisurfVAO->Unbind();
 
         mDiffuseProg->Unbind();
-
     }
 
     void CalculationLayer::RenderMOIsosurface() {
@@ -177,7 +177,7 @@ namespace SCESS {
         mPosTrisurf.Stop();
         mNegTrisurf.Stop();
 
-        if (mMethod == CalcMethod::RHF) {
+        if (mSCFMethod == SCFMethod::RHF) {
             coeffsM = &mRHFResult->Coeffs;
         } else {
             coeffsM = mSelectedSpin == 1 ? &mUHFResult->CoeffsAlpha : &mUHFResult->CoeffsBeta;
@@ -240,25 +240,24 @@ namespace SCESS {
         delete[] data;
     }
 
-    void CalculationLayer::SelectMoleculeFromFile() {
+    bool CalculationLayer::SelectMoleculeFromFile() {
         nfdchar_t *outPath = nullptr;
         nfdresult_t result = NFD_OpenDialog("xyz", nullptr, &outPath);
 
-        if (result == NFD_OKAY) {
-            try {
-                mMolecule = std::make_unique<Molecule>(Molecule::LoadFromXYZ((const char *) outPath));
-            } catch (const std::exception &e) {
-                free(outPath);
-                mMolecule = nullptr;
-                return;
-            }
-            free(outPath);
+        if (result != NFD_OKAY) return false;
 
-            mMoleculeName = "Imported Molecule";
-            mSelectedMolecule = -1;
-            mMolecule->ConstructBonding(2.0);
-            UploadMolecule();
+        try {
+            mMolecule = std::make_unique<Molecule>(Molecule::LoadFromXYZ((const char *) outPath));
+        } catch (const std::exception &e) {
+            free(outPath);
+            mMolecule = nullptr;
+            return false;
         }
+        free(outPath);
+
+        mMolecule->ConstructBonding(2.0);
+        UploadMolecule();
+        return true;
     }
 
     glm::mat3 CalculationLayer::GenerateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm) {
@@ -286,39 +285,84 @@ namespace SCESS {
 
         mCalcBasiSet = mBasisSets[mSelectedBasisSet];
         mMolecule->MakeOrbitals(mCalcBasiSet);
-        mConsoleOutput.str(std::string());
+
+        mConsoleOutput.clear();
+        mConsoleOutput.str("");
 
         mCalculationThread.Start([this]() {
-            switch (mMethod) {
-                case CalcMethod::RHF:
+            if (mCorrelationMethod != CorrelationMethod::None) {
+                mSCFMethod = SCFMethod::RHF;
+
+                //Run SCF as RHF if a SCF determinant is not available
+                if (mRHFResult == nullptr || !mUseLastSCF)
                     mRHFResult = std::make_shared<RHFResult>(
-                        std::move(SCESS::HF::RestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput, mCalcBasiSet)));
-                    break;
-                case CalcMethod::UHF:
-                    mUHFResult = std::make_shared<UHFResult>(
-                        std::move(SCESS::HF::UnrestrictedHF(*mMolecule, 1E-5, 100, &mConsoleOutput, mCalcBasiSet)));
-                    break;
-                case CalcMethod::DFT:
-                    mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
-                    break;
+                        std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                                                                 mCalcBasiSet)));
+
+                switch (mCorrelationMethod) {
+                    case CorrelationMethod::MP2:
+                        mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFResult, &mConsoleOutput);
+                        break;
+                    case CorrelationMethod::CCSD: {
+                        auto ccResult = SCESS::CoupledCluster::CCSD(*mRHFResult, &mConsoleOutput);
+                        if (ccResult.has_value()) {
+                            mCCSDResult = std::make_shared<CCSDResult>(ccResult.value());
+                            mMP2Energy = ccResult->mp2CorrelationEnergy;
+                        }
+                        break;
+                    }
+
+                    default:
+                        break;
+                }
+            } else {
+                switch (mSCFMethod) {
+                    case SCFMethod::RHF:
+                        mRHFResult = std::make_shared<RHFResult>(
+                            std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                                                                     mCalcBasiSet)));
+                        break;
+                    case SCFMethod::UHF:
+                        mUHFResult = std::make_shared<UHFResult>(
+                            std::move(SCESS::HartreeFock::Unrestricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                                                                       mCalcBasiSet)));
+                        break;
+                    case SCFMethod::DFT:
+                        mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
+                        break;
+                }
             }
+
+            std::cout << mConsoleOutput.str();
+            mUseLastSCF = true;
             mCalculationThread.MarkAsFinished();
         });
     }
 
     void CalculationLayer::DrawProgressScreen() {
+        float dpiFactor = ImGui::GetWindowDpiScale();
         ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize({600, 300}, ImGuiCond_Once);
+        ImGui::SetNextWindowSize({600.0f * dpiFactor, 300.0f * dpiFactor}, ImGuiCond_Once);
         if (ImGui::BeginPopupModal(PROG_SCREEN_NAME)) {
-            ImSpinner::SpinnerAtom("##atomSpinner", 20.0, 2.5);
+            ImSpinner::SpinnerAtom("##atomSpinner", 20.0f * dpiFactor, 2.5f);
             ImGui::SameLine();
             ImGui::Text("Running %s single-point energy. Please wait...", [this]() {
-                switch (mMethod) {
-                    case CalcMethod::RHF:
+                if (mCorrelationMethod != CorrelationMethod::None)
+                    switch (mCorrelationMethod) {
+                        case CorrelationMethod::MP2:
+                            return "MP2";
+                        case CorrelationMethod::CCSD:
+                            return "CCSD";
+                        default:
+                            return "";
+                    };
+
+                switch (mSCFMethod) {
+                    case SCFMethod::RHF:
                         return "RHF";
-                    case CalcMethod::UHF:
+                    case SCFMethod::UHF:
                         return "UHF";
-                    case CalcMethod::DFT:
+                    case SCFMethod::DFT:
                         return "DFT";
                     default:
                         return "";
@@ -369,7 +413,7 @@ namespace SCESS {
         };
 
         mMOLabels.clear();
-        if (mMethod == CalcMethod::RHF)
+        if (mSCFMethod == SCFMethod::RHF)
             sortCoeffs(mRHFResult->Energies, mRHFResult->Coeffs, mRHFResult->Occupation);
         else {
             sortCoeffs(mUHFResult->EnergiesAlpha, mUHFResult->CoeffsAlpha, mUHFResult->OccupationAlpha);
@@ -377,131 +421,114 @@ namespace SCESS {
         }
     }
 
-    void CalculationLayer::OnImGuiRender() {
-        static const char *moleculeNames[] =
-        {
-            "Water",
-            "Ammonia",
-            "Carbon Monoxide",
-            "Ethene",
-            "Methane",
-            "Lithium Hydride",
-            "Hydrogen"
-        };
-
-        if (ImGui::Begin("Select Molecule")) {
-            ImGui::SeparatorText("Molecules");
-            ImGui::BulletText("Selected Molecule: %s", mMoleculeName.c_str());
-            int selectedMolecule = -1;
-            ImGui::ListBox("##selectMoleculeLB", &selectedMolecule, moleculeNames, IM_ARRAYSIZE(moleculeNames));
-
-            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0f) * 0.5f);
-            if (ImGui::Button("Load XYZ Molecule", {200, 0})) {
-                SelectMoleculeFromFile();
-            }
-
-            ImGui::Checkbox("Draw Molecule", &mRenderMolecule);
-            if (mRenderMolecule) {
-                ImGui::SliderFloat("Molecule Opacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
-
-                ImGui::SeparatorText("Molecule Render Style");
-                MoleculeStyle lastStyle = mMolRenderStyle;
-                ImGui::RadioButton("Spacefill", (int *) &mMolRenderStyle, 0);
-                ImGui::RadioButton("Ball & Stick", (int *) &mMolRenderStyle, 1);
-
-                if (lastStyle != mMolRenderStyle)
-                    UploadMolecule();
-                if (selectedMolecule != -1) {
-                    mSelectedMolecule = selectedMolecule;
-                    mMoleculeName = moleculeNames[mSelectedMolecule];
-                    SelectMolecule();
-                }
-            }
-
-            // if (ImGui::Button("Test"))
-            //{
-            //	mIsosurfaceVolume = 25.0f;
-            //	std::shared_ptr<ScalarField> field = std::make_shared<ScalarField>();
-            //	field->Initilise(50,
-            //		[](float x, float y, float z)->float {
-            //			return (3*z*z-x*x-y*y) * exp(-0.5 * sqrt(x * x + y * y + z * z));
-            //		},
-            //		mIsosurfaceVolume);
-            //	field->Evaluate(false);
-
-            //	mPosTrisurf.Initilise(field, mIsosurfaceVolume, mIsosurfaceVal);
-            //	mNegTrisurf.Initilise(field, mIsosurfaceVolume, -mIsosurfaceVal);
-
-            //	mPosTrisurf.Evaluate(false);
-            //	mNegTrisurf.Evaluate(false);
-
-            //	UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
-            //	UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
-            //	mPosTrisurf.Reset();
-            //	mNegTrisurf.Reset();
-            //}
-        }
-        ImGui::End();
-
-        DrawProgressScreen();
-        if (mCalculationThread.IsRunning())
-            ImGui::OpenPopup(PROG_SCREEN_NAME);
-
+    void CalculationLayer::DrawQuantumCalcPanel() {
         if (ImGui::Begin("Quantum Calculation")) {
             if (mMolecule != nullptr) {
-                ImGui::SeparatorText("Hartree Fock");
-                ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0f) * 0.5f);
-                if (ImGui::Button("Run RHF", {100, 0})) {
-                    mMethod = CalcMethod::RHF;
-                    ExecuteCalculation();
+                ImGui::SeparatorText("SCF Methods");
+
+                ImGui::Indent(100.0);
+                ImGui::SeparatorText("Hartree-Fock");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("Restricted Hartree Fock", reinterpret_cast<int *>(&mSCFMethod), 0)) {
+                    mSCFMethod = SCFMethod::RHF;
                 }
 
-                ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
-                if (ImGui::Button("Run UHF", {100, 0})) {
-                    mMethod = CalcMethod::UHF;
-                    ExecuteCalculation();
+                if (ImGui::RadioButton("Unrestricted Hartree Fock", reinterpret_cast<int *>(&mSCFMethod), 1)) {
+                    mCorrelationMethod = CorrelationMethod::None;
+                    mSCFMethod = SCFMethod::UHF;
                 }
-
-                if (mRHFResult != nullptr) {
-                    ImGui::SeparatorText("Moller-Plesset");
-
-                    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 200.0) * 0.5);
-                    if (ImGui::Button("Calculate MP2 Energy", {200, 0})) {
-                        if (mMethod == CalcMethod::RHF) {
-                            mMP2Energy = HF::MP2ClosedShell(*mRHFResult);
-                        }
-                    }
-
-                    if (mMP2Energy != 0) {
-                        ImGui::Text("Moller-Plesset Order 2 Correction= %.8f hartrees", mMP2Energy);
-                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0}, "Total Energy (HF+MP2) = %.8f hartrees",
-                                           mMP2Energy + mRHFResult->Energy);
-                    }
-                }
+                ImGui::Unindent(100.0);
 
                 ImGui::SeparatorText("Density Functional Theory");
-                ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 100.0) * 0.5);
-                if (ImGui::Button("Run DFT", {100, 0})) {
-                    mMethod = CalcMethod::DFT;
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("LYP", reinterpret_cast<int *>(&mSCFMethod), 2)) {
+                    mCorrelationMethod = CorrelationMethod::None;
+                    mSCFMethod = SCFMethod::DFT;
+                }
+                ImGui::Unindent(200.0);
+
+
+                ImGui::SeparatorText("Electron Correlation Methods");
+                ImGui::Indent(200.0);
+
+                if (ImGui::RadioButton("None", reinterpret_cast<int *>(&mCorrelationMethod), 0))
+                    mCorrelationMethod = CorrelationMethod::None;
+
+                ImGui::Unindent(100.0);
+                ImGui::SeparatorText("Moller-Plesset");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("MP2", reinterpret_cast<int *>(&mCorrelationMethod), 1)) {
+                    mCorrelationMethod = CorrelationMethod::MP2;
+                    mSCFMethod = SCFMethod::RHF;
+                }
+                ImGui::Unindent(100.0);
+
+                ImGui::SeparatorText("Coupled Cluster");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("CCSD", reinterpret_cast<int *>(&mCorrelationMethod), 2)) {
+                    mCorrelationMethod = CorrelationMethod::CCSD;
+                    mSCFMethod = SCFMethod::RHF;
+                }
+                ImGui::Unindent(200.0);
+
+                ImGui::SeparatorText("Basis Sets");
+                ImGui::Indent(100.0);
+                int lastSelectedBasisSet = mSelectedBasisSet;
+                for (int i = 0; i < mBasisSets.size(); i++)
+                    ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i);
+
+                mUseLastSCF = lastSelectedBasisSet != mSelectedBasisSet;
+                ImGui::Unindent(100.0);
+
+                ImGui::NewLine();
+                ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.4f, 0.0f, 1.0f});
+                if (ImGui::Button("Execute Calculation", ImVec2{-FLT_MIN, 0.0f})) {
                     ExecuteCalculation();
                 }
+                ImGui::PopStyleColor();
+            }
+        }
+        ImGui::End();
+    }
 
-                if (ImGui::CollapsingHeader("Basis Sets", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    for (uint32_t i = 0; i < mBasisSets.size(); i++) {
-                        ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i);
+    void CalculationLayer::DrawResultsPanel() {
+        if (ImGui::Begin("Results")) {
+            if (mCalculationThread.HasFinished()) {
+                if (mCorrelationMethod != CorrelationMethod::None && ImGui::CollapsingHeader(
+                        "Electron Correlation Result", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    switch (mCorrelationMethod) {
+                        case CorrelationMethod::CCSD: {
+                            if (!mCCSDResult)break;
+                            ImGui::SeparatorText("Coupled Cluster Singles & Doubles");
+                            ImGui::Indent();
+                            ImGui::Text("E(CCSD) = %.8f hartrees", mCCSDResult->ccsdCorrelationEnergy);
+                            ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                               "E(Total) = E(Hartree-Fock) + E(CCSD) = %.8f hartrees",
+                                               mCCSDResult->ccsdCorrelationEnergy + mRHFResult->Energy);
+                            ImGui::Unindent();
+                        }
+
+                        case CorrelationMethod::MP2: {
+                            if (!mMP2Energy.has_value())break;
+                            ImGui::SeparatorText("Moller-Plesset Order 2");
+                            ImGui::Indent();
+                            ImGui::Text("E(MP2) = %.8f hartrees", mMP2Energy.value());
+                            ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                               "E(Total) = E(Hartree-Fock) + E(MP2) = %.8f hartrees",
+                                               mMP2Energy.value() + mRHFResult->Energy);
+                            ImGui::Unindent();
+                            break;
+                        }
+
+
+                        case CorrelationMethod::None:
+                        default:
+                            break;
                     }
                 }
-            }
 
-            if (mCalculationThread.HasFinished()) {
-                if (ImGui::CollapsingHeader("Console", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const std::string &consoleStr = mConsoleOutput.str();
-                    ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
-                                              {0, 0}, ImGuiInputTextFlags_ReadOnly);
-                }
-
-                if (ImGui::CollapsingHeader("Result", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    if (mMethod == CalcMethod::RHF || mMethod == CalcMethod::UHF) {
+                if (ImGui::CollapsingHeader("SCF Result", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    if (mSCFMethod == SCFMethod::RHF || mSCFMethod == SCFMethod::UHF) {
                         if (!mOrbitalsOrdered) {
                             OrderOrbitals();
                             mOrbitalsOrdered = true;
@@ -509,12 +536,12 @@ namespace SCESS {
 
                         ImGui::BulletText("Basis Set: %s", mCalcBasiSet.c_str());
                         ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
-                                          mMethod == CalcMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
+                                          mSCFMethod == SCFMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
 
                         ImGui::Indent();
                         if (ImGui::CollapsingHeader("Orbitals", ImGuiTreeNodeFlags_DefaultOpen)) {
                             if (mSelectedMO != -1) {
-                                if (mMethod == CalcMethod::RHF) {
+                                if (mSCFMethod == SCFMethod::RHF) {
                                     ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i", mSelectedMO + 1);
                                     if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
                                         if (mRHFResult->Occupation(mSelectedMO + 1) == 0 && mRHFResult->Occupation(
@@ -556,7 +583,7 @@ namespace SCESS {
                                     orbitalLabels[i] = mMOLabels[i].c_str();
 
                                 ImGui::Text("Select an MO to generate an isosurface");
-                                if (mMethod == CalcMethod::RHF)
+                                if (mSCFMethod == SCFMethod::RHF)
                                     ImGui::ListBox("##listbox1", &selectedOption, &orbitalLabels[0],
                                                    (int) mMOLabels.size());
                                 else {
@@ -577,7 +604,7 @@ namespace SCESS {
                             }
 
                             if (selectedOption != -1 || selectedOption2 != -1) {
-                                if (mMethod == CalcMethod::RHF)
+                                if (mSCFMethod == SCFMethod::RHF)
                                     mSelectedMO = selectedOption;
                                 else {
                                     if (selectedOption != -1) {
@@ -627,18 +654,35 @@ namespace SCESS {
                                 }
 
                                 if (ImGui::CollapsingHeader("Isosurface Options", ImGuiTreeNodeFlags_DefaultOpen)) {
-                                    ImGui::Text("Isosurface Value:");
+                                    ImGui::Indent();
+
+                                    float xPos = ImGui::GetCursorPosX() + 200.0f;
+
+                                    ImGui::Text("Value: ");
+                                    ImGui::SameLine();
+                                    ImGui::SetCursorPosX(xPos);
                                     ImGui::DragFloat("##isosurfVal", &mIsosurfaceVal, 0.001f, 1E-10f, 1.0f);
-                                    ImGui::Text("Isosurface Resolution:");
+
+                                    ImGui::Text("Resolution: ");
+                                    ImGui::SameLine();
+                                    ImGui::SetCursorPosX(xPos);
                                     ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
-                                    ImGui::Text("Isosurface Volume:");
+
+                                    ImGui::Text("Volume: ");
+                                    ImGui::SameLine();
+                                    ImGui::SetCursorPosX(xPos);
                                     ImGui::DragFloat("bohr##isoVolumeVal", &mIsosurfaceVolume, 0.5f, 0.01f, 100.0f);
-                                    ImGui::Text("Isosurface Opacity:");
+
+                                    ImGui::Text("Opacity: ");
+                                    ImGui::SameLine();
+                                    ImGui::SetCursorPosX(xPos);
                                     ImGui::DragFloat("##isoOpacity", &mIsoOpacity, 0.0f, 0.01f, 1.0f);
+
+                                    ImGui::Unindent();
                                 }
                             }
                         }
-                    } else if (mMethod == CalcMethod::DFT) {
+                    } else if (mSCFMethod == SCFMethod::DFT) {
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0}, "Density Functional calculation finished!");
                         ImGui::BulletText("Total DFT Energy : %.4f hartrees", mDFTEnergy);
                     }
@@ -646,6 +690,84 @@ namespace SCESS {
             }
         }
         ImGui::End();
+    }
+
+    void CalculationLayer::DrawMolSelectPanel() {
+        static const char *moleculeNames[] =
+        {
+            "Water",
+            "Ammonia",
+            "Carbon Monoxide",
+            "Ethene",
+            "Methane",
+            "Lithium Hydride",
+            "Hydrogen"
+        };
+
+        if (ImGui::Begin("Select Molecule")) {
+            ImGui::Indent(100.0f);
+            int lastSelectedMol = mSelectedMolecule;
+            for (int i = 0; i < IM_ARRAYSIZE(moleculeNames); i++)
+                ImGui::RadioButton(moleculeNames[i], &mSelectedMolecule, i);
+
+            if (ImGui::RadioButton("Load from XYZ File...", &mSelectedMolecule, IM_ARRAYSIZE(moleculeNames) + 1)) {
+                if (!SelectMoleculeFromFile())
+                    mSelectedMolecule = lastSelectedMol;
+            } else if (mSelectedMolecule != lastSelectedMol && mSelectedMolecule != -1)
+                SelectMolecule();
+
+            ImGui::Unindent(100.0f);
+            ImGui::NewLine();
+            ImGui::SeparatorText("Selected Molecule");
+            ImGui::Indent(100.0f);
+
+
+            ImGui::Text("Draw Molecule: ");
+            float xPos = ImGui::GetCursorPosX() + ImGui::GetItemRectSize().x + 20.0f;
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(xPos);
+            ImGui::Checkbox("##drawMolCheck", &mRenderMolecule);
+            if (mRenderMolecule) {
+                ImGui::Text("Opacity: ");
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(xPos);
+                ImGui::SetCursorPosX(xPos);
+                ImGui::SliderFloat("##molOpacity", &mMoleculeOpacity, 0.0f, 1.0f, "%.2f");
+
+                ImGui::Text("Render Style: ");
+                ImGui::SameLine();
+                ImGui::SetCursorPosX(xPos);
+                static const char *renderStyles[] = {"Spacefill", "Ball & Stick"};
+
+                MoleculeStyle lastStyle = mMolRenderStyle;
+                ImGui::Combo("##molRenderStyle", (int *) &mMolRenderStyle, renderStyles, IM_ARRAYSIZE(renderStyles));
+
+                if (lastStyle != mMolRenderStyle)
+                    UploadMolecule();
+            }
+        }
+        ImGui::End();
+    }
+
+    void CalculationLayer::DrawConsolePanel() {
+        if (ImGui::Begin("Console")) {
+            const std::string &consoleStr = mConsoleOutput.str();
+            ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
+                                      {-FLT_MIN, -FLT_MIN}, ImGuiInputTextFlags_ReadOnly);
+        }
+        ImGui::End();
+    }
+
+    void CalculationLayer::OnImGuiRender() {
+        DrawMolSelectPanel();
+
+        DrawProgressScreen();
+        if (mCalculationThread.IsRunning())
+            ImGui::OpenPopup(PROG_SCREEN_NAME);
+
+        DrawQuantumCalcPanel();
+        DrawResultsPanel();
+        DrawConsolePanel();
     }
 
     void CalculationLayer::OnEvent(Event &e) {

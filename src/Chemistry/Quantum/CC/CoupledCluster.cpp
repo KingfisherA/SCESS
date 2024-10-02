@@ -17,84 +17,48 @@ namespace SCESS {
     template<typename T>
     using MatrixType = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
     //
-    template<typename Scalar, int rank, typename sizeType>
-    auto TensorToMatrix(const Eigen::Tensor<Scalar, rank> &tensor, const sizeType rows, const sizeType cols) {
-        return Eigen::Map<const MatrixType<Scalar>>(tensor.data(), rows, cols);
-    }
-    //
     template<typename Scalar, typename... Dims>
     auto MatrixToTensor(const MatrixType<Scalar> &matrix, Dims... dims) {
         constexpr int rank = sizeof...(Dims);
-        return Eigen::TensorMap<Eigen::Tensor<const Scalar, rank> >(matrix.data(), {dims...});
+
+        Eigen::Tensor<double, rank> tensor(dims...);
+
+        memcpy(tensor.data(), matrix.data(), matrix.size() * sizeof(Scalar));
+
+        return tensor;
     }
     //
-    //A direct product decomposition implementation to solve the coupled cluster equations
-    //to single and double excitations
-    void CoupledCluster::CCSD(const RHFResult &rhfResult) {
-        constexpr double CONVERGENCE = 1.0E-6;
-        constexpr size_t MAX_ITERATIONS = 20;
+    std::optional<CCSDResult> CoupledCluster::CCSD(const RHFResult &rhfResult, std::stringstream *console) {
+        constexpr double CC_CONVERGENCE = 1.0E-6;
+        constexpr size_t MAX_ITERATIONS = 50;
 
-        TEITensor moTEI = IntegralHelper::CalculateMolecularTEI(rhfResult.Integrals.tei, rhfResult.Coeffs);
-        double mp2Energy = HF::MP2ClosedShell(rhfResult, moTEI);
+        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.tei, rhfResult.Coeffs);
+        double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
 
-        std::cout << "--- Moller Plesset Order 2 Correction ---\n";
-        std::cout << "MP2 Correction: " << mp2Energy << '\n';
-        std::cout << "E(Hartree Fock) + E(MP2) = " << rhfResult.Energy + mp2Energy << " hartrees\n";
+        if (console) {
+            *console << std::setprecision(12);
+            *console << "--- Coupled Cluster Singles & Doubles (CCSD) ---\n";
+        }
 
         //Antisymmetrise the two-electron integrals and integrate out the alpha and beta
         //spin functions for a closed-shell wavefunction
-        moTEI = IntegralHelper::AntisymmetriseIntegrateOutSpinClosedShell(moTEI);
-
-        std::cout << "--- Coupled Cluster Singles & Doubles (CCSD) ---\n";
+        moTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(moTEI);
 
         //Number of occupied spin orbitals
         Eigen::Index nOcc = std::distance(rhfResult.Occupation.begin(),
-                                          std::find(rhfResult.Occupation.begin(), rhfResult.Occupation.end(), 0));
-        nOcc *= 2; //For two electrons in each orbital
+                                          std::ranges::find(rhfResult.Occupation, 0));
+        //For two electrons in each orbital
+        nOcc *= 2;
         //Number of virtual spin orbitals
         Eigen::Index nVirt = rhfResult.Occupation.size() * 2 - nOcc;
-        //Total number of spin orbitals
-        Eigen::Index nOrbs = rhfResult.Occupation.size() * 2;
-
-
-        // Eigen::Tensor<double, 2> H = [&rhfResult]() {
-        //     //Transform the Hamiltonian matrix into the MO basis set and reshape so that the alpha and beta
-        //     //spin electrons are in their own block diagonal
-        //     Eigen::MatrixXd HamiltonianMat = rhfResult.Coeffs.transpose() * rhfResult.Hcore * rhfResult.Coeffs;
-        //     Eigen::Index originalDim = HamiltonianMat.rows();
-        //     HamiltonianMat.conservativeResize(HamiltonianMat.rows() * 2, HamiltonianMat.rows() * 2);
-        //     HamiltonianMat.block(originalDim, originalDim, originalDim, originalDim) = HamiltonianMat.block(
-        //         0, 0, originalDim, originalDim);
-        //
-        //
-        //     Eigen::Tensor<double, 2> HamiltonianTensor(HamiltonianMat.rows(),
-        //                                                HamiltonianMat.rows());
-        //
-        //     memcpy(HamiltonianTensor.data(), HamiltonianMat.data(),
-        //            HamiltonianMat.rows() * HamiltonianMat.rows() * sizeof(double));
-        //
-        //     return HamiltonianTensor;
-        // }();
-
-        //New Fock matrix in the MO basis set
-        //Contract the tei tensor pmqm,pmqm->pq
-        // Eigen::Tensor<double, 2> G = moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, 0, 0},
-        //                                          Eigen::array<Eigen::Index, 4>{
-        //                                              moTEI.dimension(0), nOcc, moTEI.dimension(2), nOcc
-        //                                          })
-        //         .prod(Eigen::array<int, 2>{1, 3});
 
         Eigen::Tensor<double, 2> F = [&rhfResult]() {
-            //Transform the Hamiltonian matrix into the MO basis set and reshape so that the alpha and beta
+            //Transform the Fock matrix into the MO basis set and reshape so that the alpha and beta
             //spin electrons are in their own block diagonal
             Eigen::MatrixXd FockMat = rhfResult.Coeffs.transpose() * rhfResult.Fock * rhfResult.Coeffs;
-
-
             Eigen::Tensor<double, 2> FockTensor(FockMat.rows() * 2,
                                                 FockMat.rows() * 2);
-
             FockTensor.setZero();
-
             for (Eigen::Index i = 0; i < FockTensor.dimension(0); i++)
                 FockTensor(i, i) = FockMat(i / 2, i / 2);
 
@@ -102,36 +66,40 @@ namespace SCESS {
             return FockTensor;
         }();
 
+        //Slices of the Fock matricies for occupied and virtual orbitals
         Eigen::Tensor<double, 2> Focc = F.slice(Eigen::array<Eigen::Index, 2>{0, 0},
                                                 Eigen::array<Eigen::Index, 2>{nOcc, nOcc});
         Eigen::Tensor<double, 2> Fvirt = F.slice(Eigen::array<Eigen::Index, 2>{nOcc, nOcc},
                                                  Eigen::array<Eigen::Index, 2>{nVirt, nVirt});
 
-
+        //Denominator arrays
         Eigen::Tensor<double, 2> Dia(nOcc, nVirt);
+        Eigen::Tensor<double, 4> Dijab(nOcc, nOcc, nVirt, nVirt);
 
         for (Eigen::Index i = 0; i < nOcc; i++)
-            for (Eigen::Index a = 0; a < nVirt; a++) {
+            for (Eigen::Index a = 0; a < nVirt; a++)
                 Dia(i, a) = Focc(i, i) - Fvirt(a, a);
-            }
-
-
-        Eigen::Tensor<double, 4> Dijab(nOcc, nOcc, nVirt, nVirt);
-        Eigen::Tensor<double, 4> MOijab = moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                      Eigen::array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt});
 
         for (Eigen::Index i = 0; i < nOcc; i++)
             for (Eigen::Index j = 0; j < nOcc; j++)
                 for (Eigen::Index a = 0; a < nVirt; a++)
-                    for (Eigen::Index b = 0; b < nVirt; b++) {
+                    for (Eigen::Index b = 0; b < nVirt; b++)
                         Dijab(i, j, a, b) = Focc(i, i) + Focc(j, j) - Fvirt(a, a) - Fvirt(b, b);
-                    }
 
+
+        //The first excitation amplitudes tensor
+        //Dimensions of o,v
         Eigen::Tensor<double, 2> t1Amps(nOcc, nVirt);
         t1Amps.setZero();
 
-        //o,o,v,v
-        Eigen::Tensor<double, 4> t2Amps = MOijab / Dijab;
+        //The second excitation amplitudes tensor
+        //Dimensions of o,o,v,v
+        Eigen::Tensor<double, 4> t2Amps; {
+            Eigen::Tensor<double, 4> MOijab = moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                          Eigen::array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt});
+            t2Amps = MOijab / Dijab;
+        }
+
 
         auto MakeTildeTau = [&nOcc, &nVirt](const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2) {
             Eigen::Tensor<double, 4> tildeTau = t2;
@@ -254,10 +222,10 @@ namespace SCESS {
                                                          Eigen::array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc});
 
             //je,mnie-> jmni -> mnij
-            Eigen::Tensor<double,4> slicedMO =moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, 0, nOcc},
-                                                                   Eigen::array<Eigen::Index, 4>{
-                                                                       nOcc, nOcc, nOcc, nVirt
-                                                                   });
+            Eigen::Tensor<double, 4> slicedMO = moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, 0, nOcc},
+                                                            Eigen::array<Eigen::Index, 4>{
+                                                                nOcc, nOcc, nOcc, nVirt
+                                                            });
             Eigen::Tensor<double, 4> Pij = t1.contract(slicedMO,
                                                        Eigen::array<Eigen::IndexPair<int>, 1>{
                                                            Eigen::IndexPair<int>{1, 3}
@@ -343,20 +311,18 @@ namespace SCESS {
                                              Eigen::IndexPair<int>{1, 1},
                                              Eigen::IndexPair<int>{2, 3}
                                          })
-            .shuffle(Eigen::array<int, 4>{2, 1, 3, 0});
+                    .shuffle(Eigen::array<int, 4>{2, 1, 3, 0});
 
 
             return Wmbej;
         };
 
+        double lastCorrelationEnergy = -DBL_MIN, correlationEnergy = 0.0;
+        size_t ccIteration = 0;
 
-        double lastCorrelationEnergy = -1E1000, correlationEnergy = 0.0;
-
-
-        std::cout <<std::setprecision(12);
-
-        for (size_t ccIterations = 0; ccIterations < MAX_ITERATIONS; ccIterations++) {
-            Eigen::Tensor<double, 4> tildeTau = MakeTildeTau(t1Amps, t2Amps),
+        for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
+            Eigen::Tensor<double, 4>
+                    tildeTau = MakeTildeTau(t1Amps, t2Amps),
                     tau = MakeTau(t1Amps, t2Amps);
 
             Eigen::Tensor<double, 2>
@@ -421,36 +387,6 @@ namespace SCESS {
                                                Eigen::IndexPair<int>{3, 2}
                                            })
                     .shuffle(Eigen::array<int, 2>{1, 0});
-
-            // for (Eigen::Index i = 0; i < nOcc; i++)
-            //     for (Eigen::Index a = 0; a < nVirt; a++) {
-            //         double &element = t1RHS(i, a);
-            //         element = F(i, a + nOcc - 1);
-            //
-            //         for (Eigen::Index e = 0; e < nVirt; e++)
-            //             element += t1Amps(i, e) * Fae(a, e);
-            //
-            //         for (Eigen::Index m = 0; m < nOcc; m++) {
-            //             element -= t1Amps(m, a) * Fmi(m, i);
-            //             for (Eigen::Index e = 0; e < nVirt; e++)
-            //                 element += t2Amps(i, m, a, e) * Fme(m, e);
-            //         }
-            //
-            //         for (Eigen::Index n = 0; n < nOcc; n++)
-            //             for (Eigen::Index f = 0; f < nVirt; f++)
-            //                 element -= t1Amps(n, f) * moTEI(n, a + nOcc - 1, i, f + nOcc - 1);
-            //
-            //         for (Eigen::Index m = 0; m < nOcc; m++)
-            //             for (Eigen::Index e = 0; e < nVirt; e++)
-            //                 for (Eigen::Index f = 0; f < nVirt; f++)
-            //                     element -= 0.5 * t2Amps(i, m, e, f) *
-            //                             moTEI(m, a + nOcc - 1, e + nOcc - 1, f + nOcc - 1);
-            //
-            //         for (Eigen::Index m = 0; m < nOcc; m++)
-            //             for (Eigen::Index e = 0; e < nVirt; e++)
-            //                 for (Eigen::Index n = 0; n < nOcc; n++)
-            //                     element -= 0.5 * t2Amps(m, n, a, e) * moTEI(n, m, e + nOcc - 1, i);
-            //     }
 
             //Make the t2 RHS
             Eigen::Tensor<double, 4> t2RHS = moTEI.slice(Eigen::array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
@@ -544,10 +480,10 @@ namespace SCESS {
             t2Amps = t2RHS / Dijab;
 
             Eigen::Tensor<double, 0> correlationEnergyTensor =
-                    Eigen::Tensor<double, 2>(F.slice(Eigen::array<Eigen::Index, 2>{0, nOcc},
-                                                     Eigen::array<Eigen::Index, 2>{
-                                                         nOcc, nVirt
-                                                     })).contract(
+                    F.slice(Eigen::array<Eigen::Index, 2>{0, nOcc},
+                            Eigen::array<Eigen::Index, 2>{
+                                nOcc, nVirt
+                            }).contract(
                         t1Amps, Eigen::array<Eigen::IndexPair<int>, 2>{
                             Eigen::IndexPair<int>{0, 0},
                             Eigen::IndexPair<int>{1, 1}
@@ -573,22 +509,33 @@ namespace SCESS {
                                                                               Eigen::IndexPair<int>{1, 1},
                                                                           });
 
-            std::cout << "CCSD correlation energy: " << correlationEnergyTensor(0) << " hartrees\ndE=" <<
-                    correlationEnergyTensor(0) - lastCorrelationEnergy << '\n';
+            double dE = abs(correlationEnergyTensor(0) - lastCorrelationEnergy);
+            if (console)
+                *console << "   CCSD(" << ccIteration << "): E(corr) = " << correlationEnergyTensor(0) << "      dE = " << dE
+                        << '\n';
 
-            if (abs(correlationEnergyTensor(0) - lastCorrelationEnergy < CONVERGENCE)) {
+            if (dE < CC_CONVERGENCE) {
                 correlationEnergy = correlationEnergyTensor(0);
-                std::cout << "Convergence achieved! \n";
+                if (console)
+                    *console << "---- CCSD procedure converged! ----\n";
                 break;
             }
 
             lastCorrelationEnergy = correlationEnergyTensor(0);
         }
 
-        if (correlationEnergy != 0.0) {
-            std::cout << "CCSD correlation energy: " << correlationEnergy << '\n';
-            std::cout << "E(Total)=E(HF)+E(CCSD)=" << rhfResult.Energy + correlationEnergy << '\n';
+        if (ccIteration == MAX_ITERATIONS - 1) {
+            if (console)
+                *console << "!!! CCSD procedure failed to converge !!!\n\n\n";
+            return {};
         }
+
+        if (console) {
+            *console << "E(CCSD correlation) = " << correlationEnergy << " hartrees\n";
+            *console << "E(Total) = E(Hartree Fock) + E(CCSD) = " << rhfResult.Energy + correlationEnergy <<
+                    " hartrees\n\n\n";
+        }
+        return CCSDResult{mp2Energy, correlationEnergy, t1Amps, t2Amps};
     }
     //
     //     auto MakeTildeTau = [&nOcc, &nVirt](const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2) {

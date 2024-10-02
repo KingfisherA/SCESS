@@ -28,24 +28,24 @@
 // #include "GUI/ImSpinner.h"
 
 
-void TestCoupledCluster() {
+static void TestCoupledCluster() {
     using namespace SCESS;
 
-    std::cout << "---Performing Hartree Fock Calculation on water---\n";
+    std::cout << "---Performing Hartree Fock Calculation on Water---\n";
 
     constexpr const char *BASIS_SET_NAME = "sto-3g";
 
     Molecule waterMolecule = GenerateWaterMolecule();
     waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
-
     std::stringstream ss;
-    RHFResult rhfResult = HF::RestrictedHF(waterMolecule, 1e-05, 100, &ss, BASIS_SET_NAME);
+    RHFResult rhfResult = HartreeFock::Restricted(waterMolecule, 1e-05, 100, &ss, BASIS_SET_NAME);
     std::cout << ss.str();
     ss.clear();
     ss.str("");
 
-    CoupledCluster::CCSD(rhfResult);
+    std::optional<CCSDResult> result = CoupledCluster::CCSD(rhfResult);
+    CCSDResult &res = result.value();
 
     std::cout << "Press any key to continue..\n";
     std::cin.get();
@@ -57,30 +57,32 @@ int main(int argc, char **argv) {
 #ifdef PLATFORM_WIN
 	SCESS::Console::SetHandle(GetStdHandle(STD_OUTPUT_HANDLE));
 #endif // PLATFORM_WIN
-    std::cout << "Schrodinger's Cat's Electronic System Solver\n By Charlie Wheelwright (cspw2) \n Meow!\n";
+    std::cout << "Schrodinger's Cat's Electronic System Solver\n    By Charlie Wheelwright (cspw2) \n    Meow!\n";
 
     std::cout << "---Libraries---\n";
     int vmajor, vminor, vmicro;
     xc_version(&vmajor, &vminor, &vmicro);
-    printf("Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
+    printf("    Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
 
     SCESS::Application app;
 
     if (!std::filesystem::exists(app.GetAssetsPath().string())) {
-        std::cout << "Required assets directory not found relative to executable.\n";
-        system("PAUSE");
+        std::cout << "Required assets directory not found relative to executable. Program will now close. \n";
+        std::cout << "Press any key to continue...\n";
+        std::cin.get();
         return 1;
     }
 
-    TestCoupledCluster();
+    //TestCoupledCluster();
 
-    // if (!app.Init()) {
-    //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";
-    //     system("PAUSE");
-    //     return 1;
-    // }
-    //
-    // app.Run();
+    if (!app.Init()) {
+        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+        std::cout << "Press any key to continue...\n";
+        std::cin.get();
+        return 1;
+    }
+
+    app.Run();
 
     return 0;
 }
@@ -105,7 +107,8 @@ namespace SCESS {
                                                      FramebufferAttachment(PixelFormat::RGBA8),
                                                      FramebufferAttachment(PixelFormat::DEPTH24_STENCIL8)
                                                  }
-                                             }), mProjectionMatrix(1.0f) {
+                                             }),
+                                 mProjectionMatrix(1.0f) {
         GENG_ASSERT(sInstance != nullptr, Application::Application,
                     "There can only exist one instantiation of \"Application\"");
         sInstance = this;
@@ -115,6 +118,10 @@ namespace SCESS {
         this->mRenderViewport = true;
         this->mViewportName = "Molecule View";
 
+        float dpiFactor = m_Window->GetContentScaling().x;
+        glfwSetWindowSize((GLFWwindow *) m_Window->GetAPIDisplay(), int((float) m_Window->GetWidth() * dpiFactor),
+                          int((float) m_Window->GetHeight() * dpiFactor));
+
         GPUContext *ctx = GPUContext::Get();
         ctx->SetDepthTest(false);
         ctx->SetFaceCulling(false);
@@ -123,7 +130,8 @@ namespace SCESS {
         mCalcLayer = new CalculationLayer();
         this->PushLayer(mCalcLayer);
 
-        mCam.MoveTo(glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+        mCam.SetCentrePosition({0.0f, 0.0f, 0.0f});
+        mCam.SetZoom(10.0f);
         UpdateProjectionMatrix();
 
         TextureLoader loader(GetResourcePath("Icon/SCESS Small.png").string());
@@ -142,7 +150,7 @@ namespace SCESS {
     }
 
     void Application::OnRender() {
-        mCam.UpdateCamera(m_DeltaTime * 0.1f, m_KeyDown);
+        mCam.UpdateCamera((float)m_DeltaTime * 0.1f);
 
         mViewportFramebuffer->Bind();
         mViewportFramebuffer->Clear({glm::vec3(0.01f), 1.0f});
@@ -285,15 +293,18 @@ namespace SCESS {
 
     bool Application::OnMouseMove(MouseMoveEvent &e) {
         GraphicsApp::OnMouseMove(e);
-        if (mIsViewportFocused)
-            mCam.UpdateMouse((float) mDeltaMousePos.x, (float) mDeltaMousePos.y, m_MouseButtonDown, m_KeyMods);
+        if (mIsViewportFocused) {
+            mDeltaMousePos /= glm::vec2(m_Window->GetWidth(), m_Window->GetHeight());
+            mCam.UpdateMovement(mDeltaMousePos, m_MouseButtonDown, m_KeyDown,
+                                m_KeyMods);
+        }
         return true;
     }
 
     bool Application::OnMouseScroll(MouseScrollEvent &e) {
         GraphicsApp::OnMouseScroll(e);
-        if (mIsViewportFocused)
-            mCam.UpdateZoom(mDeltaScroll);
+        // if (mIsViewportFocused)
+        //     mCam.UpdateZoom(mDeltaScroll);
         return true;
     }
 }
