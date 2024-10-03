@@ -52,31 +52,31 @@ namespace SCESS
 		}
 	};
 
-	enum class OrbitalType {
-		S,
-		//
-		P_X,
-		P_Y,
-		P_Z,
-		//
-		D_Z2,
-		D_X2,
-		D_XY,
-		D_XZ,
-		D_YZ,
-		D_Y2,
-		//
-		F_Z3,
-		F_Y3,
-		F_X3,
-		F_X2_Y,
-		F_X2_Z,
-		F_X_Y2,
-		F_XYZ,
-		F_X_Z2,
-		F_Y2_Z,
-		F_Y_Z2
-	};
+	// enum class OrbitalType {
+	// 	S,
+	// 	//
+	// 	P_X,
+	// 	P_Y,
+	// 	P_Z,
+	// 	//
+	// 	D_Z2,
+	// 	D_X2,
+	// 	D_XY,
+	// 	D_XZ,
+	// 	D_YZ,
+	// 	D_Y2,
+	// 	//
+	// 	F_Z3,
+	// 	F_Y3,
+	// 	F_X3,
+	// 	F_X2_Y,
+	// 	F_X2_Z,
+	// 	F_X_Y2,
+	// 	F_XYZ,
+	// 	F_X_Z2,
+	// 	F_Y2_Z,
+	// 	F_Y_Z2
+	// };
 
 
 	//Represents a collection of Gaussian functions with the same position which form the basis for a single atom
@@ -85,8 +85,8 @@ namespace SCESS
 
 		Eigen::Vector3d mPosition;
 		std::vector<Gaussian> mGaussians;
-		static const std::unordered_map<OrbitalType,
-			Eigen::Vector3i> sAngMomMap;
+		// static const std::unordered_map<OrbitalType,
+		// 	Eigen::Vector3i> sAngMomMap;
 	public:
 
 
@@ -97,10 +97,10 @@ namespace SCESS
 		GaussianCollection(const Eigen::Vector3d& position) :mPosition(position) {
 		}
 
-		static const Eigen::Vector3i& GetAngMomentum(SCESS::OrbitalType type)
-		{
-			return sAngMomMap.at(type);
-		}
+		// static const Eigen::Vector3i& GetAngMomentum(SCESS::OrbitalType type)
+		// {
+		// 	return sAngMomMap.at(type);
+		// }
 
 		Gaussian& Get(uint32_t i)
 		{
@@ -112,13 +112,7 @@ namespace SCESS
 			return mGaussians[i];
 		}
 
-		void Add(const OrbitalType type, const Gaussian& gaussianIn) {
-			Eigen::Vector3i angMom = sAngMomMap.at(type);
-
-			Gaussian g(gaussianIn.mExponent, gaussianIn.mCoeff, this->mPosition, angMom);
-			g.CalculateNormalisationConstant();
-			mGaussians.push_back(g);
-		}
+		void Add(const Eigen::Vector3i& angMom, const Gaussian& gaussianIn);
 
 		void UpdatePosition(const Eigen::Vector3d& pos)
 		{

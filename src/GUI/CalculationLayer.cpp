@@ -296,7 +296,8 @@ namespace SCESS {
                 //Run SCF as RHF if a SCF determinant is not available
                 if (mRHFResult == nullptr || !mUseLastSCF)
                     mRHFResult = std::make_shared<RHFResult>(
-                        std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                        std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100,
+                                                                 &mConsoleOutput,
                                                                  mCalcBasiSet)));
 
                 switch (mCorrelationMethod) {

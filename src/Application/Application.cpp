@@ -21,6 +21,7 @@
 #include <filesystem>
 
 #include "xc.h"
+#include "Chemistry/Quantum/Basis/BasisUtils.h"
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 
@@ -74,6 +75,7 @@ int main(int argc, char **argv) {
     }
 
     //TestCoupledCluster();
+
 
     if (!app.Init()) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";

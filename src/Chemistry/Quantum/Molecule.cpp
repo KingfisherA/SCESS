@@ -56,7 +56,6 @@ namespace SCESS {
             throw std::runtime_error("Basis set could not be loaded succesfully");
         }
         nlohmann::json &basisSet = *basisSetOpt;
-        std::vector<SCESS::OrbitalType> types;
         mOrbitals.clear();
         mNoElectrons = 0;
 
@@ -71,41 +70,57 @@ namespace SCESS {
                     std::string AOType;
                     AO["type"].get_to(AOType);
 
-                    types.clear();
-                    if (AOType == "S") {
-                        types.push_back(SCESS::OrbitalType::S);
-                    } else if (AOType == "P") {
-                        types.push_back(SCESS::OrbitalType::P_X);
-                        types.push_back(SCESS::OrbitalType::P_Y);
-                        types.push_back(SCESS::OrbitalType::P_Z);
-                    } else if (AOType == "D") {
-                        types.push_back(SCESS::OrbitalType::D_X2);
-                        types.push_back(SCESS::OrbitalType::D_Y2);
-                        types.push_back(SCESS::OrbitalType::D_Z2);
-                        types.push_back(SCESS::OrbitalType::D_XY);
-                        types.push_back(SCESS::OrbitalType::D_XZ);
-                        types.push_back(SCESS::OrbitalType::D_YZ);
-                    } else if (AOType == "F") {
-                        types.push_back(SCESS::OrbitalType::F_X3);
-                        types.push_back(SCESS::OrbitalType::F_Y3);
-                        types.push_back(SCESS::OrbitalType::F_Z3);
-                        types.push_back(SCESS::OrbitalType::F_X2_Y);
-                        types.push_back(SCESS::OrbitalType::F_X_Y2);
-                        types.push_back(SCESS::OrbitalType::F_X2_Z);
-                        types.push_back(SCESS::OrbitalType::F_X_Z2);
-                        types.push_back(SCESS::OrbitalType::F_Y2_Z);
-                        types.push_back(SCESS::OrbitalType::F_Y_Z2);
-                        types.push_back(SCESS::OrbitalType::F_XYZ);
-                    }
+                    // types.clear();
+                    // if (AOType == "S") {
+                    //     types.push_back(SCESS::OrbitalType::S);
+                    // } else if (AOType == "P") {
+                    //     types.push_back(SCESS::OrbitalType::P_X);
+                    //     types.push_back(SCESS::OrbitalType::P_Y);
+                    //     types.push_back(SCESS::OrbitalType::P_Z);
+                    // } else if (AOType == "D") {
+                    //     types.push_back(SCESS::OrbitalType::D_X2);
+                    //     types.push_back(SCESS::OrbitalType::D_Y2);
+                    //     types.push_back(SCESS::OrbitalType::D_Z2);
+                    //     types.push_back(SCESS::OrbitalType::D_XY);
+                    //     types.push_back(SCESS::OrbitalType::D_XZ);
+                    //     types.push_back(SCESS::OrbitalType::D_YZ);
+                    // } else if (AOType == "F") {
+                    //     types.push_back(SCESS::OrbitalType::F_X3);
+                    //     types.push_back(SCESS::OrbitalType::F_Y3);
+                    //     types.push_back(SCESS::OrbitalType::F_Z3);
+                    //     types.push_back(SCESS::OrbitalType::F_X2_Y);
+                    //     types.push_back(SCESS::OrbitalType::F_X_Y2);
+                    //     types.push_back(SCESS::OrbitalType::F_X2_Z);
+                    //     types.push_back(SCESS::OrbitalType::F_X_Z2);
+                    //     types.push_back(SCESS::OrbitalType::F_Y2_Z);
+                    //     types.push_back(SCESS::OrbitalType::F_Y_Z2);
+                    //     types.push_back(SCESS::OrbitalType::F_XYZ);
+                    // }
+
+                    std::vector<Eigen::Vector3i> angularMomenta = SCESS::BasisUtils::GenerateAngularMomenta(
+                        [&AOType]()-> size_t {
+                            if (AOType == "S")
+                                return 0;
+                            if (AOType == "P")
+                                return 1;
+                            if (AOType == "D")
+                                return 2;
+                            if (AOType == "F")
+                                return 3;
+                            if (AOType == "G")
+                                return 4;
+
+                            return 0;
+                        }());
 
                     nlohmann::json &gtos = AO["gtos"];
-                    for (SCESS::OrbitalType type: types) {
+                    for (const Eigen::Vector3i &angMom: angularMomenta) {
                         GaussianCollection collection(a.GetPos());
                         for (nlohmann::json &gto: gtos) {
                             double exponent, coeff = 0.0;
                             gto["alpha"].get_to(exponent);
                             gto["coeff"].get_to(coeff);
-                            collection.Add(type, Gaussian(exponent, coeff));
+                            collection.Add(angMom, Gaussian(exponent, coeff));
                         }
                         mOrbitals.push_back(collection);
                     }
@@ -128,39 +143,41 @@ namespace SCESS {
                 for (size_t j = 0; j < angMomenta.size(); j++) {
                     int angularMomentum = angMomenta[j].get<int>();
 
-                    types.clear();
-                    switch (angularMomentum) {
-                        case 0:
-                            types.push_back(SCESS::OrbitalType::S);
-                            break;
-                        case 1:
-                            types.push_back(SCESS::OrbitalType::P_X);
-                            types.push_back(SCESS::OrbitalType::P_Y);
-                            types.push_back(SCESS::OrbitalType::P_Z);
-                            break;
-                        case 2:
-                            types.push_back(SCESS::OrbitalType::D_X2);
-                            types.push_back(SCESS::OrbitalType::D_Y2);
-                            types.push_back(SCESS::OrbitalType::D_Z2);
-                            types.push_back(SCESS::OrbitalType::D_XY);
-                            types.push_back(SCESS::OrbitalType::D_XZ);
-                            types.push_back(SCESS::OrbitalType::D_YZ);
-                            break;
-                        case 3:
-                            types.push_back(SCESS::OrbitalType::F_X3);
-                            types.push_back(SCESS::OrbitalType::F_Y3);
-                            types.push_back(SCESS::OrbitalType::F_Z3);
-                            types.push_back(SCESS::OrbitalType::F_X2_Y);
-                            types.push_back(SCESS::OrbitalType::F_X_Y2);
-                            types.push_back(SCESS::OrbitalType::F_X2_Z);
-                            types.push_back(SCESS::OrbitalType::F_X_Z2);
-                            types.push_back(SCESS::OrbitalType::F_Y2_Z);
-                            types.push_back(SCESS::OrbitalType::F_Y_Z2);
-                            types.push_back(SCESS::OrbitalType::F_XYZ);
-                            break;
-                    }
+                    std::vector<Eigen::Vector3i> angularMomenta = SCESS::BasisUtils::GenerateAngularMomenta(
+                        (size_t) angularMomentum);
+                    // types.clear();
+                    // switch (angularMomentum) {
+                    //     case 0:
+                    //         types.push_back(SCESS::OrbitalType::S);
+                    //         break;
+                    //     case 1:
+                    //         types.push_back(SCESS::OrbitalType::P_X);
+                    //         types.push_back(SCESS::OrbitalType::P_Y);
+                    //         types.push_back(SCESS::OrbitalType::P_Z);
+                    //         break;
+                    //     case 2:
+                    //         types.push_back(SCESS::OrbitalType::D_X2);
+                    //         types.push_back(SCESS::OrbitalType::D_Y2);
+                    //         types.push_back(SCESS::OrbitalType::D_Z2);
+                    //         types.push_back(SCESS::OrbitalType::D_XY);
+                    //         types.push_back(SCESS::OrbitalType::D_XZ);
+                    //         types.push_back(SCESS::OrbitalType::D_YZ);
+                    //         break;
+                    //     case 3:
+                    //         types.push_back(SCESS::OrbitalType::F_X3);
+                    //         types.push_back(SCESS::OrbitalType::F_Y3);
+                    //         types.push_back(SCESS::OrbitalType::F_Z3);
+                    //         types.push_back(SCESS::OrbitalType::F_X2_Y);
+                    //         types.push_back(SCESS::OrbitalType::F_X_Y2);
+                    //         types.push_back(SCESS::OrbitalType::F_X2_Z);
+                    //         types.push_back(SCESS::OrbitalType::F_X_Z2);
+                    //         types.push_back(SCESS::OrbitalType::F_Y2_Z);
+                    //         types.push_back(SCESS::OrbitalType::F_Y_Z2);
+                    //         types.push_back(SCESS::OrbitalType::F_XYZ);
+                    //         break;
+                    // }
 
-                    for (SCESS::OrbitalType type: types) {
+                    for (const Eigen::Vector3i &angMom: angularMomenta) {
                         GaussianCollection collection(a.GetPos());
                         nlohmann::json exponents = shell["exponents"];
                         nlohmann::json coefficients = shell["coefficients"];
@@ -169,7 +186,7 @@ namespace SCESS {
                                 std::string exponentS, coeffS;
                                 coeffCollection[k].get_to(coeffS);
                                 exponents[k].get_to(exponentS);
-                                collection.Add(type, Gaussian(std::stod(exponentS), std::stod(coeffS)));
+                                collection.Add(angMom, Gaussian(std::stod(exponentS), std::stod(coeffS)));
                             }
                         }
                         mOrbitals.push_back(collection);

@@ -33,6 +33,10 @@
 # Fonts
 *.tff
 
+#C-Make Files
+CMakeLists.txt
+*.cmake
+
 # Excluded Folders
 Python/
 libs/

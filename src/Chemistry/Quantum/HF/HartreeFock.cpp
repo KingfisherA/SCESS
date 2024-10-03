@@ -61,9 +61,11 @@ namespace SCESS {
 
         while (delta > convergeLimit && scfCount < scfMaxIterations) {
             scfCount++;
+
             //Generate the Fock matrix
             Fock = Hcore + ConstructGRHF(DensityMat, tei);
             Fock = (Fock + Fock.transpose()) * 0.5;
+
             //Transform the Fock matrix in the orthonormal basis set
             Eigen::MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
 
@@ -79,6 +81,7 @@ namespace SCESS {
             //Recompute the density matrix
             OldDensity = DensityMat;
             DensityMat = ConstructDensityRHF(Coeffs, molecule.GetNoElectrons());
+
 
             //Calculate delta change to the density matrix
             const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
