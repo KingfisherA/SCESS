@@ -7,12 +7,17 @@
 
 #include<chrono>
 #include<algorithm>
+#include <Eigen/QR>
+
+#include "Utilities/Utilities.h"
 
 
 //
 //
 namespace SCESS {
     RHFResult HartreeFock::Restricted(const Molecule &molecule,
+                                      const Molecule *lastMolecule,
+                                      const RHFResult *lastResult,
                                       const double convergeLimit,
                                       const size_t scfMaxIterations,
                                       std::stringstream *console,
@@ -38,9 +43,8 @@ namespace SCESS {
 
         const Eigen::Index dimensions = S.rows();
         double delta = 1.0;
-        Eigen::Index scfCount = 0;
         double Vnn = molecule.CalculateNuclearRepulsion();
-        double currentE = 0.0;
+        double energy = 0.0, lastEnergy = DBL_MAX;
 
         Eigen::MatrixXd Hcore = T + V;
 
@@ -52,19 +56,84 @@ namespace SCESS {
         Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
         TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
 
-        Eigen::MatrixXd Fock, Coeffs, Energies, OldDensity;
-        Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(dimensions, dimensions);
+        Eigen::MatrixXd Fock, Coeffs, Density, OldDensity;
+        Eigen::VectorXd Energies;
+
+        if (lastResult && lastMolecule) {
+            Eigen::MatrixXd S21 = Integrals::CalculateMixedOverlapMatrix(molecule, *lastMolecule);
+            Eigen::MatrixXd S22Inv = S.completeOrthogonalDecomposition().pseudoInverse();
+
+            Density = S22Inv * (S21 * lastResult->Density * S21.transpose()) * S22Inv;
+            Density.conservativeResize(dimensions, dimensions);
+        } else
+            Density = Eigen::MatrixXd::Zero(dimensions, dimensions);
 
         if (console)
             *console << "Beginning SCF iterations...\n";
 
 
-        while (delta > convergeLimit && scfCount < scfMaxIterations) {
-            scfCount++;
+        std::vector<Eigen::MatrixXd> DIIS_Errors;
+        DIIS_Errors.reserve(7);
+        std::vector<Eigen::MatrixXd> FockMatrices;
+        FockMatrices.reserve(7);
 
+        Eigen::Index scfIter = 1;
+        for (; scfIter < scfMaxIterations+1; scfIter++) {
             //Generate the Fock matrix
-            Fock = Hcore + ConstructGRHF(DensityMat, tei);
+            Fock = Hcore + ConstructGRHF(Density, tei);
             Fock = (Fock + Fock.transpose()) * 0.5;
+
+             //Build the DIIS error vector (FDS-SDF)
+            Eigen::MatrixXd DIIS_Error = Fock * Density * S - S * Density * Fock;
+            DIIS_Error = TransformMat.transpose() * DIIS_Error * TransformMat;
+            DIIS_Errors.push_back(DIIS_Error);
+            FockMatrices.push_back(Fock);
+            delta = sqrt(DIIS_Error.cwiseSquare().mean());
+
+            if (scfIter >= 4) {
+                //Turn on DIIS
+
+                if(scfIter == 4) {
+                    FockMatrices.erase(FockMatrices.begin(), FockMatrices.begin()+2);
+                    DIIS_Errors.erase(DIIS_Errors.begin(),DIIS_Errors.begin()+2);
+                    if (console)
+                        *console << "Turning on DIIS \n";
+                }
+
+                Eigen::Index DIIS_Size = FockMatrices.size();
+
+                if (DIIS_Size > 6) {
+                    FockMatrices.erase(FockMatrices.begin());
+                    DIIS_Errors.erase(DIIS_Errors.begin());
+                    DIIS_Size -= 1;
+                }
+
+                Eigen::MatrixXd ErrorMat = Eigen::MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1,-1.0);
+                // ErrorMat.block(ErrorMat.rows() - 1, 0, 1, ErrorMat.cols())
+                //         = Eigen::MatrixXd::Constant(1, ErrorMat.cols(), -1.0);
+                //
+                // ErrorMat.block(0, ErrorMat.cols() - 1, ErrorMat.rows(), 1)
+                //         = Eigen::MatrixXd::Constant(ErrorMat.rows(), 1, -1.0);
+                ErrorMat(ErrorMat.rows() - 1, ErrorMat.cols() - 1) = 0.0;
+
+                double maxVal = 0.0;
+                for (Eigen::Index i = 0; i < DIIS_Errors.size(); i++)
+                    for (Eigen::Index j = i; j < DIIS_Errors.size(); j++) {
+                        ErrorMat(i, j) = ErrorMat(j, i) = DIIS_Errors[i].cwiseProduct(DIIS_Errors[j]).sum();
+                        maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
+                    }
+
+                ErrorMat.block(0,0, ErrorMat.rows()-1, ErrorMat.cols()-1) /= maxVal;
+
+                Eigen::VectorXd Residual = Eigen::VectorXd::Zero(DIIS_Size + 1);
+                Residual(Residual.rows() - 1) = -1.0;
+
+                Eigen::VectorXd DIISCoeffs = ErrorMat.lu().solve(Residual);
+
+                Fock = Eigen::MatrixXd::Zero(Fock.rows(), Fock.cols());
+                for (Eigen::Index i = 0; i < FockMatrices.size(); i++)
+                    Fock += DIISCoeffs(i) * FockMatrices[i];
+            }
 
             //Transform the Fock matrix in the orthonormal basis set
             Eigen::MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
@@ -79,26 +148,29 @@ namespace SCESS {
             Coeffs = TransformMat * CPrime;
 
             //Recompute the density matrix
-            OldDensity = DensityMat;
-            DensityMat = ConstructDensityRHF(Coeffs, molecule.GetNoElectrons());
-
+            OldDensity = Density;
+            Density = ConstructDensityRHF(Coeffs, molecule.GetNoElectrons());
 
             //Calculate delta change to the density matrix
-            const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
-            delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
+            // const Eigen::MatrixXd DensityMatriciesDelta = Density - OldDensity;
+            // delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
 
-            currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
+            lastEnergy = energy;
+            energy = CalculateEnergyRHF(Density, Hcore, Fock) + Vnn;
+
+            if (delta < 1E-3 && abs(energy - lastEnergy) < convergeLimit)
+                break;
 
             //Calculate the current energy
             if (console)
-                *console << "   RHF(" << scfCount << "): E = " << currentE << "      dE = " << delta << '\n';
+                *console << "   RHF(" << scfIter << "): E = " << energy << "      dE = " << delta << '\n';
         }
 
-        currentE = CalculateEnergyRHF(DensityMat, Hcore, Fock) + Vnn;
+        energy = CalculateEnergyRHF(Density, Hcore, Fock) + Vnn;
         if (console) {
-            if (scfCount < scfMaxIterations)
+            if (scfIter < scfMaxIterations)
                 *console << "---- RHF procedure converged! ----\nRHF converged after " <<
-                        scfCount << " iterations.\nE(RHF) = " << currentE << " hartrees\n\n\n";
+                        scfIter << " iterations.\nE(RHF) = " << energy << " hartrees\n\n\n";
             else
                 *console << "!!! RHF procedure failed to converge !!!\n\n\n";
         }
@@ -110,7 +182,7 @@ namespace SCESS {
         }
 
 
-        return {Fock, Hcore, DensityMat, Coeffs, Energies, Occupation, integrals, currentE};
+        return {Fock, Hcore, Density, Coeffs, Energies, Occupation, integrals, energy};
     }
 
     UHFResult HartreeFock::Unrestricted(const Molecule &molecule, const double convergeLimit,

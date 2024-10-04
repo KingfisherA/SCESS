@@ -6,6 +6,7 @@ namespace SCESS {
     class Utilities {
     public:
         static void PrintMatrix(const Eigen::MatrixXd& matrix);
+        static void PrintMatrix(const Eigen::MatrixXd& matrix, std::stringstream& ss);
         static void PrintTensorMatrix(const Eigen::Tensor<double,2>& matrix);
     };
 }

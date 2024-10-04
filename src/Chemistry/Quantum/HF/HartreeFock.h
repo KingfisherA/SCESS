@@ -18,8 +18,10 @@ namespace SCESS {
         /// <param name="convergeLimit">Convergence limit of the SCF procedure</param>
         /// <param name="scfMaxIterations">Maximum amount of scf iterations to perform. The iterations are automatically terminated when the convergence limit has been achieved.</param>
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
+        /// <param name="basisSet"></param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static RHFResult Restricted(const Molecule &molecule, const double convergeLimit = 1E-5,
+        static RHFResult Restricted(const Molecule &molecule, const Molecule *lastMolecule = nullptr,
+                                    const RHFResult *lastResult = nullptr, const double convergeLimit = 1E-5,
                                     const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
                                     const std::string_view basisSet = "");
 
@@ -73,7 +75,8 @@ namespace SCESS {
          * @param moTEI The tei transformed into a molecular orbital basis in chemist's notation
          * @return MP2 correction energy
          */
-        static double MP2ClosedShell(const RHFResult &result, const TEITensor &moTEI,std::stringstream *console = nullptr);
+        static double MP2ClosedShell(const RHFResult &result, const TEITensor &moTEI,
+                                     std::stringstream *console = nullptr);
 
     private:
         static Eigen::MatrixXd ConstructGRHF(const Eigen::MatrixXd &Density, const TEITensor &teiTensor);
@@ -96,6 +99,8 @@ namespace SCESS {
         HFResult(const double energyIn, const ConfigIntegrals &integrals) : Energy(energyIn), Integrals(integrals) {
         }
         HFResult(const HFResult &res) = default;
+
+        virtual ~HFResult() = default;
 
 
         const double Energy;

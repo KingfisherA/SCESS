@@ -154,7 +154,7 @@ namespace SCESS {
         Eigen::MatrixXd V =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
-        for (size_t i = 0; i < molecule.GetNoOrbitals(); i++) {
+        for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
             for (size_t j = i; j < molecule.GetNoOrbitals(); j++) {
                 const GaussianCollection &c1 = molecule.GetOrbital(i);
                 const GaussianCollection &c2 = molecule.GetOrbital(j);
@@ -171,9 +171,9 @@ namespace SCESS {
                 }
                 V(i, j) = V(j, i) = Vn;
             }
-        }
 
-        TEITensor tei = CalculateTwoElectronTensor(molecule);
+
+        TEITensor tei = CalculateTwoElectronTensorMultithread(molecule);
 
         return ConfigIntegrals{S, T, V, tei};
     }
@@ -264,11 +264,20 @@ namespace SCESS {
     Eigen::MatrixXd Integrals::CalculateOverlapMatrix(const Molecule &molecule) {
         Eigen::MatrixXd S = Eigen::MatrixXd::Zero(molecule.GetOrbitals().size(), molecule.GetOrbitals().size());
 
-        for (size_t i = 0; i < S.rows(); i++) {
-            for (size_t j = i; j < S.cols(); j++) {
+        for (Eigen::Index i = 0; i < S.rows(); i++)
+            for (Eigen::Index j = i; j < S.cols(); j++)
                 S(i, j) = S(j, i) = EvaluateOverlap(molecule.GetOrbital(i), molecule.GetOrbital(j));
-            }
-        }
+
+        return S;
+    }
+
+
+    Eigen::MatrixXd Integrals::CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2) {
+        Eigen::MatrixXd S = Eigen::MatrixXd::Zero(mol1.GetOrbitals().size(), mol2.GetOrbitals().size());
+
+        for (Eigen::Index i = 0; i < S.rows(); i++)
+            for (Eigen::Index j = i; j < S.cols(); j++)
+                S(i, j) = S(j, i) = EvaluateOverlap(mol1.GetOrbital(i), mol2.GetOrbital(j));
 
         return S;
     }
@@ -514,25 +523,104 @@ namespace SCESS {
         return returnTensor;
     }
 
+    TEITensor Integrals::CalculateTwoElectronTensorMultithread(const Molecule &molecule) {
+        std::unordered_map<size_t, std::vector<Eigen::Vector4i> > yoshIdxMap;
+
+        for (int i = 0; i < molecule.GetNoOrbitals(); i++)
+            for (int j = 0; j < molecule.GetNoOrbitals(); j++)
+                for (int k = 0; k < molecule.GetNoOrbitals(); k++)
+                    for (int l = 0; l < molecule.GetNoOrbitals(); l++) {
+                        size_t yoshIdx = TEIYoshimineIdx(i, j, k, l);
+
+                        auto itPair = yoshIdxMap.find(yoshIdx);
+                        std::vector<Eigen::Vector4i> *indxArray = nullptr;
+                        if (itPair == yoshIdxMap.end()) {
+                            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<Eigen::Vector4i>{}).first->second;
+                            indxArray->reserve(4);
+                        } else {
+                            indxArray = &itPair->second;
+                        }
+
+                        indxArray->emplace_back((int) i, (int) j, (int) k, (int) l);
+                    }
+
+        constexpr size_t NUM_THREADS = 3;
+        std::thread threads[NUM_THREADS];
+        std::unordered_map<size_t, double> integralResultMaps[NUM_THREADS + 1];
+
+        auto threadWorker = [](const std::unordered_map<size_t, std::vector<Eigen::Vector4i> > &yoshIdxMap,
+                               const Molecule &molecule, std::unordered_map<size_t, double> &integralResult,
+                               size_t startingIdx,
+                               size_t chunkSize) {
+            auto it = yoshIdxMap.begin();
+            for (size_t i = 0; i < startingIdx; i++)
+                ++it;
+
+            for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
+                const Eigen::Vector4i &indices = it->second[0];
+                integralResult[it->first] = EvaluateTwoElectron(molecule.GetOrbital(indices.x()),
+                                                                molecule.GetOrbital(indices.y()),
+                                                                molecule.GetOrbital(indices.z()),
+                                                                molecule.GetOrbital(indices.w()));
+                ++it;
+            }
+        };
+
+        size_t chunkSize = yoshIdxMap.size() / (NUM_THREADS + 1);
+
+        if (chunkSize >= 20) {
+            for (uint32_t i = 0; i < NUM_THREADS; i++)
+                threads[i] = std::thread(threadWorker, std::ref(yoshIdxMap), std::ref(molecule),
+                                         std::ref(integralResultMaps[i + 1]),
+                                         i * chunkSize, chunkSize);
+
+            //Dispatch work on current thread as well
+            threadWorker(yoshIdxMap, molecule, integralResultMaps[0], NUM_THREADS * chunkSize,
+                         yoshIdxMap.size() - NUM_THREADS * chunkSize);
+
+            for (auto &thread: threads)
+                thread.join();
+        } else
+            threadWorker(yoshIdxMap, molecule, integralResultMaps[0], 0, yoshIdxMap.size());
+
+
+        TEITensor teiTensor((Eigen::Index) molecule.GetNoOrbitals(),
+                            (Eigen::Index) molecule.GetNoOrbitals(),
+                            (Eigen::Index) molecule.GetNoOrbitals(),
+                            (Eigen::Index) molecule.GetNoOrbitals());
+
+        for (auto &[yoshIdx, indices]: yoshIdxMap) {
+            double integralResult = [&yoshIdx, &integralResultMaps, NUM_THREADS]() {
+                for (auto &integralResultMap: integralResultMaps)
+                    if (integralResultMap.contains(yoshIdx))
+                        return integralResultMap.at(yoshIdx);
+                return 0.0;
+            }();
+
+            for (const Eigen::Vector4i &idxVec: indices)
+                teiTensor(idxVec[0], idxVec[1], idxVec[2], idxVec[3]) = integralResult;
+        }
+
+
+        return teiTensor;
+    }
+
     double Integrals::EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
                                           const GaussianCollection &c3, const GaussianCollection &c4) {
         double result = 0.0;
 
-        for (unsigned int i = 0; i < c1.Size(); i++) {
-            for (unsigned int j = 0; j < c2.Size(); j++) {
-                for (unsigned int k = 0; k < c3.Size(); k++) {
-                    for (unsigned int l = 0; l < c4.Size(); l++) {
-                        const Gaussian &g1 = c1.Get(i);
-                        const Gaussian &g2 = c2.Get(j);
-                        const Gaussian &g3 = c3.Get(k);
-                        const Gaussian &g4 = c4.Get(l);
+        for (size_t i = 0; i < c1.Size(); i++)
+            for (size_t j = 0; j < c2.Size(); j++)
+                for (size_t k = 0; k < c3.Size(); k++)
+                    for (size_t l = 0; l < c4.Size(); l++) {
+                        const Gaussian &g1 = c1.Get(i),
+                                g2 = c2.Get(j),
+                                g3 = c3.Get(k),
+                                g4 = c4.Get(l);
 
                         result += g1.mNorm * g2.mNorm * g3.mNorm * g4.mNorm *
                                 g1.mCoeff * g2.mCoeff * g3.mCoeff * g4.mCoeff * TwoElectronGaussian(g1, g2, g3, g4);
                     }
-                }
-            }
-        }
 
         return result;
     }
@@ -551,7 +639,8 @@ namespace SCESS {
         const Eigen::Vector3d &b, const int lb, const int mb, const int nb, const double alphab,
         const Eigen::Vector3d &c, const int lc, const int mc, const int nc, const double alphac,
         const Eigen::Vector3d &d, const int ld, const int md, const int nd, const double alphad) {
-        static const double pi = boost::math::constants::pi<double>();
+        constexpr double pi = std::numbers::pi_v<double>;
+
         double rab2 = (a - b).squaredNorm();
         double rcd2 = (c - d).squaredNorm();
 
@@ -564,72 +653,72 @@ namespace SCESS {
         double gamma2 = alphac + alphad;
         double delta = 0.25 * (1.0 / gamma1 + 1.0 / gamma2);
 
-        std::vector<double> bx = B_array(la, lb, lc, ld, p[0], a[0], b[0], q[0], c[0], d[0], gamma1, gamma2, delta);
-        std::vector<double> by = B_array(ma, mb, mc, md, p[1], a[1], b[1], q[1], c[1], d[1], gamma1, gamma2, delta);
-        std::vector<double> bz = B_array(na, nb, nc, nd, p[2], a[2], b[2], q[2], c[2], d[2], gamma1, gamma2, delta);
+        std::vector<double> bx = B_Array(la, lb, lc, ld, p[0], a[0], b[0], q[0], c[0], d[0], gamma1, gamma2, delta);
+        std::vector<double> by = B_Array(ma, mb, mc, md, p[1], a[1], b[1], q[1], c[1], d[1], gamma1, gamma2, delta);
+        std::vector<double> bz = B_Array(na, nb, nc, nd, p[2], a[2], b[2], q[2], c[2], d[2], gamma1, gamma2, delta);
 
         double sum = 0.0;
-        for (int i = 0; i <= (la + lb + lc + ld); i++) {
-            for (int j = 0; j <= (ma + mb + mc + md); j++) {
+        for (int i = 0; i <= (la + lb + lc + ld); i++)
+            for (int j = 0; j <= (ma + mb + mc + md); j++)
                 for (int k = 0; k <= (na + nb + nc + nd); k++) {
                     sum += bx[i] * by[j] * bz[k] * GammaFuncs::Fgamma(i + j + k, 0.25 * rpq2 / delta);
                 }
-            }
-        }
 
-        return 2.0 * std::pow(pi, 2.5) / (gamma1 * gamma2 * std::sqrt(gamma1 + gamma2)) *
-               std::exp(-alphaa * alphab * rab2 / gamma1) *
-               std::exp(-alphac * alphad * rcd2 / gamma2) * sum;
+
+        return 2.0 * pow(pi, 2.5) / (gamma1 * gamma2 * sqrt(gamma1 + gamma2)) *
+               exp(-alphaa * alphab * rab2 / gamma1) *
+               exp(-alphac * alphad * rcd2 / gamma2) * sum;
     }
 
-    std::vector<double> Integrals::B_array(const int l1, const int l2, const int l3, const int l4,
+    std::vector<double> Integrals::B_Array(const int l1, const int l2, const int l3, const int l4,
                                            const double p, const double a, const double b, const double q,
                                            const double c, const double d,
                                            const double g1, const double g2, const double delta) {
         int imax = l1 + l2 + l3 + l4 + 1;
         std::vector<double> arrB(imax, 0);
 
-        for (int i1 = 0; i1 < l1 + l2 + 1; i1++) {
-            for (int i2 = 0; i2 < l3 + l4 + 1; i2++) {
-                for (int r1 = 0; r1 < i1 / 2 + 1; r1++) {
-                    for (int r2 = 0; r2 < i2 / 2 + 1; r2++) {
+        auto factRatio2 = [](const int a, const int b)-> double {
+            return boost::math::factorial<double>(a) / boost::math::factorial<double>(b) /
+                   boost::math::factorial<double>(a - 2 * b);
+        };
+
+        auto B0 = [&factRatio2](int i, int r, double g)-> double {
+            return factRatio2(i, r) * pow(4 * g, r - i);
+        };
+
+        auto fB = [&B0](const int i, const int l1, const int l2, const double p, const double a, const double b,
+                        const int r, const double g)-> double {
+            return PolynomialCoeff(i, l1, l2, p - a, p - b) * B0(i, r, g);
+        };
+
+        auto BArrayTerm = [&fB, &factRatio2](const int i1, const int i2, const int r1, const int r2, const int u,
+                                             const int l1,
+                                             const int l2, const int l3, const int l4,
+                                             const double px, const double ax, const double bx, const double qx,
+                                             const double cx,
+                                             const double dx, const double gamma1,
+                                             const double gamma2, const double delta)-> double {
+            return fB(i1, l1, l2, px, ax, bx, r1, gamma1) *
+                   pow(-1, i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
+                   pow(-1, u) * factRatio2(i1 + i2 - 2 * (r1 + r2), u) *
+                   pow(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) /
+                   pow(delta, i1 + i2 - 2 * (r1 + r2) - u);
+        };
+
+
+        for (int i1 = 0; i1 < l1 + l2 + 1; i1++)
+            for (int i2 = 0; i2 < l3 + l4 + 1; i2++)
+                for (int r1 = 0; r1 < i1 / 2 + 1; r1++)
+                    for (int r2 = 0; r2 < i2 / 2 + 1; r2++)
                         for (int u = 0; u < (i1 + i2) / 2 - r1 - r2 + 1; u++) {
                             int i = i1 + i2 - 2 * (r1 + r2) - u;
-                            arrB[i] += B_term(i1, i2, r1, r2, u, l1, l2, l3, l4,
-                                              p, a, b, q, c, d, g1, g2, delta);
+                            arrB[i] += BArrayTerm(i1, i2, r1, r2, u, l1, l2, l3, l4,
+                                                  p, a, b, q, c, d, g1, g2, delta);
                         }
-                    }
-                }
-            }
-        }
+
         return arrB;
     }
 
-    double Integrals::B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
-                             const int l2, const int l3, const int l4,
-                             const double px, const double ax, const double bx, const double qx, const double cx,
-                             const double dx, const double gamma1,
-                             const double gamma2, const double delta) {
-        return fB(i1, l1, l2, px, ax, bx, r1, gamma1) *
-               pow(-1, i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
-               pow(-1, u) * fact_ratio2(i1 + i2 - 2 * (r1 + r2), u) *
-               pow(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) /
-               pow(delta, i1 + i2 - 2 * (r1 + r2) - u);
-    }
-
-    double Integrals::fB(const int i, const int l1, const int l2, const double p, const double a, const double b,
-                         const int r, const double g) {
-        return PolynomialCoeff(i, l1, l2, p - a, p - b) * B0(i, r, g);
-    }
-
-    double Integrals::B0(int i, int r, double g) {
-        return fact_ratio2(i, r) * pow(4 * g, r - i);
-    }
-
-    double Integrals::fact_ratio2(const int a, const int b) {
-        return boost::math::factorial<double>(a) / boost::math::factorial<double>(b) / boost::math::factorial<
-                   double>(a - 2 * b);
-    }
 
 #pragma endregion
     //

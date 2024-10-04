@@ -3,6 +3,8 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include<unordered_map>
 
+#include "Chemistry/Quantum/Molecule.h"
+
 namespace SCESS {
     class Gaussian;
     class GaussianCollection;
@@ -169,7 +171,7 @@ namespace SCESS {
         static double OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2);
         static double EvaluateOverlap(const GaussianCollection &c1, const GaussianCollection &c2);
         static Eigen::MatrixXd CalculateOverlapMatrix(const Molecule &molecule);
-
+        static Eigen::MatrixXd CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2);
         //Nuclear attraction integrals
         //A-matrix style integration
         //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
@@ -199,6 +201,7 @@ namespace SCESS {
          * @return The tei in chemist's notation
          */
         static TEITensor CalculateTwoElectronTensor(const Molecule &molecule);
+        static TEITensor CalculateTwoElectronTensorMultithread(const Molecule &molecule);
         static double EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
                                           const GaussianCollection &c3, const GaussianCollection &c4);
         static double TwoElectronGaussian(const Gaussian &gto1, const Gaussian &gto2,
@@ -212,18 +215,18 @@ namespace SCESS {
                                           const Eigen::Vector3d &d, const int ld, const int md, const int nd,
                                           const double alphad);
         //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
-        static std::vector<double> B_array(const int l1, const int l2, const int l3, const int l4,
+        static std::vector<double> B_Array(const int l1, const int l2, const int l3, const int l4,
                                            const double p, const double a, const double b, const double q,
                                            const double c, const double d,
                                            const double g1, const double g2, const double delta);
-        static double B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
-                             const int l2, const int l3, const int l4,
-                             const double px, const double ax, const double bx, const double qx, const double cx,
-                             const double dx, const double gamma1,
-                             const double gamma2, const double delta);
-        static double fB(const int i, const int l1, const int l2, const double p,
-                         const double a, const double b, const int r, const double g);
-        static double B0(int i, int r, double g);
-        static double fact_ratio2(const int a, const int b);
+        // static double B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
+        //                      const int l2, const int l3, const int l4,
+        //                      const double px, const double ax, const double bx, const double qx, const double cx,
+        //                      const double dx, const double gamma1,
+        //                      const double gamma2, const double delta);
+        // static double fB(const int i, const int l1, const int l2, const double p,
+        //                  const double a, const double b, const int r, const double g);
+        // static double B0(int i, int r, double g);
+        // static double fact_ratio2(const int a, const int b);
     };
 }

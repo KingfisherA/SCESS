@@ -5,6 +5,7 @@
 #include <Eigen/src/Core/util/Meta.h>
 
 namespace SCESS {
+
     void Utilities::PrintMatrix(const Eigen::MatrixXd &matrix) {
         std::cout << std::fixed << std::setprecision(2);
         for (Eigen::Index row = 0; row < matrix.rows(); ++row) {
@@ -13,6 +14,16 @@ namespace SCESS {
                 std::cout << matrix(row, col) << ' ';
             }
             std::cout << " |\n";
+        }
+    }
+
+    void Utilities::PrintMatrix(const Eigen::MatrixXd &matrix, std::stringstream &ss) {
+        for (Eigen::Index row = 0; row < matrix.rows(); ++row) {
+            ss << "| ";
+            for (Eigen::Index col = 0; col < matrix.cols(); ++col) {
+                ss << matrix(row, col) << ' ';
+            }
+            ss << " |\n";
         }
     }
 

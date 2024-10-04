@@ -137,5 +137,6 @@ project "SCESS"
 
 	filter { "configurations:Release", "system:Linux" }
 		defines { "CONFIG_RELEASE" }
-		optimize "On"
+		optimize "Speed"
+		vectorextensions "AVX2"
 		symbols "Off"

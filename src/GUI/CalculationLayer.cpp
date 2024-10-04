@@ -286,6 +286,7 @@ namespace SCESS {
         mCalcBasiSet = mBasisSets[mSelectedBasisSet];
         mMolecule->MakeOrbitals(mCalcBasiSet);
 
+
         mConsoleOutput.clear();
         mConsoleOutput.str("");
 
@@ -294,11 +295,11 @@ namespace SCESS {
                 mSCFMethod = SCFMethod::RHF;
 
                 //Run SCF as RHF if a SCF determinant is not available
-                if (mRHFResult == nullptr || !mUseLastSCF)
+                if (mRHFResult == nullptr)
                     mRHFResult = std::make_shared<RHFResult>(
-                        std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100,
-                                                                 &mConsoleOutput,
-                                                                 mCalcBasiSet)));
+                        std::move(SCESS::HartreeFock::Restricted(
+                            *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
+                            mCalcBasiSet)));
 
                 switch (mCorrelationMethod) {
                     case CorrelationMethod::MP2:
@@ -319,9 +320,16 @@ namespace SCESS {
             } else {
                 switch (mSCFMethod) {
                     case SCFMethod::RHF:
-                        mRHFResult = std::make_shared<RHFResult>(
-                            std::move(SCESS::HartreeFock::Restricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
-                                                                     mCalcBasiSet)));
+                        if (mUseLastSCF)
+                            mRHFResult = std::make_shared<RHFResult>(
+                                std::move(SCESS::HartreeFock::Restricted(
+                                    *mMolecule, mLastMolecule.get(), mRHFResult.get(), 1E-5, 100, &mConsoleOutput,
+                                    mCalcBasiSet)));
+                        else
+                            mRHFResult = std::make_shared<RHFResult>(
+                                std::move(SCESS::HartreeFock::Restricted(
+                                    *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
+                                    mCalcBasiSet)));
                         break;
                     case SCFMethod::UHF:
                         mUHFResult = std::make_shared<UHFResult>(
@@ -335,7 +343,7 @@ namespace SCESS {
             }
 
             std::cout << mConsoleOutput.str();
-            mUseLastSCF = true;
+            mLastMolecule = std::make_unique<Molecule>(*mMolecule);
             mCalculationThread.MarkAsFinished();
         });
     }
@@ -478,8 +486,10 @@ namespace SCESS {
                 for (int i = 0; i < mBasisSets.size(); i++)
                     ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i);
 
-                mUseLastSCF = lastSelectedBasisSet != mSelectedBasisSet;
                 ImGui::Unindent(100.0);
+
+                if (mRHFResult != nullptr)
+                    ImGui::Checkbox("Use Last Result", &mUseLastSCF);
 
                 ImGui::NewLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.4f, 0.0f, 1.0f});

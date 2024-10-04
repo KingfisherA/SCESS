@@ -40,7 +40,7 @@ static void TestCoupledCluster() {
     waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
     std::stringstream ss;
-    RHFResult rhfResult = HartreeFock::Restricted(waterMolecule, 1e-05, 100, &ss, BASIS_SET_NAME);
+    RHFResult rhfResult = HartreeFock::Restricted(waterMolecule, nullptr, nullptr, 1e-05, 100, &ss, BASIS_SET_NAME);
     std::cout << ss.str();
     ss.clear();
     ss.str("");
@@ -152,7 +152,7 @@ namespace SCESS {
     }
 
     void Application::OnRender() {
-        mCam.UpdateCamera((float)m_DeltaTime * 0.1f);
+        mCam.UpdateCamera((float) m_DeltaTime * 0.1f);
 
         mViewportFramebuffer->Bind();
         mViewportFramebuffer->Clear({glm::vec3(0.01f), 1.0f});

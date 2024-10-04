@@ -85,6 +85,7 @@ namespace SCESS {
 
         int mSelectedMolecule = -1;
         uRef<Molecule> mMolecule;
+        uRef<Molecule> mLastMolecule;
         sRef<GEng::VertexArray> mMoleculeVAO;
         sRef<GEng::VertexBuffer> mMoleculeBuffer;
         sRef<GEng::VertexArray> mMoleculeBondVAO;
@@ -110,6 +111,7 @@ namespace SCESS {
         sRef<RHFResult> mRHFResult;
         sRef<UHFResult> mUHFResult;
         bool mUseLastSCF = false;
+
         sRef<CCSDResult> mCCSDResult;
         std::optional<double> mMP2Energy;
 
