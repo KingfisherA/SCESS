@@ -42,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>bin\linux\Debug-x64\</OutDir>
-    <IntDir>bin-obj\linux\Debug-x64\</IntDir>
+    <OutDir>bin\windows\Debug-x64\</OutDir>
+    <IntDir>bin-obj\windows\Debug-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>bin\linux\Release-x64\</OutDir>
-    <IntDir>bin-obj\linux\Release-x64\</IntDir>
+    <OutDir>bin\windows\Release-x64\</OutDir>
+    <IntDir>bin-obj\windows\Release-x64\</IntDir>
     <TargetName>SCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
@@ -122,7 +122,7 @@
     <ClInclude Include="src\Chemistry\Quantum\DFT\XCFunctional.h" />
     <ClInclude Include="src\Chemistry\Quantum\HF\HartreeFock.h" />
     <ClInclude Include="src\Chemistry\Quantum\Integrals\Gamma.h" />
-    <ClInclude Include="src\Chemistry\Quantum\Integrals\IntegralHelper.h" />
+    <ClInclude Include="src\Chemistry\Quantum\Integrals\Integrals.h" />
     <ClInclude Include="src\Chemistry\Quantum\Molecule.h" />
     <ClInclude Include="src\Chemistry\Quantum\Tests\Tests.h" />
     <ClInclude Include="src\GUI\CalculationLayer.h" />
@@ -144,7 +144,7 @@
     <ClCompile Include="src\Chemistry\Quantum\DFT\XCFunctional.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\HF\HartreeFock.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Integrals\Gamma.cpp" />
-    <ClCompile Include="src\Chemistry\Quantum\Integrals\IntegralHelper.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\Integrals\Integrals.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Molecule.cpp" />
     <ClCompile Include="src\GUI\CalculationLayer.cpp" />
     <ClCompile Include="src\Maths\Isosurfaces.cpp" />

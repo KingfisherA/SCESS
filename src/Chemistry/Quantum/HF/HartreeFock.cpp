@@ -109,11 +109,6 @@ namespace SCESS {
                 }
 
                 Eigen::MatrixXd ErrorMat = Eigen::MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1,-1.0);
-                // ErrorMat.block(ErrorMat.rows() - 1, 0, 1, ErrorMat.cols())
-                //         = Eigen::MatrixXd::Constant(1, ErrorMat.cols(), -1.0);
-                //
-                // ErrorMat.block(0, ErrorMat.cols() - 1, ErrorMat.rows(), 1)
-                //         = Eigen::MatrixXd::Constant(ErrorMat.rows(), 1, -1.0);
                 ErrorMat(ErrorMat.rows() - 1, ErrorMat.cols() - 1) = 0.0;
 
                 double maxVal = 0.0;

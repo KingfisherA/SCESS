@@ -380,7 +380,7 @@ namespace SCESS {
 
             const std::string &consoleStr = mConsoleOutput.str();
             ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
-                                      {0, 0}, ImGuiInputTextFlags_ReadOnly);
+                                      {-FLT_MIN, -FLT_MIN}, ImGuiInputTextFlags_ReadOnly);
 
             if (mCalculationThread.HasFinished())
                 ImGui::CloseCurrentPopup();

@@ -10,7 +10,7 @@
           "src/Chemistry/Quantum/Basis/BasisUtils.h"
           "src/Chemistry/Quantum/Basis/Gaussian.cpp"
           "src/Chemistry/Quantum/Basis/Gaussian.h"
-          "src/Chemistry/Quantum/CC/CoupledCluster.cpp"
+          "src/Chemistry/Quantum/CC/CCSD.cpp"
           "src/Chemistry/Quantum/CC/CoupledCluster.h"
           "src/Chemistry/Quantum/DFT/DFT.cpp"
           "src/Chemistry/Quantum/DFT/DFT.h"
@@ -39,28 +39,29 @@
       "src/Utilities/Utilities.h"
     "src/pch.cpp"
     "src/pch.h"
+        src/Chemistry/Quantum/CC/CCSD-DIIS.cpp
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Debug-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
+    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
+    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/SCESS/src>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/SCESS/src>
   $<$<CONFIG:Debug>:/usr/include>
   $<$<CONFIG:Debug>:/usr/local/include>
   $<$<CONFIG:Debug>:/opt/etsf/include>
   $<$<CONFIG:Debug>:/usr/local/include/eigen3>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/eigen-3.4.90>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/glm>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/ImGui>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/eigen-3.4.90>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/glm>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:OS_LINUX>
@@ -68,9 +69,9 @@ target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:_DEBUG>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/ImGui/bin/linux/Release-x64>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/Libraries/nativefiledialog/build/lib/Release/x64>
-  $<$<CONFIG:Debug>:/media/charlie/SSD/dev/C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Debug>:GraphicsEngine>
@@ -111,33 +112,33 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/SSD/dev/C++/SCESS/bin/linux/Release-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
+    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
+    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/SCESS/src>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/SCESS/src>
   $<$<CONFIG:Release>:/usr/include>
   $<$<CONFIG:Release>:/usr/local/include>
   $<$<CONFIG:Release>:/opt/etsf/include>
   $<$<CONFIG:Release>:/usr/local/include/eigen3>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/GraphicsEngine/src>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/json-develop/include>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/eigen-3.4.90>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/glm>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/ImGui>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/json-develop/include>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/eigen-3.4.90>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/glm>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Release>:OS_LINUX>
   $<$<CONFIG:Release>:CONFIG_RELEASE>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/ImGui/bin/linux/Release-x64>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/Libraries/nativefiledialog/build/lib/Release/x64>
-  $<$<CONFIG:Release>:/media/charlie/SSD/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui/bin/linux/Release-x64>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/build/lib/Release/x64>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Release>:GraphicsEngine>

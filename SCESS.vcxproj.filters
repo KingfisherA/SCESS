@@ -76,7 +76,7 @@
     <ClInclude Include="src\Chemistry\Quantum\Integrals\Gamma.h">
       <Filter>src\Chemistry\Quantum\Integrals</Filter>
     </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Integrals\IntegralHelper.h">
+    <ClInclude Include="src\Chemistry\Quantum\Integrals\Integrals.h">
       <Filter>src\Chemistry\Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="src\Chemistry\Quantum\Molecule.h">
@@ -138,7 +138,7 @@
     <ClCompile Include="src\Chemistry\Quantum\Integrals\Gamma.cpp">
       <Filter>src\Chemistry\Quantum\Integrals</Filter>
     </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Integrals\IntegralHelper.cpp">
+    <ClCompile Include="src\Chemistry\Quantum\Integrals\Integrals.cpp">
       <Filter>src\Chemistry\Quantum\Integrals</Filter>
     </ClCompile>
     <ClCompile Include="src\Chemistry\Quantum\Molecule.cpp">

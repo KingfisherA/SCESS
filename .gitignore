@@ -33,7 +33,7 @@
 # Fonts
 *.tff
 
-#C-Make Files
+# CMake Files
 CMakeLists.txt
 *.cmake
 
