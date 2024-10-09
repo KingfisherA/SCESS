@@ -32,7 +32,8 @@ namespace SCESS {
     enum class CorrelationMethod:int {
         None = 0,
         MP2 = 1,
-        CCSD = 2
+        CCSD = 2,
+        CCSD_T = 3
     };
 
     inline const char *CorrelationMethodToStr(CorrelationMethod method) {
@@ -40,6 +41,7 @@ namespace SCESS {
             case CorrelationMethod::None: return "";
             case CorrelationMethod::MP2: return "MP2";
             case CorrelationMethod::CCSD: return "CCSD";
+            case CorrelationMethod::CCSD_T: return "CCSD(T)";
             default: return "";
         }
     }

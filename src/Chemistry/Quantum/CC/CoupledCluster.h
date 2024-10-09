@@ -18,6 +18,7 @@ namespace SCESS {
         double ccsdCorrelationEnergy = 0.0;
         Eigen::Tensor<double, 2> t1Amps;
         Eigen::Tensor<double, 4> t2Amps;
+        TEITensor moTEI;
     };
 
     class CoupledCluster {
@@ -30,11 +31,22 @@ namespace SCESS {
         using FockTensor = Eigen::Tensor<double, 2>;
 
         /**
-        * A direct product decomposition implementation to solve the coupled cluster equations
+        * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant
          * @param rhfResult The RHF determinant
          */
         static std::optional<CCSDResult> CCSD(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+
+        /**
+        * An implementation to solve the coupled cluster equations
+        * to single and double excitations for a closed shell molecule starting from a RHF determinant with DIIS acceleration.
+         * @param rhfResult The RHF determinant
+         */
+        static std::optional<CCSDResult> CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+
+        static std::optional<CCSDResult> CCSD_T(const RHFResult& rhfResult, std::stringstream* console = nullptr);
+
+        static double CalculateTriplesCorrection(const CCSDResult& ccsd, const FockTensor& F, const Eigen::Index nOcc, const Eigen::Index nVirt);
 
         static FockTensor TransformFockToMO(const RHFResult &rhfResult);
         static void CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
@@ -59,11 +71,11 @@ namespace SCESS {
                                  const TauTensor &tau);
         static WTensor MakeWmbej(const TEITensor &moTEI, const Eigen::Index nOcc,
                                  const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2);
-        static void Iterate(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
-                            const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
-                            const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2);
+        static void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
+                                const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
+                                const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2);
 
-        static double CalculateEnergy(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
+        static double CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
                                       const TEITensor &moTEI,
                                       const T1Tensor &t1, const T2Tensor &t2);
     };

@@ -306,7 +306,16 @@ namespace SCESS {
                         mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFResult, &mConsoleOutput);
                         break;
                     case CorrelationMethod::CCSD: {
-                        auto ccResult = SCESS::CoupledCluster::CCSD(*mRHFResult, &mConsoleOutput);
+                        auto ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFResult, &mConsoleOutput);
+                        if (ccResult.has_value()) {
+                            mCCSDResult = std::make_shared<CCSDResult>(ccResult.value());
+                            mMP2Energy = ccResult->mp2CorrelationEnergy;
+                        }
+                        break;
+                    }
+
+                    case CorrelationMethod::CCSD_T: {
+                        auto ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFResult, &mConsoleOutput);
                         if (ccResult.has_value()) {
                             mCCSDResult = std::make_shared<CCSDResult>(ccResult.value());
                             mMP2Energy = ccResult->mp2CorrelationEnergy;
@@ -362,6 +371,8 @@ namespace SCESS {
                             return "MP2";
                         case CorrelationMethod::CCSD:
                             return "CCSD";
+                        case CorrelationMethod::CCSD_T:
+                            return "CCSD(T)";
                         default:
                             return "";
                     };
@@ -476,6 +487,10 @@ namespace SCESS {
                 ImGui::Indent(100.0);
                 if (ImGui::RadioButton("CCSD", reinterpret_cast<int *>(&mCorrelationMethod), 2)) {
                     mCorrelationMethod = CorrelationMethod::CCSD;
+                    mSCFMethod = SCFMethod::RHF;
+                }
+                if (ImGui::RadioButton("CCSD(T)", reinterpret_cast<int *>(&mCorrelationMethod), 3)) {
+                    mCorrelationMethod = CorrelationMethod::CCSD_T;
                     mSCFMethod = SCFMethod::RHF;
                 }
                 ImGui::Unindent(200.0);

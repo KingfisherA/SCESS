@@ -40,6 +40,7 @@
     "src/pch.cpp"
     "src/pch.h"
         src/Chemistry/Quantum/CC/CCSD-DIIS.cpp
+        src/Chemistry/Quantum/CC/CCSD_T.cpp
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("SCESS" PROPERTIES
