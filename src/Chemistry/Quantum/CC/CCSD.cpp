@@ -1,6 +1,7 @@
 //
 // Created by charlie on 30/09/24.
 //
+#include <pch.h>
 
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
@@ -9,8 +10,6 @@
 #include<iostream>
 #include <boost/math/constants/constants.hpp>
 #include <GL/glew.h>
-
-#include "pch.h"
 
 
 namespace SCESS {
@@ -27,8 +26,7 @@ namespace SCESS {
         return tensor;
     }
 
-    std::optional<CCSDResult> CoupledCluster::CCSD(const RHFResult &rhfResult, std::stringstream *console) {
-
+    uRef<CCSDResult> CoupledCluster::CCSD(const RHFResult &rhfResult, std::stringstream *console) {
         using namespace Eigen;
 
         constexpr double CC_CONVERGENCE = 1.0E-6;
@@ -77,7 +75,6 @@ namespace SCESS {
         size_t ccIteration = 0;
 
         for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
-
             //Solve the CC equations
             CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps);
 
@@ -101,7 +98,7 @@ namespace SCESS {
         if (ccIteration == MAX_ITERATIONS - 1) {
             if (console)
                 *console << "!!! CCSD procedure failed to converge !!!\n\n\n";
-            return {};
+            return nullptr;
         }
 
         if (console) {
@@ -109,7 +106,8 @@ namespace SCESS {
             *console << "E(Total) = E(Hartree Fock) + E(CCSD) = " << rhfResult.Energy + correlationEnergy <<
                     " hartrees\n\n\n";
         }
-        return CCSDResult{mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI};
+
+        return std::make_unique<CCSDResult>(mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI);
     }
 
 
@@ -391,8 +389,8 @@ namespace SCESS {
     }
 
     void CoupledCluster::IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
-                                 const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
-                                 const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2) {
+                                     const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
+                                     const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2) {
         using namespace Eigen;
         TauTensor
                 tildeTau = MakeTildeTau(t1, t2),
@@ -554,8 +552,8 @@ namespace SCESS {
     }
 
     double CoupledCluster::CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
-                                           const TEITensor &moTEI,
-                                           const T1Tensor &t1, const T2Tensor &t2) {
+                                               const TEITensor &moTEI,
+                                               const T1Tensor &t1, const T2Tensor &t2) {
         using namespace Eigen;
         Tensor<double, 0> correlationEnergyTensor =
                 F.slice(array<Eigen::Index, 2>{0, nOcc},

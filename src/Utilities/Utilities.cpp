@@ -1,3 +1,5 @@
+#include "pch.h"
+
 #include "Utilities.h"
 
 #include <iomanip>

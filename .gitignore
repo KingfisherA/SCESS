@@ -16,6 +16,9 @@
 *.dylib
 *.dll
 
+# Program Debug Databases
+*.pdb
+
 # Fortran module files
 *.mod
 *.smod
@@ -42,7 +45,7 @@ Python/
 libs/
 .vs/
 bin-obj/
-bin/
+Debug-x64/
 Fonts/
 Icon/
 Screenshots/
@@ -53,3 +56,4 @@ cmake-build-release/
 CMakeFiles/
 .idea/
 .kdev4/
+.cache/

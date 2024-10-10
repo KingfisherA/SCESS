@@ -1,4 +1,7 @@
 //Class for performing integral calculations
+//Code modified from https://github.com/ifilot/pyqint?tab=readme-ov-file
+
+
 #include<pch.h>
 #include"Integrals.h"
 

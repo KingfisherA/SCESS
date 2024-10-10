@@ -1,3 +1,5 @@
+#include "pch.h"
+
 #include <imgui.h>
 #include<optional>
 #include <Eigen/Core>
@@ -6,17 +8,17 @@
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 
 namespace SCESS {
-    std::optional<CCSDResult> CoupledCluster::CCSD_T(const RHFResult &rhfResult, std::stringstream *console) {
+    uRef<CCSD_TResult> CoupledCluster::CCSD_T(const RHFResult &rhfResult, std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
-        std::optional<CCSDResult> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
+        uRef<CCSDResult> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
 
-        if (!ccsd.has_value()) {
+        if (ccsd == nullptr) {
             if (console)
                 *console << "Cannot calculate triples correction as the CCSD did not converge.\n";
 
-            return {};
+            return nullptr;
         }
 
         if (console)
@@ -32,7 +34,7 @@ namespace SCESS {
 
         FockTensor F = TransformFockToMO(rhfResult);
 
-        double triplesCorrection = CoupledCluster::CalculateTriplesCorrection(ccsd.value(), F, nOcc, nVirt);
+        double triplesCorrection = CoupledCluster::CalculateTriplesCorrection(*ccsd, F, nOcc, nVirt);
 
         if (console) {
             *console << "E(T) = " << triplesCorrection << "\n";
@@ -40,7 +42,7 @@ namespace SCESS {
                     ccsdCorrelationEnergy + triplesCorrection << '\n';
         }
 
-        return ccsd;
+        return std::make_unique<CCSD_TResult>(*ccsd, triplesCorrection);
     }
 
     //Computes the triple correction energy with the spin integrated out
@@ -90,10 +92,10 @@ namespace SCESS {
                     + Wijkabc.shuffle(array<int, 6>{1, 0, 2, 5, 4, 3})
                     //- kjiabc
                     - Wijkabc.shuffle(array<int, 6>{2, 1, 0, 3, 4, 5})
-                    //- kjibac
-                    - Wijkabc.shuffle(array<int, 6>{2, 1, 0, 4, 3, 5})
-                    //- kjicba
-                    - Wijkabc.shuffle(array<int, 6>{2, 1, 0, 5, 4, 3});
+                    //+ kjibac
+                    + Wijkabc.shuffle(array<int, 6>{2, 1, 0, 4, 3, 5})
+                    //+ kjicba
+                    + Wijkabc.shuffle(array<int, 6>{2, 1, 0, 5, 4, 3});
 
             return Wijkabc;
         };
@@ -127,9 +129,9 @@ namespace SCESS {
                     //- kjiabc
                     - Vijkabc.shuffle(array<int, 6>{2, 1, 0, 3, 4, 5})
                     //- kjibac
-                    - Vijkabc.shuffle(array<int, 6>{2, 1, 0, 4, 3, 5})
+                    + Vijkabc.shuffle(array<int, 6>{2, 1, 0, 4, 3, 5})
                     //- kjicba
-                    - Vijkabc.shuffle(array<int, 6>{2, 1, 0, 5, 4, 3});
+                    + Vijkabc.shuffle(array<int, 6>{2, 1, 0, 5, 4, 3});
 
             return Vijkabc;
         };
@@ -152,12 +154,12 @@ namespace SCESS {
                             for (Eigen::Index b = 0; b < nVirt; b++)
                                 for (Eigen::Index c = 0; c < nVirt; c++) {
                                     Dijkabc(i, j, k, a, b, c) =
-                                            Fvirt(a, a) +
-                                            Fvirt(b, b) +
-                                            Fvirt(c, c)
-                                            - Focc(i, i)
-                                            - Focc(j, j)
-                                            - Focc(k, k);
+                                            Focc(i, i)
+                                            + Focc(j, j)
+                                            + Focc(k, k)
+                                            - Fvirt(a, a)
+                                            - Fvirt(b, b)
+                                            - Fvirt(c, c);
                                 }
 
             return Dijkabc;
@@ -166,19 +168,15 @@ namespace SCESS {
         //Evaluate the perturbed energy
         double tCorrectionEnergy = 0.0; {
             Tensor<double, 6> Wijkabc = MakeWijkabc();
-            Tensor<double, 6> Vijkabc = MakeVijkabc();
-            Tensor<double, 6> Dijkabc = MakeDijkabc();
-
-            Tensor<double, 6> sumTensor = (Wijkabc + Vijkabc) / Dijkabc;
-
-            Tensor<double, 0> correctionETensor = sumTensor.contract(Wijkabc, array<IdxP, 6>{
-                                                                         IdxP{0, 0},
-                                                                         IdxP{1, 1},
-                                                                         IdxP{2, 2},
-                                                                         IdxP{3, 3},
-                                                                         IdxP{4, 4},
-                                                                         IdxP{5, 5}
-                                                                     });
+            Tensor<double, 6> sumTensor = (Wijkabc + MakeVijkabc()) / MakeDijkabc();
+            Tensor<double, 0> correctionETensor = Wijkabc.contract(sumTensor, array<IdxP, 6>{
+                                                                       IdxP{0, 0},
+                                                                       IdxP{1, 1},
+                                                                       IdxP{2, 2},
+                                                                       IdxP{3, 3},
+                                                                       IdxP{4, 4},
+                                                                       IdxP{5, 5}
+                                                                   });
             tCorrectionEnergy = correctionETensor(0);
         }
 

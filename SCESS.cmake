@@ -10,7 +10,9 @@
           "src/Chemistry/Quantum/Basis/BasisUtils.h"
           "src/Chemistry/Quantum/Basis/Gaussian.cpp"
           "src/Chemistry/Quantum/Basis/Gaussian.h"
+          "src/Chemistry/Quantum/CC/CCSD-DIIS.cpp"
           "src/Chemistry/Quantum/CC/CCSD.cpp"
+          "src/Chemistry/Quantum/CC/CCSD_T.cpp"
           "src/Chemistry/Quantum/CC/CoupledCluster.h"
           "src/Chemistry/Quantum/DFT/DFT.cpp"
           "src/Chemistry/Quantum/DFT/DFT.h"
@@ -39,8 +41,8 @@
       "src/Utilities/Utilities.h"
     "src/pch.cpp"
     "src/pch.h"
-        src/Chemistry/Quantum/CC/CCSD-DIIS.cpp
-        src/Chemistry/Quantum/CC/CCSD_T.cpp
+        src/GUI/ShaderSources.cpp
+        src/GUI/ShaderSources.h
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("SCESS" PROPERTIES
@@ -78,7 +80,7 @@ target_link_libraries("SCESS"
   $<$<CONFIG:Debug>:GraphicsEngine>
   $<$<CONFIG:Debug>:glfw3>
   $<$<CONFIG:Debug>:ImGui>
-  $<$<CONFIG:Debug>:boost_filesystem>
+  $<$<CONFIG:Debug>:libboost_filesystem.a>
   $<$<CONFIG:Debug>:GLEW.a>
   $<$<CONFIG:Debug>:GL>
   $<$<CONFIG:Debug>:m>
@@ -145,7 +147,7 @@ target_link_libraries("SCESS"
   $<$<CONFIG:Release>:GraphicsEngine>
   $<$<CONFIG:Release>:glfw3>
   $<$<CONFIG:Release>:ImGui>
-  $<$<CONFIG:Release>:boost_filesystem>
+  $<$<CONFIG:Release>:libboost_filesystem.a>
   $<$<CONFIG:Release>:GLEW.a>
   $<$<CONFIG:Release>:GL>
   $<$<CONFIG:Release>:m>

@@ -4,6 +4,7 @@
 
 #include "Chemistry/Quantum/Integrals/Integrals.h"
 #include<optional>
+#include <GraphicsEngine/Utilities/Memory.h>
 
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 
@@ -14,11 +15,29 @@ namespace SCESS {
 namespace SCESS {
     struct CCSDResult {
     public:
+        CCSDResult(double mp2, double ccsdCorr, const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2,
+                   const TEITensor &tei)
+            : mp2CorrelationEnergy(mp2), ccsdCorrelationEnergy(ccsdCorr), t1Amps(t1), t2Amps(t2), moTEI(tei) {
+        }
+
+        CCSDResult(const CCSDResult &other) = default;
+
+        virtual ~CCSDResult() = default;
+
         double mp2CorrelationEnergy = 0.0;
         double ccsdCorrelationEnergy = 0.0;
         Eigen::Tensor<double, 2> t1Amps;
         Eigen::Tensor<double, 4> t2Amps;
         TEITensor moTEI;
+    };
+
+    struct CCSD_TResult : public CCSDResult {
+    public:
+        CCSD_TResult(const CCSDResult &result, double tripE)
+            : CCSDResult(result), triplesCorrectionE(tripE) {
+        }
+
+        double triplesCorrectionE = 0.0;
     };
 
     class CoupledCluster {
@@ -35,18 +54,19 @@ namespace SCESS {
         * to single and double excitations for a closed shell molecule starting from a RHF determinant
          * @param rhfResult The RHF determinant
          */
-        static std::optional<CCSDResult> CCSD(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDResult> CCSD(const RHFResult &rhfResult, std::stringstream *console = nullptr);
 
         /**
         * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant with DIIS acceleration.
          * @param rhfResult The RHF determinant
          */
-        static std::optional<CCSDResult> CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDResult> CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console = nullptr);
 
-        static std::optional<CCSDResult> CCSD_T(const RHFResult& rhfResult, std::stringstream* console = nullptr);
+        static uRef<CCSD_TResult> CCSD_T(const RHFResult &rhfResult, std::stringstream *console = nullptr);
 
-        static double CalculateTriplesCorrection(const CCSDResult& ccsd, const FockTensor& F, const Eigen::Index nOcc, const Eigen::Index nVirt);
+        static double CalculateTriplesCorrection(const CCSDResult &ccsd, const FockTensor &F, const Eigen::Index nOcc,
+                                                 const Eigen::Index nVirt);
 
         static FockTensor TransformFockToMO(const RHFResult &rhfResult);
         static void CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
@@ -76,7 +96,7 @@ namespace SCESS {
                                 const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2);
 
         static double CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
-                                      const TEITensor &moTEI,
-                                      const T1Tensor &t1, const T2Tensor &t2);
+                                          const TEITensor &moTEI,
+                                          const T1Tensor &t1, const T2Tensor &t2);
     };
 } // SCESS

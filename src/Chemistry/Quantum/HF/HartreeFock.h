@@ -1,5 +1,7 @@
 #pragma once
 
+#include <GraphicsEngine/Utilities/Memory.h>
+
 #include "Eigen/Dense"
 #include "Chemistry/Quantum/Integrals/Integrals.h"
 
@@ -20,10 +22,10 @@ namespace SCESS {
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
         /// <param name="basisSet"></param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static RHFResult Restricted(const Molecule &molecule, const Molecule *lastMolecule = nullptr,
-                                    const RHFResult *lastResult = nullptr, const double convergeLimit = 1E-5,
-                                    const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
-                                    const std::string_view basisSet = "");
+        static uRef<RHFResult> Restricted(const Molecule &molecule, const Molecule *lastMolecule = nullptr,
+                                          const RHFResult *lastResult = nullptr, const double convergeLimit = 1E-5,
+                                          const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
+                                          const std::string_view basisSet = "");
 
         /// <summary>
         /// Computes the unrestricted open-shell hartree fock energy and orbitals in the given basis set defined by the molecule.
@@ -33,9 +35,9 @@ namespace SCESS {
         /// <param name="scfMaxIterations">Maximum amount of scf iterations to perform. The iterations are automatically terminated when the convergence limit has been achieved.</param>
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static UHFResult Unrestricted(const Molecule &molecule, const double convergeLimit = 1E-5,
-                                      const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
-                                      const std::string_view basisSet = "");
+        static uRef<UHFResult> Unrestricted(const Molecule &molecule, const double convergeLimit = 1E-5,
+                                            const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
+                                            const std::string_view basisSet = "");
 
         /// <summary>
         /// Evaluate the energy for a given density, hamiltonian and fock matrix for a closed-shell RHF procedure.
@@ -96,8 +98,10 @@ namespace SCESS {
     struct HFResult {
         HFResult() : Energy(0), Integrals() {
         }
+
         HFResult(const double energyIn, const ConfigIntegrals &integrals) : Energy(energyIn), Integrals(integrals) {
         }
+
         HFResult(const HFResult &res) = default;
 
         virtual ~HFResult() = default;
@@ -110,6 +114,7 @@ namespace SCESS {
     struct RHFResult : public HFResult {
         RHFResult() : HFResult() {
         }
+
         RHFResult(
             const Eigen::MatrixXd &Fock,
             const Eigen::MatrixXd &Hcore,
@@ -122,6 +127,7 @@ namespace SCESS {
                                    Density(Density), Coeffs(Coeffs), Energies(Energies), Occupation(Occupation),
                                    HFResult(Energy, integrals) {
         }
+
         RHFResult(const RHFResult &) = default;
         Eigen::MatrixXd Fock;
         Eigen::MatrixXd Hcore;
@@ -134,6 +140,7 @@ namespace SCESS {
     struct UHFResult : public HFResult {
         UHFResult() : HFResult() {
         }
+
         UHFResult(
             const Eigen::MatrixXd &FockAlpha,
             const Eigen::MatrixXd &FockBeta,
@@ -153,6 +160,7 @@ namespace SCESS {
                                    OccupationAlpha(OccupationAlpha), OccupationBeta(OccupationBeta),
                                    HFResult(Energy, integrals) {
         }
+
         UHFResult(const UHFResult &res) = default;
         Eigen::MatrixXd FockAlpha, FockBeta;
         Eigen::MatrixXd Hcore;

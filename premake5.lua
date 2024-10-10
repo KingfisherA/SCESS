@@ -46,21 +46,21 @@ project "SCESS"
 		  "/usr/include",
 		  "/usr/local/include",
 		  "/opt/etsf/include",
-          "/usr/local/include/eigen3",
-          "../../C++/GraphicsEngine/src",
+                  "/usr/local/include/eigen3",
+                  "../../C++/GraphicsEngine/src",
 		  "../../Libraries/json-develop/include",
 		  "../../Libraries/eigen-3.4.90",
 		  "../../Libraries/glm",
-          "../../Libraries/",
+                  "../../Libraries/",
 		  "../../Libraries/ImGui",
-          "../../Libraries/nativefiledialog/src/include"
+                  "../../Libraries/nativefiledialog/src/include"
 		}
-        libdirs
-        {
-            "../../Libraries/ImGui/bin/linux/Release-x64",
-            "../../Libraries/nativefiledialog/build/lib/Release/x64"
-        }
-		links { "GraphicsEngine", "glfw3","ImGui", "boost_filesystem", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
+		libdirs
+		{
+		    "../../Libraries/ImGui/bin/linux/Release-x64",
+		    "../../Libraries/nativefiledialog/build/lib/Release/x64"
+		}
+			links { "GraphicsEngine", "glfw3", "ImGui", "libboost_filesystem.a", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
 
 
 	filter { "system:linux", "configurations:Debug" }
@@ -97,8 +97,7 @@ project "SCESS"
           "GraphicsEngine",
 		  "opengl32",
 		  "ImGui",
-		  "xc.lib",
-		  "nativefiledialog/build/lib/Release/x64/nfd.lib"
+		  "xc.lib"
 		}
 		linkoptions { '/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT"' }
 
@@ -111,9 +110,10 @@ project "SCESS"
 		    "../../Libraries/boost_1_83_0/stage/lib/",
 		    "../../Libraries/ImGui/bin/windows/Debug-x64",
 		    "../../Libraries/libxc-6.2.2/VS/Release",
-		    "../../C++/GraphicsEngine/bin/windows/Debug-x64/GraphicsEngine"
+		    "../../C++/GraphicsEngine/bin/windows/Debug-x64/GraphicsEngine",
+			"../../Libraries/nativefiledialog/build/lib/Release/x64"
 		     }
-		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib" }
+		links { "glew32sd", "glfw3_debug", "libboost_filesystem-vc143-mt-gd-x64-1_83.lib", "nfd.lib"}
 		staticruntime "off"
 		buildoptions "/MDd"
 
@@ -125,9 +125,10 @@ project "SCESS"
 		    "../../Libraries/boost_1_83_0/stage/lib/",
 		    "../../Libraries/ImGui/bin/windows/Release-x64",
 		    "../../Libraries/libxc-6.2.2/VS/Release",
-		     "../../C++/GraphicsEngine/bin/windows/Release-x64/GraphicsEngine"
+		     "../../C++/GraphicsEngine/bin/windows/Release-x64/GraphicsEngine",
+			 "../../Libraries/nativefiledialog/build/lib/Release/x64"
 		     }
-		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib"}
+		links { "glew32s", "glfw3", "libboost_filesystem-vc143-mt-x64-1_83.lib", "nfd.lib"}
 		staticruntime "off"
 		buildoptions "/MD"
 

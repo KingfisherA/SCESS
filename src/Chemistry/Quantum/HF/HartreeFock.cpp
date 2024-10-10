@@ -15,13 +15,13 @@
 //
 //
 namespace SCESS {
-    RHFResult HartreeFock::Restricted(const Molecule &molecule,
-                                      const Molecule *lastMolecule,
-                                      const RHFResult *lastResult,
-                                      const double convergeLimit,
-                                      const size_t scfMaxIterations,
-                                      std::stringstream *console,
-                                      const std::string_view basisSet) {
+    uRef<RHFResult> HartreeFock::Restricted(const Molecule &molecule,
+                                            const Molecule *lastMolecule,
+                                            const RHFResult *lastResult,
+                                            const double convergeLimit,
+                                            const size_t scfMaxIterations,
+                                            std::stringstream *console,
+                                            const std::string_view basisSet) {
         using namespace std::chrono;
 
         if (console)
@@ -78,12 +78,12 @@ namespace SCESS {
         FockMatrices.reserve(7);
 
         Eigen::Index scfIter = 1;
-        for (; scfIter < scfMaxIterations+1; scfIter++) {
+        for (; scfIter < scfMaxIterations + 1; scfIter++) {
             //Generate the Fock matrix
             Fock = Hcore + ConstructGRHF(Density, tei);
             Fock = (Fock + Fock.transpose()) * 0.5;
 
-             //Build the DIIS error vector (FDS-SDF)
+            //Build the DIIS error vector (FDS-SDF)
             Eigen::MatrixXd DIIS_Error = Fock * Density * S - S * Density * Fock;
             DIIS_Error = TransformMat.transpose() * DIIS_Error * TransformMat;
             DIIS_Errors.push_back(DIIS_Error);
@@ -93,9 +93,9 @@ namespace SCESS {
             if (scfIter >= 4) {
                 //Turn on DIIS
 
-                if(scfIter == 4) {
-                    FockMatrices.erase(FockMatrices.begin(), FockMatrices.begin()+2);
-                    DIIS_Errors.erase(DIIS_Errors.begin(),DIIS_Errors.begin()+2);
+                if (scfIter == 4) {
+                    FockMatrices.erase(FockMatrices.begin(), FockMatrices.begin() + 2);
+                    DIIS_Errors.erase(DIIS_Errors.begin(), DIIS_Errors.begin() + 2);
                     if (console)
                         *console << "Turning on DIIS \n";
                 }
@@ -108,7 +108,7 @@ namespace SCESS {
                     DIIS_Size -= 1;
                 }
 
-                Eigen::MatrixXd ErrorMat = Eigen::MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1,-1.0);
+                Eigen::MatrixXd ErrorMat = Eigen::MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1, -1.0);
                 ErrorMat(ErrorMat.rows() - 1, ErrorMat.cols() - 1) = 0.0;
 
                 double maxVal = 0.0;
@@ -118,7 +118,7 @@ namespace SCESS {
                         maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
                     }
 
-                ErrorMat.block(0,0, ErrorMat.rows()-1, ErrorMat.cols()-1) /= maxVal;
+                ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
 
                 Eigen::VectorXd Residual = Eigen::VectorXd::Zero(DIIS_Size + 1);
                 Residual(Residual.rows() - 1) = -1.0;
@@ -177,12 +177,12 @@ namespace SCESS {
         }
 
 
-        return {Fock, Hcore, Density, Coeffs, Energies, Occupation, integrals, energy};
+        return std::make_unique<RHFResult>(Fock, Hcore, Density, Coeffs, Energies, Occupation, integrals, energy);
     }
 
-    UHFResult HartreeFock::Unrestricted(const Molecule &molecule, const double convergeLimit,
-                                        const size_t scfMaxIterations,
-                                        std::stringstream *console, const std::string_view basisSet) {
+    uRef<UHFResult> HartreeFock::Unrestricted(const Molecule &molecule, const double convergeLimit,
+                                              const size_t scfMaxIterations,
+                                              std::stringstream *console, const std::string_view basisSet) {
         using namespace std::chrono;
 
         if (console != nullptr)
@@ -310,11 +310,12 @@ namespace SCESS {
             OccupationBeta(i) = 1;
         }
 
-        return {
+
+        return std::make_unique<UHFResult>(
             FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta,
             CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta,
             integrals, currentE
-        };
+        );
     }
 
     Eigen::MatrixXd HartreeFock::ConstructGRHF(const Eigen::MatrixXd &Density,

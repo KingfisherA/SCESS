@@ -75,8 +75,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;nativefiledialog\build\lib\Release\x64\nfd.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Debug\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Debug-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Debug-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;glew32sd.lib;glfw3_debug.lib;libboost_filesystem-vc143-mt-gd-x64-1_83.lib;nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Debug\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Debug-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Debug-x64\GraphicsEngine;..\..\Libraries\nativefiledialog\build\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -87,7 +87,7 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;..\..\Libraries\glm;..\..\Libraries\ImGui;..\..\Libraries\glew-2.1.0\include;..\..\Libraries\glfw-3.3.2\include;..\..\Libraries;..\..\Libraries\nativefiledialog\src\include;..\..\Libraries\boost_1_83_0;..\..\Libraries\libxc-6.2.2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <Optimization>Full</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MinimalRebuild>false</MinimalRebuild>
@@ -96,6 +96,8 @@
       <AdditionalOptions>/MD %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>OS_WIN;GLEW_STATIC;GENG_STATIC;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -105,9 +107,10 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;nativefiledialog\build\lib\Release\x64\nfd.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Release\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Release-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Release-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;opengl32.lib;ImGui.lib;xc.lib;glew32s.lib;glfw3.lib;libboost_filesystem-vc143-mt-x64-1_83.lib;nfd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\glew-2.1.0\lib\Release\x64;..\..\Libraries\glfw-3.3.2\lib\x64;..\..\Libraries\boost_1_83_0\stage\lib;..\..\Libraries\ImGui\bin\windows\Release-x64;..\..\Libraries\libxc-6.2.2\VS\Release;..\GraphicsEngine\bin\windows\Release-x64\GraphicsEngine;..\..\Libraries\nativefiledialog\build\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"LIBCMTD" /NODEFAULTLIB:"LIBCMT" %(AdditionalOptions)</AdditionalOptions>
+      <LinkTimeCodeGeneration>UseFastLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -127,6 +130,7 @@
     <ClInclude Include="src\Chemistry\Quantum\Tests\Tests.h" />
     <ClInclude Include="src\GUI\CalculationLayer.h" />
     <ClInclude Include="src\GUI\ImSpinner.h" />
+    <ClInclude Include="src\GUI\ShaderSources.h" />
     <ClInclude Include="src\Maths\Isosurfaces.h" />
     <ClInclude Include="src\Maths\Quadrature.h" />
     <ClInclude Include="src\Platform\Intrinsics.h" />
@@ -138,7 +142,9 @@
     <ClCompile Include="src\Chemistry\PeriodicTable.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Basis\BasisUtils.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp" />
-    <ClCompile Include="src\Chemistry\Quantum\CC\CoupledCluster.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD-DIIS.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD.cpp" />
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD_T.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFTGrid.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\DFT\XCFunctional.cpp" />
@@ -147,6 +153,7 @@
     <ClCompile Include="src\Chemistry\Quantum\Integrals\Integrals.cpp" />
     <ClCompile Include="src\Chemistry\Quantum\Molecule.cpp" />
     <ClCompile Include="src\GUI\CalculationLayer.cpp" />
+    <ClCompile Include="src\GUI\ShaderSources.cpp" />
     <ClCompile Include="src\Maths\Isosurfaces.cpp" />
     <ClCompile Include="src\Maths\Quadrature.cpp" />
     <ClCompile Include="src\Utilities\Utilities.cpp" />

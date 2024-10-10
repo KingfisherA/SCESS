@@ -1,3 +1,5 @@
+#include "pch.h"
+
 #include<optional>
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
@@ -5,7 +7,7 @@
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 
 namespace SCESS {
-    std::optional<CCSDResult> CoupledCluster::CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console) {
+    uRef<CCSDResult> CoupledCluster::CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console) {
         using namespace Eigen;
 
         constexpr double CC_CONVERGENCE = 1.0E-6;
@@ -145,7 +147,7 @@ namespace SCESS {
         if (ccIteration == MAX_ITERATIONS - 1) {
             if (console)
                 *console << "!!! CCSD procedure failed to converge !!!\n\n\n";
-            return {};
+            return nullptr;
         }
 
         if (console) {
@@ -153,6 +155,6 @@ namespace SCESS {
             *console << "E(Total) = E(Hartree Fock) + E(CCSD) = " << rhfResult.Energy + correlationEnergy <<
                     " hartrees\n\n\n";
         }
-        return CCSDResult{mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI};
+        return std::make_unique<CCSDResult>(mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI);
     }
 }

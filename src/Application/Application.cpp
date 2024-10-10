@@ -40,13 +40,12 @@ static void TestCoupledCluster() {
     waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
     std::stringstream ss;
-    RHFResult rhfResult = HartreeFock::Restricted(waterMolecule, nullptr, nullptr, 1e-05, 100, &ss, BASIS_SET_NAME);
+    uRef<RHFResult> rhfResult = HartreeFock::Restricted(waterMolecule, nullptr, nullptr, 1e-05, 100, &ss, BASIS_SET_NAME);
     std::cout << ss.str();
     ss.clear();
     ss.str("");
 
-    std::optional<CCSDResult> result = CoupledCluster::CCSD(rhfResult);
-    CCSDResult &res = result.value();
+    uRef<CCSDResult> result = CoupledCluster::CCSD(*rhfResult);
 
     std::cout << "Press any key to continue..\n";
     std::cin.get();
@@ -100,9 +99,11 @@ namespace SCESS {
     // Static Variable Initilisation
     Application *Application::sInstance = nullptr;
 
+    static const char* FONT_PATH = "../../../Assets/Fonts/Ubuntu-Light.ttf";
+
 #define BIND_EVENT_FNC(x) std::bind(&Application::x, this, std::placeholders::_1)
 
-    Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver", 800, 600,
+    Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver", FONT_PATH, 800, 600,
                                              FramebufferSpecification{
                                                  800, 600, 1,
                                                  {

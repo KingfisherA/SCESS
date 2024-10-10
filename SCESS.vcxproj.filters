@@ -91,6 +91,9 @@
     <ClInclude Include="src\GUI\ImSpinner.h">
       <Filter>src\GUI</Filter>
     </ClInclude>
+    <ClInclude Include="src\GUI\ShaderSources.h">
+      <Filter>src\GUI</Filter>
+    </ClInclude>
     <ClInclude Include="src\Maths\Isosurfaces.h">
       <Filter>src\Maths</Filter>
     </ClInclude>
@@ -120,7 +123,13 @@
     <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp">
       <Filter>src\Chemistry\Quantum\Basis</Filter>
     </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\CC\CoupledCluster.cpp">
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD-DIIS.cpp">
+      <Filter>src\Chemistry\Quantum\CC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD.cpp">
+      <Filter>src\Chemistry\Quantum\CC</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD_T.cpp">
       <Filter>src\Chemistry\Quantum\CC</Filter>
     </ClCompile>
     <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp">
@@ -145,6 +154,9 @@
       <Filter>src\Chemistry\Quantum</Filter>
     </ClCompile>
     <ClCompile Include="src\GUI\CalculationLayer.cpp">
+      <Filter>src\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GUI\ShaderSources.cpp">
       <Filter>src\GUI</Filter>
     </ClCompile>
     <ClCompile Include="src\Maths\Isosurfaces.cpp">

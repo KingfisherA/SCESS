@@ -17,6 +17,7 @@ namespace GEng {
 }
 
 namespace SCESS {
+    struct CCSD_TResult;
     class GaussianCollection;
     struct RHFResult;
     struct UHFResult;
@@ -110,11 +111,12 @@ namespace SCESS {
 
         SCFMethod mSCFMethod = SCFMethod::RHF;
         CorrelationMethod mCorrelationMethod = CorrelationMethod::None;
-        sRef<RHFResult> mRHFResult;
-        sRef<UHFResult> mUHFResult;
-        bool mUseLastSCF = false;
+        uRef<RHFResult> mRHFResult;
+        uRef<UHFResult> mUHFResult;
+        bool mUseLastSCF = true, mInvalidateLastSCF = false;
 
-        sRef<CCSDResult> mCCSDResult;
+        uRef<CCSDResult> mCCSDResult;
+        uRef<CCSD_TResult> mCCSD_TResult;
         std::optional<double> mMP2Energy;
 
         double mDFTEnergy = 0.0;

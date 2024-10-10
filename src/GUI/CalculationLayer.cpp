@@ -295,30 +295,30 @@ namespace SCESS {
                 mSCFMethod = SCFMethod::RHF;
 
                 //Run SCF as RHF if a SCF determinant is not available
-                if (mRHFResult == nullptr)
-                    mRHFResult = std::make_shared<RHFResult>(
-                        std::move(SCESS::HartreeFock::Restricted(
-                            *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
-                            mCalcBasiSet)));
+                if (!mUseLastSCF || mInvalidateLastSCF)
+                    mRHFResult =
+                            std::move(SCESS::HartreeFock::Restricted(
+                                *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
+                                mCalcBasiSet));
 
                 switch (mCorrelationMethod) {
                     case CorrelationMethod::MP2:
                         mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFResult, &mConsoleOutput);
                         break;
                     case CorrelationMethod::CCSD: {
-                        auto ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFResult, &mConsoleOutput);
-                        if (ccResult.has_value()) {
-                            mCCSDResult = std::make_shared<CCSDResult>(ccResult.value());
-                            mMP2Energy = ccResult->mp2CorrelationEnergy;
+                        uRef<CCSDResult> ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFResult, &mConsoleOutput);
+                        if (ccResult != nullptr) {
+                            mCCSDResult = std::move(ccResult);
+                            mMP2Energy = mCCSDResult->mp2CorrelationEnergy;
                         }
                         break;
                     }
 
                     case CorrelationMethod::CCSD_T: {
-                        auto ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFResult, &mConsoleOutput);
-                        if (ccResult.has_value()) {
-                            mCCSDResult = std::make_shared<CCSDResult>(ccResult.value());
-                            mMP2Energy = ccResult->mp2CorrelationEnergy;
+                        uRef<CCSD_TResult> ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFResult, &mConsoleOutput);
+                        if (ccResult != nullptr) {
+                            mCCSD_TResult = std::move(ccResult);
+                            mMP2Energy = mCCSD_TResult->mp2CorrelationEnergy;
                         }
                         break;
                     }
@@ -330,20 +330,20 @@ namespace SCESS {
                 switch (mSCFMethod) {
                     case SCFMethod::RHF:
                         if (mUseLastSCF)
-                            mRHFResult = std::make_shared<RHFResult>(
-                                std::move(SCESS::HartreeFock::Restricted(
-                                    *mMolecule, mLastMolecule.get(), mRHFResult.get(), 1E-5, 100, &mConsoleOutput,
-                                    mCalcBasiSet)));
+                            mRHFResult =
+                                    std::move(SCESS::HartreeFock::Restricted(
+                                        *mMolecule, mLastMolecule.get(), mRHFResult.get(), 1E-5, 100, &mConsoleOutput,
+                                        mCalcBasiSet));
                         else
-                            mRHFResult = std::make_shared<RHFResult>(
-                                std::move(SCESS::HartreeFock::Restricted(
-                                    *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
-                                    mCalcBasiSet)));
+                            mRHFResult =
+                                    std::move(SCESS::HartreeFock::Restricted(
+                                        *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
+                                        mCalcBasiSet));
                         break;
                     case SCFMethod::UHF:
-                        mUHFResult = std::make_shared<UHFResult>(
-                            std::move(SCESS::HartreeFock::Unrestricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
-                                                                       mCalcBasiSet)));
+                        mUHFResult =
+                                std::move(SCESS::HartreeFock::Unrestricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                                                                           mCalcBasiSet));
                         break;
                     case SCFMethod::DFT:
                         mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
@@ -353,6 +353,7 @@ namespace SCESS {
 
             std::cout << mConsoleOutput.str();
             mLastMolecule = std::make_unique<Molecule>(*mMolecule);
+            mInvalidateLastSCF = false;
             mCalculationThread.MarkAsFinished();
         });
     }
@@ -451,11 +452,13 @@ namespace SCESS {
                 ImGui::Indent(100.0);
                 if (ImGui::RadioButton("Restricted Hartree Fock", reinterpret_cast<int *>(&mSCFMethod), 0)) {
                     mSCFMethod = SCFMethod::RHF;
+                    mInvalidateLastSCF = true;
                 }
 
                 if (ImGui::RadioButton("Unrestricted Hartree Fock", reinterpret_cast<int *>(&mSCFMethod), 1)) {
                     mCorrelationMethod = CorrelationMethod::None;
                     mSCFMethod = SCFMethod::UHF;
+                    mInvalidateLastSCF = true;
                 }
                 ImGui::Unindent(100.0);
 
@@ -464,9 +467,9 @@ namespace SCESS {
                 if (ImGui::RadioButton("LYP", reinterpret_cast<int *>(&mSCFMethod), 2)) {
                     mCorrelationMethod = CorrelationMethod::None;
                     mSCFMethod = SCFMethod::DFT;
+                    mInvalidateLastSCF = true;
                 }
                 ImGui::Unindent(200.0);
-
 
                 ImGui::SeparatorText("Electron Correlation Methods");
                 ImGui::Indent(200.0);
@@ -497,14 +500,18 @@ namespace SCESS {
 
                 ImGui::SeparatorText("Basis Sets");
                 ImGui::Indent(100.0);
-                int lastSelectedBasisSet = mSelectedBasisSet;
                 for (int i = 0; i < mBasisSets.size(); i++)
-                    ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i);
+                    if (ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i))
+                        mInvalidateLastSCF = true;
 
                 ImGui::Unindent(100.0);
 
                 if (mRHFResult != nullptr)
-                    ImGui::Checkbox("Use Last Result", &mUseLastSCF);
+                    ImGui::Checkbox("Use Last SCF Result", &mUseLastSCF);
+                if (mInvalidateLastSCF) {
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("SCF will be re-run");
+                }
 
                 ImGui::NewLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.4f, 0.0f, 1.0f});
@@ -522,30 +529,58 @@ namespace SCESS {
             if (mCalculationThread.HasFinished()) {
                 if (mCorrelationMethod != CorrelationMethod::None && ImGui::CollapsingHeader(
                         "Electron Correlation Result", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    switch (mCorrelationMethod) {
-                        case CorrelationMethod::CCSD: {
-                            if (!mCCSDResult)break;
-                            ImGui::SeparatorText("Coupled Cluster Singles & Doubles");
-                            ImGui::Indent();
-                            ImGui::Text("E(CCSD) = %.8f hartrees", mCCSDResult->ccsdCorrelationEnergy);
-                            ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
-                                               "E(Total) = E(Hartree-Fock) + E(CCSD) = %.8f hartrees",
-                                               mCCSDResult->ccsdCorrelationEnergy + mRHFResult->Energy);
-                            ImGui::Unindent();
-                        }
+                    auto DrawMP2 = [this]() {
+                        if (!mMP2Energy.has_value())return;
+                        ImGui::SeparatorText("Moller-Plesset Order 2");
+                        ImGui::Indent();
+                        ImGui::Text("E(MP2) = %.8f hartrees", mMP2Energy.value());
+                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                           "E(Total) = E(Hartree-Fock) + E(MP2) = %.8f hartrees",
+                                           mMP2Energy.value() + mRHFResult->Energy);
+                        ImGui::Unindent();
+                    };
 
-                        case CorrelationMethod::MP2: {
-                            if (!mMP2Energy.has_value())break;
-                            ImGui::SeparatorText("Moller-Plesset Order 2");
-                            ImGui::Indent();
-                            ImGui::Text("E(MP2) = %.8f hartrees", mMP2Energy.value());
-                            ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
-                                               "E(Total) = E(Hartree-Fock) + E(MP2) = %.8f hartrees",
-                                               mMP2Energy.value() + mRHFResult->Energy);
-                            ImGui::Unindent();
+                    auto DrawCCSD = [this]() {
+                        if (!mCCSDResult)return;
+                        ImGui::SeparatorText("Coupled Cluster Singles & Doubles");
+                        ImGui::Indent();
+                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSDResult->ccsdCorrelationEnergy);
+                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                           "E(Total) = E(Hartree-Fock) + E(CCSD) = %.8f hartrees",
+                                           mCCSDResult->ccsdCorrelationEnergy + mRHFResult->Energy);
+                        ImGui::Unindent();
+                    };
+
+                    auto DrawCCSD_T = [this]() {
+                        if (!mCCSD_TResult)return;
+                        ImGui::SeparatorText("Coupled Cluster Singles & Doubles with Pertubative Triples");
+                        ImGui::Indent();
+                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSD_TResult->ccsdCorrelationEnergy);
+                        ImGui::Text("E(T) = %.8f hartrees", mCCSD_TResult->triplesCorrectionE);
+                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                           "E(Total) = E(Hartree-Fock) + E(CCSD) + E(T) = %.8f hartrees",
+                            mCCSD_TResult->ccsdCorrelationEnergy + mRHFResult->Energy + mCCSD_TResult->
+                                           triplesCorrectionE);
+                        ImGui::Unindent();
+                    };
+
+                    switch (mCorrelationMethod) {
+                        case CorrelationMethod::CCSD_T: {
+                            DrawCCSD_T();
+                            DrawMP2();
                             break;
                         }
 
+                        case CorrelationMethod::CCSD: {
+                            DrawCCSD();
+                            DrawMP2();
+                            break;
+                        }
+
+                        case CorrelationMethod::MP2: {
+                            DrawMP2();
+                            break;
+                        }
 
                         case CorrelationMethod::None:
                         default:
@@ -734,7 +769,8 @@ namespace SCESS {
             ImGui::Indent(100.0f);
             int lastSelectedMol = mSelectedMolecule;
             for (int i = 0; i < IM_ARRAYSIZE(moleculeNames); i++)
-                ImGui::RadioButton(moleculeNames[i], &mSelectedMolecule, i);
+                if (ImGui::RadioButton(moleculeNames[i], &mSelectedMolecule, i))
+                    mInvalidateLastSCF = true;
 
             if (ImGui::RadioButton("Load from XYZ File...", &mSelectedMolecule, IM_ARRAYSIZE(moleculeNames) + 1)) {
                 if (!SelectMoleculeFromFile())
