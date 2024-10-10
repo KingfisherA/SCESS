@@ -47,7 +47,7 @@ libs/
 bin-obj/
 Debug-x64/
 Fonts/
-Icon/
+/Icon/
 Screenshots/
 /Old Source/
 /build/
