@@ -32,6 +32,7 @@
 # Executables
 *.out
 *.app
+*.exe
 
 # Fonts
 *.tff
@@ -45,7 +46,7 @@ Python/
 libs/
 .vs/
 bin-obj/
-Debug-x64/
+bin/
 Fonts/
 /Icon/
 Screenshots/

@@ -14,6 +14,8 @@
           "src/Chemistry/Quantum/CC/CCSD.cpp"
           "src/Chemistry/Quantum/CC/CCSD_T.cpp"
           "src/Chemistry/Quantum/CC/CoupledCluster.h"
+          "src/Chemistry/Quantum/CI/ConfigurationInteraction.h"
+          "src/Chemistry/Quantum/CI/FullCI.cpp"
           "src/Chemistry/Quantum/DFT/DFT.cpp"
           "src/Chemistry/Quantum/DFT/DFT.h"
           "src/Chemistry/Quantum/DFT/DFTGrid.cpp"
@@ -32,6 +34,8 @@
       "src/GUI/CalculationLayer.cpp"
       "src/GUI/CalculationLayer.h"
       "src/GUI/ImSpinner.h"
+      "src/GUI/ShaderSources.cpp"
+      "src/GUI/ShaderSources.h"
       "src/Maths/Isosurfaces.cpp"
       "src/Maths/Isosurfaces.h"
       "src/Maths/Quadrature.cpp"
@@ -41,8 +45,6 @@
       "src/Utilities/Utilities.h"
     "src/pch.cpp"
     "src/pch.h"
-        src/GUI/ShaderSources.cpp
-        src/GUI/ShaderSources.h
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("SCESS" PROPERTIES
@@ -65,9 +67,12 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries>
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/ImGui>
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/cppitertools>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:OS_LINUX>
+  $<$<CONFIG:Debug>:EIGEN_USE_BLAS>
+  $<$<CONFIG:Debug>:EIGEN_USE_LAPACKE>
   $<$<CONFIG:Debug>:CONFIG_DEBUG>
   $<$<CONFIG:Debug>:_DEBUG>
 )
@@ -77,6 +82,9 @@ target_link_directories("SCESS" PRIVATE
   $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
+  $<$<CONFIG:Debug>:lapack>
+  $<$<CONFIG:Debug>:lapacke>
+  $<$<CONFIG:Debug>:blas>
   $<$<CONFIG:Debug>:GraphicsEngine>
   $<$<CONFIG:Debug>:glfw3>
   $<$<CONFIG:Debug>:ImGui>
@@ -133,9 +141,12 @@ target_include_directories("SCESS" PRIVATE
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries>
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/ImGui>
   $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/nativefiledialog/src/include>
+  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/cppitertools>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Release>:OS_LINUX>
+  $<$<CONFIG:Release>:EIGEN_USE_BLAS>
+  $<$<CONFIG:Release>:EIGEN_USE_LAPACKE>
   $<$<CONFIG:Release>:CONFIG_RELEASE>
 )
 target_link_directories("SCESS" PRIVATE
@@ -144,6 +155,9 @@ target_link_directories("SCESS" PRIVATE
   $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
 )
 target_link_libraries("SCESS"
+  $<$<CONFIG:Release>:lapack>
+  $<$<CONFIG:Release>:lapacke>
+  $<$<CONFIG:Release>:blas>
   $<$<CONFIG:Release>:GraphicsEngine>
   $<$<CONFIG:Release>:glfw3>
   $<$<CONFIG:Release>:ImGui>

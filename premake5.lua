@@ -40,6 +40,7 @@ project "SCESS"
 
 		
 	filter {"system:linux"}
+		defines{ "EIGEN_USE_BLAS", "EIGEN_USE_LAPACKE" }
 		includedirs
 		{
 		  "%{wks.location}/src/",
@@ -53,14 +54,15 @@ project "SCESS"
 		  "../../Libraries/glm",
                   "../../Libraries/",
 		  "../../Libraries/ImGui",
-                  "../../Libraries/nativefiledialog/src/include"
+                  "../../Libraries/nativefiledialog/src/include",
+                  "../../Libraries/cppitertools"
 		}
 		libdirs
 		{
 		    "../../Libraries/ImGui/bin/linux/Release-x64",
 		    "../../Libraries/nativefiledialog/build/lib/Release/x64"
 		}
-			links { "GraphicsEngine", "glfw3", "ImGui", "libboost_filesystem.a", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
+		links {"lapack", "lapacke", "blas", "GraphicsEngine", "glfw3", "ImGui", "libboost_filesystem.a", "GLEW.a", "GL", "m", "Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "/opt/etsf/lib/libxc.a", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
 
 
 	filter { "system:linux", "configurations:Debug" }
@@ -90,7 +92,8 @@ project "SCESS"
 		  "../../Libraries/",
 		  "../../Libraries/nativefiledialog/src/include",
 		  "../../Libraries/boost_1_83_0",
-		  "../../Libraries/libxc-6.2.2/src"
+		  "../../Libraries/libxc-6.2.2/src",
+		  "../../Libraries/cppitertools"
 		}
 		links
 		{
