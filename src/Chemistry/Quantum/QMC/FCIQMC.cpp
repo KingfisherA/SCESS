@@ -46,26 +46,38 @@ namespace SCESS {
 
         //Implementation of the QMC algorithm
 
-        //The key is the determinant the given particle is on
-        std::unordered_map<uint32_t, Particle> particles;
-        std::vector<int> spawn;
-
-        constexpr size_t NUM_CYCLES = 20;
+        constexpr size_t NUM_CYCLES = 200,
+                NUM_REPORT_CYCLES = 10;
         constexpr double EPSILON = 0.001;
 
         using namespace boost::random;
-        mt19937 generator;
+        mt19937 generator(time(0));
         uniform_01<mt19937, double> randomNumber(generator);
 
-        //Testing
-        for (auto i: boost::irange(0, 10))
-            std::cout << randomNumber() << '\n';
+        //The key is the determinant the given particle is on
+        std::unordered_map<uint32_t, Particle> walkers;
+        std::unordered_map<uint32_t, Particle> spawn;
 
+        // Zero is the reference determinant
+        // Give it an initial population of 200
+        walkers.emplace(0, Particle{200});
+
+        //Reference determinant in the Hartree-Fock determinant which is given by the first index 0
+        double runningTotalProjEnergy = 0.0;
+        double H00 = H_FCI(0, 0);
+        //Imaginary time step
+        double tau = 0.0001;
+        // The shift factor in the projection energy operator
+        double shift = 0.0;
+        double nParticles = 0.0;
+        double nParticlesLast = 0.0;
 
         // I: Index of the determinant which we are attempting to spawn on to
         // H_row: Row of the Hamiltonian matrix connected to this determinant
         // tau: Imaginary timestep
-        auto AttemptSpawn = [&randomNumber](uint32_t I, double tau, VectorXd &H_row) {
+        // populationParent: Population of the parent determinant
+        auto AttemptSpawn = [&randomNumber, &spawn](uint32_t I,
+                                                    int populationParent, double tau, const VectorXd &H_row) {
             for (uint32_t J = 0; J < H_row.size(); J++) {
                 //Cannot spawn a determinant onto itself
                 if (I == J) continue;
@@ -75,48 +87,123 @@ namespace SCESS {
                 if (abs(H_row(J)) < EPSILON) continue;
 
                 //Attempt to spawn particle
-                randomNumber();
                 double rate = abs(tau * H_row(J));
                 uint32_t nSpawn = static_cast<uint32_t>(rate);
                 rate = rate - (double) nSpawn;
+                //If the rate is greater than the random number, spawn a new particle
                 if (rate > randomNumber()) nSpawn++;
+
+                if (!spawn.contains(J))
+                    spawn.emplace(J, Particle{0});
+
+                Particle &JDetParticle = spawn.at(J);
+
+                if (H_row(J) > 0.0) {
+                    if (populationParent < 0)
+                        JDetParticle.population += nSpawn;
+                    else
+                        JDetParticle.population -= nSpawn;
+                } else {
+                    if (populationParent > 0)
+                        JDetParticle.population += nSpawn;
+                    else
+                        JDetParticle.population -= nSpawn;
+                }
             }
         };
 
-        //Reference determinant in the Hartree-Fock determinant which is given by the first index 0
 
-        size_t D0_population = 0;
-        double runningTotalProjEnergy = 0.0;
+        auto SimpleDeathClone = [&randomNumber](double tau, double Hii, double H00, double shift, int &population) {
+            double rate = abs(population) * tau * (Hii - H00 - shift);
+            int numKill = static_cast<int>(rate);
+            rate = rate - (double) numKill;
 
-        for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
-            spawn.clear();
-            double cycleProjEnergy = 0.0;
-            size_t numSpawningAttempts = particles.size();
-
-            //Loop over all determinants in the Hilbert space
-            for (size_t I = 0; I < determinants.size(); I++) {
-                double H0i = H_FCI(0, I);
-                double Hii = H_FCI(I, I);
-
-                Particle &currentParticle = particles.at(I);
-
-                // Only update the projected energy if this particle is not on the
-                // reference determinant
-                if (I != 0) {
-                    //Update the the projected energy
-                    runningTotalProjEnergy += H0i * currentParticle.population;
-                } else {
-                    D0_population += currentParticle.population;
-                }
-
-                //Attempt to spawn more determinants
-                for (uint32_t j = 0; j < currentParticle.population; j++) {
-                }
+            if (abs(rate) > randomNumber()) {
+                if (rate > 0.0)
+                    numKill++;
+                else
+                    numKill--;
             }
+
+            //Particle death takes population closer to zero
+            if (population > 0)
+                population -= numKill;
+            else
+                population += numKill;
+        };
+
+        auto SimpleAnnihilation = [&spawn, &walkers]() {
+            for (auto &[I, walker]: walkers) {
+                if (spawn.contains(I))
+                    walker.population += spawn.at(I).population;
+            }
+        };
+
+        auto UpdateShift = [](double &shift, size_t nParticles, size_t nParticlesLast) -> void {
+        };
+
+        for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
+            runningTotalProjEnergy = 0.0;
+
+            for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
+                spawn.clear();
+                size_t numSpawningAttempts = std::accumulate(walkers.begin(), walkers.end(), (size_t) 0,
+                                                             [](size_t &&acc, const std::pair<uint32_t, Particle> &p) {
+                                                                 return acc + p.second.population;
+                                                             });
+
+                //  Loop over all determinants in the Hilbert space
+                //  These will all be considered to be "walkers"
+                for (uint32_t I = 0; I < determinants.size(); I++) {
+                    double H0i = H_FCI(0, I);
+                    double Hii = H_FCI(I, I);
+
+                    if (!walkers.contains(I))
+                        walkers.emplace(I, Particle{0});
+
+                    Particle &currentParticle = walkers.at(I);
+
+                    // Only update the projected energy if this particle is not on the
+                    // reference determinant
+                    if (I != 0) {
+                        //Update the total projected energy
+                        runningTotalProjEnergy += H0i * currentParticle.population;
+                    }
+
+                    //Attempt to spawn more determinants
+                    for (uint32_t j = 0; j < currentParticle.population; j++) {
+                        AttemptSpawn(I, currentParticle.population, tau, H_FCI.row(I));
+                    }
+
+                    SimpleDeathClone(tau, Hii, H00, shift, currentParticle.population);
+                }
+
+                SimpleAnnihilation();
+
+                if (console)
+                    *console << "       Cycle(" << cycle + 1 << "; E(Projected) = " << runningTotalProjEnergy / double(
+                                cycle + 1)
+                            << '\n';
+            }
+
+            if (console)
+                *console << "   Report Cycle(" << reportCycle + 1 << "; E(Projected) = " << runningTotalProjEnergy /
+                        NUM_CYCLES
+                        << '\n';
+
+
+            nParticles = std::accumulate(walkers.begin(), walkers.end(), (size_t) 0,
+                                         [](size_t &&acc, const std::pair<uint32_t, Particle> &p) {
+                                             return acc + p.second.population;
+                                         });
+
+            nParticlesLast = nParticles;
         }
 
         runningTotalProjEnergy /= NUM_CYCLES;
 
+        if (console)
+            *console << "Final total projected energy: " << runningTotalProjEnergy << '\n';
 
         return runningTotalProjEnergy;
     }

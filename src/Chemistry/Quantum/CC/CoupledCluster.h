@@ -1,11 +1,9 @@
 #pragma once
 #include<Eigen/Core>
 #include<unsupported/Eigen/CXX11/Tensor>
-
-#include "Chemistry/Quantum/Integrals/Integrals.h"
-#include<optional>
 #include <GraphicsEngine/Utilities/Memory.h>
 
+#include "Chemistry/Quantum/Integrals/Integrals.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 
 namespace SCESS {

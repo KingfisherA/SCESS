@@ -12,11 +12,12 @@ namespace SCESS {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
+        //Perform CCSD with DIIS acceleration and get t1 and t2 amplitudes
         uRef<CCSDResult> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
 
         if (ccsd == nullptr) {
             if (console)
-                *console << "Cannot calculate triples correction as the CCSD did not converge.\n";
+                *console << "Cannot calculate triples correction as the CCSD t amplitudes did not converge.\n";
 
             return nullptr;
         }
@@ -32,8 +33,10 @@ namespace SCESS {
         //Number of virtual spin orbitals
         Eigen::Index nVirt = rhfResult.Occupation.size() * 2 - nOcc;
 
+        //Get the Fock matrix in canonical MO basis set
         FockTensor F = TransformFockToMO(rhfResult);
 
+        //Calculate the triples perturbation correction energy
         double triplesCorrection = CoupledCluster::CalculateTriplesCorrection(*ccsd, F, nOcc, nVirt);
 
         if (console) {
@@ -165,7 +168,7 @@ namespace SCESS {
             return Dijkabc;
         };
 
-        //Evaluate the perturbed energy
+        //Evaluate the triples perturbed correction energy
         double tCorrectionEnergy = 0.0; {
             Tensor<double, 6> Wijkabc = MakeWijkabc();
             Tensor<double, 6> sumTensor = (Wijkabc + MakeVijkabc()) / MakeDijkabc();

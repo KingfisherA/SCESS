@@ -43,6 +43,7 @@ CMakeLists.txt
 
 # Excluded Folders
 Python/
+Releases/
 libs/
 .vs/
 bin-obj/

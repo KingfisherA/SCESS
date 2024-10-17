@@ -29,12 +29,15 @@ namespace SCESS {
     uRef<CCSDResult> CoupledCluster::CCSD(const RHFResult &rhfResult, std::stringstream *console) {
         using namespace Eigen;
 
+        //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
+        //Maximum coupled cluster iterations
         constexpr size_t MAX_ITERATIONS = 50;
-        constexpr bool ENABLE_DIIS = true;
-        constexpr size_t MAX_DIIS_VECS = 6;
 
+        //Transform the two electron repulsion integrals into the MO basis set
+        //for MP2 calculation. Integrals are in chemist's notation
         TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.tei, rhfResult.Coeffs);
+        //Evaluate MP2 energy
         double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
 
         if (console) {
@@ -43,7 +46,8 @@ namespace SCESS {
         }
 
         //Antisymmetrise the two-electron integrals and integrate out the alpha and beta
-        //spin functions for a closed-shell wavefunction
+        //spin functions for a closed-shell wavefunction. Also converts from chemist's
+        //to physicits' notation
         moTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(moTEI);
 
         //Number of occupied spin orbitals
@@ -54,6 +58,7 @@ namespace SCESS {
         //Number of virtual spin orbitals
         Eigen::Index nVirt = rhfResult.Occupation.size() * 2 - nOcc;
 
+        //Fock matrix in canonical MO basis set
         FockTensor F = TransformFockToMO(rhfResult);
 
         //Denominator arrays
@@ -78,6 +83,7 @@ namespace SCESS {
             //Solve the CC equations
             CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps);
 
+            //Calculate CC correlation energy
             correlationEnergy = CoupledCluster::CalculateEnergyCCSD(F, nOcc, nVirt, moTEI, t1Amps, t2Amps);
 
             double dE = abs(correlationEnergy - lastCorrelationEnergy);
@@ -113,9 +119,12 @@ namespace SCESS {
 
     CoupledCluster::FockTensor CoupledCluster::TransformFockToMO(const RHFResult &rhfResult) {
         using namespace Eigen;
-        //Transform the Fock matrix into the MO basis set and reshape so that the alpha and beta
-        //spin electrons are in their own block diagonal
+        //Transform the Fock matrix into the MO basis set
         MatrixXd FockMat = rhfResult.Coeffs.transpose() * rhfResult.Fock * rhfResult.Coeffs;
+
+        //Assuming canonical HF orbitals only the diagonals are needed
+        //Hence, we copy over only the diagonal elements.
+        //Also, even indices are alpha spin and odd indices are beta spin
         FockTensor FockTensor(FockMat.rows() * 2,
                               FockMat.rows() * 2);
         FockTensor.setZero();

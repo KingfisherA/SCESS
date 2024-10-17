@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
     SCESS::Application app;
 
-    if (!std::filesystem::exists(app.GetAssetsPath().string())) {
+    if (!std::filesystem::exists(app.GetAssetsPath())) {
         std::cout << "Required assets directory not found relative to executable. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
         std::cin.get();
@@ -43,16 +43,16 @@ int main(int argc, char **argv) {
     }
 
     //SCESS::Tests::TestFullCI();
-    //SCESS::Tests::TestFCIQMC();
+    SCESS::Tests::TestFCIQMC();
 
-    if (!app.Init()) {
-        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
-        std::cout << "Press any key to continue...\n";
-        std::cin.get();
-        return 1;
-    }
-
-    app.Run();
+    // if (!app.Init()) {
+    //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+    //     std::cout << "Press any key to continue...\n";
+    //     std::cin.get();
+    //     return 1;
+    // }
+    //
+    // app.Run();
 
     return 0;
 }
@@ -68,11 +68,10 @@ namespace SCESS {
     // Static Variable Initilisation
     Application *Application::sInstance = nullptr;
 
-    static const char *FONT_PATH = "../../../Assets/Fonts/Ubuntu-Light.ttf";
-
 #define BIND_EVENT_FNC(x) std::bind(&Application::x, this, std::placeholders::_1)
 
-    Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver", FONT_PATH, 800, 600,
+    Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver",
+                                             GetFontPath(), 800, 600,
                                              FramebufferSpecification{
                                                  800, 600, 1,
                                                  {

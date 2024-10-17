@@ -9,8 +9,7 @@ namespace SCESS {
 
     struct Particle {
         public:
-        uint32_t population;
-
+        int population;
     };
 
 class QuantumMonteCarlo {

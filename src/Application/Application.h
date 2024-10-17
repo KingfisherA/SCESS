@@ -42,10 +42,17 @@ namespace SCESS {
         [[nodiscard]] glm::mat4 &GetProjectionMatrix() { return mProjectionMatrix; }
         [[nodiscard]] const glm::mat4 &GetProjectionMatrix() const { return mProjectionMatrix; }
 
-        [[nodiscard]] const boost::filesystem::path &GetAssetsPath() const { return mAssetsPath; }
-        [[nodiscard]] boost::filesystem::path GetResourcePath(const std::string& resource) {
-            return boost::filesystem::path(mAssetsPath).append(resource);
+        //Relative Assets: "./Assets"
+#define ASSETS_PATH "../../../Assets"
+        [[nodiscard]] static const char *GetAssetsPath() { return ASSETS_PATH; }
+
+        [[nodiscard]] static boost::filesystem::path GetResourcePath(const std::string &resource) {
+            return boost::filesystem::path(GetAssetsPath()).append(resource);
         };
+
+        static const char *GetFontPath() {
+            return ASSETS_PATH "/Fonts/Ubuntu-Light.ttf";
+        }
 
     private:
         void OnViewportResize() override;
@@ -70,8 +77,6 @@ namespace SCESS {
         glm::mat4 mProjectionMatrix;
 
         sRef<GEng::Texture2D> mAppIcon;
-
-        boost::filesystem::path mAssetsPath = "../../../Assets";
 
         bool mSplashScreenOpen = true;
     };
