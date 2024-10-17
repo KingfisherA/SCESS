@@ -8,18 +8,19 @@
 #include "GraphicsEngine/3D/VertexArray.h"
 #include "GraphicsEngine/3D/ShaderProgram.h"
 #include "GraphicsEngine/Maths/Geometry.h"
+#include "GUI/ImSpinner.h"
 
 #include "Chemistry/Quantum/Basis/BasisUtils.h"
 #include "Chemistry/Quantum/Molecule.h"
 #include "Chemistry/Quantum/Basis/Gaussian.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 #include "Chemistry/Quantum/DFT/DFT.h"
+#include "Chemistry/Quantum/CC/CoupledCluster.h"
+#include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
+
 #include "Maths/Isosurfaces.h"
 
 #include "Application/Application.h"
-#include "Chemistry/Quantum/CC/CoupledCluster.h"
-
-#include "GUI/ImSpinner.h"
 
 namespace SCESS {
     using namespace GEng;
@@ -201,13 +202,13 @@ namespace SCESS {
     void CalculationLayer::SelectMolecule() {
         static SCESS::Molecule (*moleculeFuncs[])() =
         {
-            {&GenerateWaterMolecule},
-            {&GenerateAmmoniaMolecule},
-            {&GenerateCOMolecule},
-            {&GenerateEtheneMolecule},
-            {&GenerateMethaneMolecule},
-            {&GenerateLithiumHydrideMolecule},
-            {&GenerateHydrogenMolecule}
+            &GenerateWaterMolecule,
+            &GenerateAmmoniaMolecule,
+            &GenerateCOMolecule,
+            &GenerateEtheneMolecule,
+            &GenerateMethaneMolecule,
+            &GenerateLithiumHydrideMolecule,
+            &GenerateHydrogenMolecule
         };
 
         mMolecule = std::make_unique<SCESS::Molecule>(moleculeFuncs[mSelectedMolecule]());
@@ -323,6 +324,15 @@ namespace SCESS {
                         break;
                     }
 
+                    case CorrelationMethod::FCI: {
+                        uRef<CIResult> ciResult = SCESS::ConfigurationInteraction::FCI(
+                            *mRHFResult, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
+                        if (ciResult != nullptr) {
+                            mFCIResult = std::move(ciResult);
+                        }
+                        break;
+                    }
+
                     default:
                         break;
                 }
@@ -374,6 +384,8 @@ namespace SCESS {
                             return "CCSD";
                         case CorrelationMethod::CCSD_T:
                             return "CCSD(T)";
+                        case CorrelationMethod::FCI:
+                            return "FCI";
                         default:
                             return "";
                     };
@@ -496,6 +508,14 @@ namespace SCESS {
                     mCorrelationMethod = CorrelationMethod::CCSD_T;
                     mSCFMethod = SCFMethod::RHF;
                 }
+                ImGui::Unindent(100.0);
+
+                ImGui::SeparatorText("Configuration Interaction");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("Full CI", reinterpret_cast<int *>(&mCorrelationMethod), 4)) {
+                    mCorrelationMethod = CorrelationMethod::FCI;
+                    mSCFMethod = SCFMethod::RHF;
+                }
                 ImGui::Unindent(200.0);
 
                 ImGui::SeparatorText("Basis Sets");
@@ -559,8 +579,19 @@ namespace SCESS {
                         ImGui::Text("E(T) = %.8f hartrees", mCCSD_TResult->triplesCorrectionE);
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
                                            "E(Total) = E(Hartree-Fock) + E(CCSD) + E(T) = %.8f hartrees",
-                            mCCSD_TResult->ccsdCorrelationEnergy + mRHFResult->Energy + mCCSD_TResult->
+                                           mCCSD_TResult->ccsdCorrelationEnergy + mRHFResult->Energy + mCCSD_TResult->
                                            triplesCorrectionE);
+                        ImGui::Unindent();
+                    };
+
+                    auto DrawFCI = [this]() {
+                        if (!mFCIResult)return;
+                        ImGui::SeparatorText("Full Configuration Interaction");
+                        ImGui::Indent();
+                        ImGui::Text("E(FCI Correlation) = %.8f hartrees", mFCIResult->Energies(0) - mRHFResult->Energy);
+                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                           "E(Total) = E(Hartree Fock) + E(FCI Correlation) = %.8f hartrees",
+                                           mFCIResult->Energies(0));
                         ImGui::Unindent();
                     };
 
@@ -579,6 +610,11 @@ namespace SCESS {
 
                         case CorrelationMethod::MP2: {
                             DrawMP2();
+                            break;
+                        }
+
+                        case CorrelationMethod::FCI: {
+                            DrawFCI();
                             break;
                         }
 

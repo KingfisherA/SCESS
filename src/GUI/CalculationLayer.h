@@ -6,6 +6,7 @@
 #include"GraphicsEngine/Utilities/Threading.h"
 
 #include"Chemistry/Quantum/Molecule.h"
+#include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
 #include "Maths/Isosurfaces.h"
 
 
@@ -34,7 +35,8 @@ namespace SCESS {
         None = 0,
         MP2 = 1,
         CCSD = 2,
-        CCSD_T = 3
+        CCSD_T = 3,
+        FCI = 4
     };
 
     inline const char *CorrelationMethodToStr(CorrelationMethod method) {
@@ -43,6 +45,7 @@ namespace SCESS {
             case CorrelationMethod::MP2: return "MP2";
             case CorrelationMethod::CCSD: return "CCSD";
             case CorrelationMethod::CCSD_T: return "CCSD(T)";
+            case CorrelationMethod::FCI: return "FCI";
             default: return "";
         }
     }
@@ -118,6 +121,8 @@ namespace SCESS {
         uRef<CCSDResult> mCCSDResult;
         uRef<CCSD_TResult> mCCSD_TResult;
         std::optional<double> mMP2Energy;
+
+        uRef<CIResult> mFCIResult;
 
         double mDFTEnergy = 0.0;
         std::string mCalcBasiSet;

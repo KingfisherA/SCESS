@@ -3,18 +3,13 @@
 #include "Application/Application.h"
 #include <ImGui/imgui.h>
 
-#include "GraphicsEngine/Events/Events.h"
-#include "GraphicsEngine/Events/KeyEvents.h"
 #include "GraphicsEngine/Events/MouseEvents.h"
-#include "GraphicsEngine/3D/VertexArray.h"
 #include "GraphicsEngine/Platform/Windows/Console.h"
 #include "GraphicsEngine/Platform/GPUContext.h"
-#include "GraphicsEngine/Utilities/Memory.h"
 #include "GraphicsEngine/GUI/Display.h"
 #include "GraphicsEngine/3D/Texture.h"
 #include "GraphicsEngine/3D/Framebuffer.h"
 #include "GraphicsEngine/GUI/ImGuiLayer.h"
-#include "GraphicsEngine/Utilities/IO.h"
 #include "GraphicsEngine/Utilities/Assert.h"
 
 #include "GUI/CalculationLayer.h"
@@ -23,68 +18,7 @@
 #include "xc.h"
 #include "Chemistry/Quantum/Basis/BasisUtils.h"
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
-#include "Chemistry/Quantum/HF/HartreeFock.h"
-#include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
-
-// #define IMSPINNER_DEMO
-// #include "GUI/ImSpinner.h"
-
-
-static void TestCoupledCluster() {
-    using namespace SCESS;
-
-    std::cout << "---Performing Hartree Fock Calculation on Water---\n";
-
-    constexpr const char *BASIS_SET_NAME = "sto-3g";
-
-    Molecule waterMolecule = GenerateWaterMolecule();
-    waterMolecule.MakeOrbitals(BASIS_SET_NAME);
-
-    std::stringstream ss;
-    uRef<RHFResult> rhfResult = HartreeFock::Restricted(waterMolecule, nullptr, nullptr, 1e-05, 100, &ss,
-                                                        BASIS_SET_NAME);
-    std::cout << ss.str();
-    ss.clear();
-    ss.str("");
-
-    uRef<CCSDResult> result = CoupledCluster::CCSD(*rhfResult);
-
-    std::cout << "Press any key to continue..\n";
-    std::cin.get();
-}
-
-static void TestFullCI() {
-    using namespace SCESS;
-
-    std::cout << "---Performing Hartree Fock Calculation on Hydrogen ---\n";
-
-    constexpr const char *BASIS_SET_NAME = "sto-3g";
-
-    Molecule hydrogenMolecule = GenerateHydrogenMolecule();
-    hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
-
-    std::stringstream ss;
-    uRef<RHFResult> rhfResult = HartreeFock::Restricted(hydrogenMolecule, nullptr, nullptr, 1e-08, 100, &ss,
-                                                        BASIS_SET_NAME);
-    HartreeFock::MP2ClosedShell(*rhfResult, &ss);
-
-    std::cout << ss.str();
-    ss.clear();
-    ss.str("");
-
-
-
-    uRef<CIResult> ciResult = ConfigurationInteraction::FCI(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion());
-
-    std::cout << "--- Full Configuration Interaction ---\n";
-    std::cout << "E(FCI Correlation) = " << ciResult->Energies(0) - rhfResult->Energy << " hartrees\n";
-    std::cout << "E(Total) = E(Hartree Fock) + E(FCI Correlation) = " << ciResult->Energies(0) << " hartrees\n";
-
-
-
-    std::cout << "Press any key to continue..\n";
-    std::cin.get();
-}
+#include "Chemistry/Quantum/Tests.h"
 
 #pragma region Entry Point
 
@@ -108,17 +42,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    //TestCoupledCluster();
-    TestFullCI();
+    //SCESS::Tests::TestFullCI();
+    //SCESS::Tests::TestFCIQMC();
 
-    // if (!app.Init()) {
-    //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";
-    //     std::cout << "Press any key to continue...\n";
-    //     std::cin.get();
-    //     return 1;
-    // }
-    //
-    // app.Run();
+    if (!app.Init()) {
+        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+        std::cout << "Press any key to continue...\n";
+        std::cin.get();
+        return 1;
+    }
+
+    app.Run();
 
     return 0;
 }

@@ -8,6 +8,8 @@
 #include <Eigen/Core>
 #include<Chemistry/Quantum/Integrals/Integrals.h>
 
+#include "Chemistry/Quantum/HF/HartreeFock.h"
+
 namespace SCESS {
     struct RHFResult;
 }
@@ -86,7 +88,16 @@ namespace SCESS {
          * @param rhfWavefunction
          * @return
          */
-        static uRef<CIResult> FCI(const RHFResult &rhfWavefunction, double Vnn);
+        static uRef<CIResult> FCI(const RHFResult &rhfWavefunction, double Vnn,
+                                  std::stringstream *console = nullptr);
+
+
+        /**
+         * Generates the one electron hamiltonian for a RHF determinant with the spin
+         * functions integrated out
+         * @return
+         */
+        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFResult& rhfWfn);
 
         static CIDeterminant::OrbitalStr MixAlphaAndBeta(const CIDeterminant::OrbitalStr &alphaList,
                                                          const CIDeterminant::OrbitalStr &betaList);
@@ -94,7 +105,7 @@ namespace SCESS {
         static std::vector<CIDeterminant> GenerateAllDeterminants(uint32_t nSpinOrbs, uint32_t nElectrons);
 
         static double CalculateHamiltonianElement(const CIDeterminant &detI, const CIDeterminant &detJ,
-                                                  const Eigen::MatrixXd &HSpin, const TEITensor &moTEI);
+                                                  const Eigen::MatrixXd &HSpin, const TEITensor &moSpinTEI);
 
         static void PrintDeterminants(const std::vector<CIDeterminant> &determinants);
     };

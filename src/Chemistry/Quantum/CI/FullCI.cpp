@@ -21,31 +21,21 @@ namespace SCESS {
         auto CalcDifferences = [&flips, &commonIJ, &uniqueI, &uniqueJ](const CIDeterminant::OrbitalStr &I,
                                                                        const CIDeterminant::OrbitalStr &J,
                                                                        uint8_t (*func)(uint8_t)) {
-            int i = 0;
-            int j = 0;
-            int k = 0;
-            int icnt = 0; /* number of counts in I array */
-            int jcnt = 0; /* number of counts in J array */
-            int flipI = 0; /* number of flips in I string to have max coincidence */
-            int flipJ = 0; /* number of flips in J string to have max coincidence */
-            int ndoI = 0; /* number of different orbitals in I string */
-            int ndoJ = 0; /* number of different orbitals in J string */
+            uint32_t i = 0, j = 0,
+                    flipI = 0, flipJ = 0; // number of flips in I and J string to have max coincidence
 
             while ((i < I.size()) && (j < I.size())) {
                 if (I[i] == J[j]) {
                     commonIJ.push_back(func(I[i]));
                     i++;
                     j++;
-                    k++;
                 } else if (I[i] < J[j]) {
+                    flipI += i - uniqueI.size();
                     uniqueI.push_back(func(I[i]));
-                    flipI += i - ndoI;
-                    ndoI++;
                     i++;
                 } else if (I[i] > J[j]) {
+                    flipJ += j - uniqueJ.size();
                     uniqueJ.push_back(func(J[j]));
-                    flipJ += j - ndoJ;
-                    ndoJ++;
                     j++;
                 }
             }
@@ -53,16 +43,14 @@ namespace SCESS {
             if (i != j) {
                 if (i < j) {
                     while (i < I.size()) {
+                        flipI += i - uniqueI.size();
                         uniqueI.push_back(func(I[i]));
-                        flipI += i - ndoI;
-                        ndoI++;
                         i++;
                     }
                 } else {
                     while (j < I.size()) {
+                        flipJ += j - uniqueJ.size();
                         uniqueJ.push_back(func(J[j]));
-                        flipJ += j - ndoJ;
-                        ndoJ++;
                         j++;
                     }
                 }
@@ -79,9 +67,14 @@ namespace SCESS {
             sign = -1;
     }
 
-    uRef<CIResult> ConfigurationInteraction::FCI(const RHFResult &rhfWavefunction, double Vnn) {
+    uRef<CIResult> ConfigurationInteraction::FCI(const RHFResult &rhfWavefunction, double Vnn,
+                                                 std::stringstream *console) {
         const Eigen::MatrixXd &C = rhfWavefunction.Coeffs;
         const ConfigIntegrals &ints = rhfWavefunction.Integrals;
+
+        if (console)
+            *console <<
+                    "--- Full Configuration Interaction --- \n\n    Transforming and antisymmetrising ERI integrals...\n";
 
         // Transform tei tensor into MO basis in physicists' notation and
         // integrate out spin functions
@@ -89,26 +82,13 @@ namespace SCESS {
                 Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
                     Integrals::Transforms::ToMolecularTEI(ints.tei, C));
 
+        if (console)
+            *console << "   Transformation of integrals completed!\n";
+
 
         // Transform the one-electron Hamiltonian matrix into the MO basis set
         // and integrate out spin functions
-        Eigen::MatrixXd HSpin = Eigen::MatrixXd::Zero(C.rows() * 2, C.cols() * 2); {
-            Eigen::MatrixXd H_Transformed = C.transpose() * rhfWavefunction.Hcore * C;
-
-            for (uint32_t i = 0; i < HSpin.rows(); i++)
-                for (uint32_t j = i; j < HSpin.cols(); j++) {
-                    //Integrate out alpha and beta spin
-                    if ((i + j) % 2 != 0) {
-                        //Alpha with beta spin function so zero
-                        HSpin(i, j) = HSpin(j, i) = 0.0;
-                        continue;
-                    }
-
-                    uint32_t ii = i / 2, jj = j / 2;
-
-                    HSpin(i, j) = HSpin(j, i) = H_Transformed(ii, jj);
-                }
-        }
+        Eigen::MatrixXd HSpin = GenerateOneElectronHamiltonianSpin(rhfWavefunction);
 
         //Must be the same number of alpha and beta spin electrons for a closed-shell RHF determinant
         uint32_t nElectrons = std::distance(rhfWavefunction.Occupation.begin(),
@@ -117,8 +97,21 @@ namespace SCESS {
                 nSpinOrbs = nSpatialOrbitals * 2;
 
 
+        if (console)
+            *console << "   Generating all Slater determinants in Hilbert space...\n";
+        auto genDetTime1 = std::chrono::high_resolution_clock::now();
         std::vector<CIDeterminant> determinants = GenerateAllDeterminants(nSpinOrbs, nElectrons);
+        auto genDetTime2 = std::chrono::high_resolution_clock::now();
+        if (console)
+            *console << "   Generated " << determinants.size() << " determinants in " << std::chrono::duration_cast<
+                std::chrono::milliseconds>(genDetTime2 - genDetTime1).count() << " milliseconds\n";
 
+
+        if (console) {
+            *console << "   Forming Full CI Hamiltonian Matrix\n";
+            *console << "   !!! No symmetry specified; will have to evaluate all " << determinants.size() <<
+                    " matrix elements !!!\n";
+        }
         Eigen::MatrixXd H_FCI = Eigen::MatrixXd::Zero((Eigen::Index) determinants.size(),
                                                       (Eigen::Index) determinants.size());
 
@@ -128,6 +121,8 @@ namespace SCESS {
                               CalculateHamiltonianElement(determinants[i], determinants[j], HSpin, moSpinTEI);
             }
 
+        if (console)
+            *console << "   Diagonalising FCI matrix...\n";
         //Diagonalise the Full CI matrix
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(H_FCI);
         Eigen::VectorXd Energies = eigensolver.eigenvalues().real();
@@ -137,11 +132,43 @@ namespace SCESS {
 
         Eigen::MatrixXd Wavefunctions = eigensolver.eigenvectors().real();
 
+        if (console) {
+            *console << "\n\n\n--- Full CI procedure completed! ---\n\n";
+            *console << "   E(FCI Correlation) = " << Energies(0) - rhfWavefunction.Energy << " hartrees\n";
+            *console << "   E(Total) = E(Hartree Fock) + E(Correlation) = " << Energies(0) << " hartrees\n";
+            *console << "   Generated " << Wavefunctions.rows() << " FCI wavefunctions\n";
+        }
+
         return std::make_unique<CIResult>(Energies, Wavefunctions, std::move(determinants));
     }
 
+    Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(const RHFResult &rhfWfn) {
+        const Eigen::MatrixXd &C = rhfWfn.Coeffs;
+        // Transform the one-electron Hamiltonian matrix into the MO basis set
+        // and integrate out spin functions
+        Eigen::MatrixXd HSpin = Eigen::MatrixXd::Zero(C.rows() * 2, C.cols() * 2);
+        Eigen::MatrixXd H_Transformed = C.transpose() * rhfWfn.Hcore * C;
+
+        for (uint32_t i = 0; i < HSpin.rows(); i++)
+            for (uint32_t j = i; j < HSpin.cols(); j++) {
+                //Integrate out alpha and beta spin
+                if ((i + j) % 2 != 0) {
+                    //Alpha with beta spin function so zero
+                    HSpin(i, j) = HSpin(j, i) = 0.0;
+                    continue;
+                }
+
+                uint32_t ii = i / 2, jj = j / 2;
+
+                HSpin(i, j) = HSpin(j, i) = H_Transformed(ii, jj);
+            }
+
+        return HSpin;
+    }
+
     double ConfigurationInteraction::CalculateHamiltonianElement(const CIDeterminant &detI, const CIDeterminant &detJ,
-                                                                 const Eigen::MatrixXd &HSpin, const TEITensor &moTEI) {
+                                                                 const Eigen::MatrixXd &HSpin,
+                                                                 const TEITensor &moSpinTEI) {
         CIDeterminant::OrbitalStr uniqueI, uniqueJ, commonIJ;
 
         if (detI.GetAlphaOrbitals().size() != detJ.GetAlphaOrbitals().size() ||
@@ -160,7 +187,7 @@ namespace SCESS {
 
                 for (uint32_t m = 0; m < commonIJ.size() - 1; m++)
                     for (uint32_t n = m + 1; n < commonIJ.size(); n++)
-                        element += moTEI(commonIJ[m], commonIJ[n], commonIJ[m], commonIJ[n]);
+                        element += moSpinTEI(commonIJ[m], commonIJ[n], commonIJ[m], commonIJ[n]);
 
                 return element;
             }
@@ -171,13 +198,13 @@ namespace SCESS {
                 double element = HSpin(m, p);
 
                 for (auto &n: commonIJ)
-                    element += moTEI(m, n, p, n);
+                    element += moSpinTEI(m, n, p, n);
 
                 return sign * element;
             }
             case 2: {
-                double element = moTEI(uniqueI[0], uniqueI[1], uniqueJ[0],
-                                       uniqueJ[1]);
+                double element = moSpinTEI(uniqueI[0], uniqueI[1], uniqueJ[0],
+                                           uniqueJ[1]);
 
                 return sign * element;
             }
