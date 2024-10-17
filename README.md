@@ -16,7 +16,7 @@ This is a basic implementation of different *ab-initio* quantum chemistry theori
 - Can draw isosurface plots of the Hartree-Fock solutions
 
 # Binaries
-Release binaries are available for testing in the [bin](bin/) folder. These binaries expect the "Assets" directory to be placed three folders back from the location of the executable i.e. just run the binary from the bin/linux/Release-x64 folder and it will find the Assets directory at the same level as the bin folder.
+Release binaries are available for testing from the releases GitHub section.
 
 # Dependencies
 - Eigen
