@@ -60,7 +60,7 @@ namespace SCESS::Tests {
     }
 
     void TestFCIQMC() {
-        std::cout << "--- Full CI Quantum Monte Carlo ---\n";
+        std::cout << "Performing calculation on hydrogen diatomic\n";
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         Molecule hydrogenMolecule = GenerateHydrogenMolecule();
@@ -70,9 +70,10 @@ namespace SCESS::Tests {
         uRef<RHFResult> rhfResult = HartreeFock::Restricted(hydrogenMolecule, nullptr, nullptr, 1e-08, 100, &ss,
                                                             BASIS_SET_NAME);
 
+        std::cout << ss.str() << '\n';
+
         double energy = QuantumMonteCarlo::SimpleFCIQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion(), &ss);
 
-        std::cout << ss.str() << '\n';
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

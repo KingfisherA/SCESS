@@ -11,7 +11,6 @@ namespace SCESS {
         public:
         int population;
     };
-
 class QuantumMonteCarlo {
 public:
     //Full CI quantum monte carlo

@@ -8,8 +8,11 @@
 #include <boost/range/irange.hpp>
 
 namespace SCESS {
-    double QuantumMonteCarlo::SimpleFCIQMC(const RHFResult &rhfWavefunction, double Vnn, std::stringstream *console) {
+    double QuantumMonteCarlo::SimpleFCIQMC(const RHFResult &rhfWavefunction, double Vnn,
+                                           std::stringstream *console) {
         using namespace Eigen;
+
+        std::cout << "--- Full CI Quantum Monte Carlo ---\n";
 
         //Evaluate the Full CI  Hamiltonian matrix
         uint32_t nElectrons = std::distance(rhfWavefunction.Occupation.begin(),
@@ -43,168 +46,137 @@ namespace SCESS {
 
         VectorXd WaveFunc0 = Wavefunctions.col(0);
 
+        std::cout << " --- FCI Energy: " << Energies(0) << " hartrees---\n\n\n\n";
 
         //Implementation of the QMC algorithm
 
-        constexpr size_t NUM_CYCLES = 200,
-                NUM_REPORT_CYCLES = 10;
-        constexpr double EPSILON = 0.001;
+        constexpr size_t NUM_CYCLES = 1000,
+                NUM_REPORT_CYCLES = 1000;
+        constexpr double EPSILON = 0.01;
 
         using namespace boost::random;
-        mt19937 generator(time(0));
+        mt19937 generator(time(nullptr));
         uniform_01<mt19937, double> randomNumber(generator);
 
         //The key is the determinant the given particle is on
-        std::unordered_map<uint32_t, Particle> walkers;
-        std::unordered_map<uint32_t, Particle> spawn;
+        std::vector<Particle> walkers(determinants.size(), Particle{0});
+        std::vector<Particle> spawn(determinants.size(), Particle{0});
 
-        // Zero is the reference determinant
-        // Give it an initial population of 200
-        walkers.emplace(0, Particle{200});
+        // Zero is the reference Hartree-Fock determinant
+        // Give it an initial population of 100
+        walkers[0].population = 100;
 
         //Reference determinant in the Hartree-Fock determinant which is given by the first index 0
-        double runningTotalProjEnergy = 0.0;
+        double runningTotalProjEnergy = 0.0, averageEnergy = 0.0;
         double H00 = H_FCI(0, 0);
         //Imaginary time step
         double tau = 0.0001;
         // The shift factor in the projection energy operator
-        double shift = 0.0;
-        double nParticles = 0.0;
-        double nParticlesLast = 0.0;
-
-        // I: Index of the determinant which we are attempting to spawn on to
-        // H_row: Row of the Hamiltonian matrix connected to this determinant
-        // tau: Imaginary timestep
-        // populationParent: Population of the parent determinant
-        auto AttemptSpawn = [&randomNumber, &spawn](uint32_t I,
-                                                    int populationParent, double tau, const VectorXd &H_row) {
-            for (uint32_t J = 0; J < H_row.size(); J++) {
-                //Cannot spawn a determinant onto itself
-                if (I == J) continue;
-
-                //  Cannot spawn if the matrix element between this determinant and another one is too small
-                //  This indicates that the determinants are disconnected
-                if (abs(H_row(J)) < EPSILON) continue;
-
-                //Attempt to spawn particle
-                double rate = abs(tau * H_row(J));
-                uint32_t nSpawn = static_cast<uint32_t>(rate);
-                rate = rate - (double) nSpawn;
-                //If the rate is greater than the random number, spawn a new particle
-                if (rate > randomNumber()) nSpawn++;
-
-                if (!spawn.contains(J))
-                    spawn.emplace(J, Particle{0});
-
-                Particle &JDetParticle = spawn.at(J);
-
-                if (H_row(J) > 0.0) {
-                    if (populationParent < 0)
-                        JDetParticle.population += nSpawn;
-                    else
-                        JDetParticle.population -= nSpawn;
-                } else {
-                    if (populationParent > 0)
-                        JDetParticle.population += nSpawn;
-                    else
-                        JDetParticle.population -= nSpawn;
-                }
-            }
-        };
-
-
-        auto SimpleDeathClone = [&randomNumber](double tau, double Hii, double H00, double shift, int &population) {
-            double rate = abs(population) * tau * (Hii - H00 - shift);
-            int numKill = static_cast<int>(rate);
-            rate = rate - (double) numKill;
-
-            if (abs(rate) > randomNumber()) {
-                if (rate > 0.0)
-                    numKill++;
-                else
-                    numKill--;
-            }
-
-            //Particle death takes population closer to zero
-            if (population > 0)
-                population -= numKill;
-            else
-                population += numKill;
-        };
-
-        auto SimpleAnnihilation = [&spawn, &walkers]() {
-            for (auto &[I, walker]: walkers) {
-                if (spawn.contains(I))
-                    walker.population += spawn.at(I).population;
-            }
-        };
-
-        auto UpdateShift = [](double &shift, size_t nParticles, size_t nParticlesLast) -> void {
-        };
+        double shift = 0.0; //Energies(0) - Vnn;
+        int nParticles = 0.0;
+        int nParticlesLast = 0.0;
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
-            runningTotalProjEnergy = 0.0;
-
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
-                spawn.clear();
-                size_t numSpawningAttempts = std::accumulate(walkers.begin(), walkers.end(), (size_t) 0,
-                                                             [](size_t &&acc, const std::pair<uint32_t, Particle> &p) {
-                                                                 return acc + p.second.population;
-                                                             });
+                for (Particle &p: spawn)
+                    p.population = 0;
 
                 //  Loop over all determinants in the Hilbert space
                 //  These will all be considered to be "walkers"
                 for (uint32_t I = 0; I < determinants.size(); I++) {
-                    double H0i = H_FCI(0, I);
                     double Hii = H_FCI(I, I);
 
-                    if (!walkers.contains(I))
-                        walkers.emplace(I, Particle{0});
+                    Particle &currentWalker = walkers[I];
 
-                    Particle &currentParticle = walkers.at(I);
+                    //Attempt to spawn determinants from I onto other determinants
+                    for (uint32_t k = 0; k < abs(currentWalker.population); k++)
+                        for (uint32_t J = 0; J < determinants.size(); J++) {
+                            if (I == J) continue;
 
-                    // Only update the projected energy if this particle is not on the
-                    // reference determinant
-                    if (I != 0) {
-                        //Update the total projected energy
-                        runningTotalProjEnergy += H0i * currentParticle.population;
+                            if (abs(H_FCI(I, J)) < EPSILON) continue;
+
+                            double pSpawn = abs(tau * H_FCI(I, J));
+                            int nSpawn = int(pSpawn);
+                            pSpawn = pSpawn - nSpawn;
+                            if (pSpawn > randomNumber()) nSpawn++;
+
+                            Particle &JSpawn = spawn[J];
+                            if (H_FCI(I, J) >= 0.0) {
+                                //Opposite sign to parent
+                                if (currentWalker.population < 0)
+                                    JSpawn.population += nSpawn;
+                                else
+                                    JSpawn.population -= nSpawn;
+                            } else {
+                                //Same sign as parent
+                                if (currentWalker.population > 0)
+                                    JSpawn.population += nSpawn;
+                                else
+                                    JSpawn.population -= nSpawn;
+                            }
+                        }
+
+                    //Death cloning stage
+                    double pCloneDeath = abs(currentWalker.population) * tau * (Hii - rhfWavefunction.Energy - shift);
+                    int nKill = int(pCloneDeath);
+                    pCloneDeath = pCloneDeath - nKill;
+
+                    if (abs(pCloneDeath) > randomNumber()) {
+                        if (pCloneDeath > 0.0)
+                            nKill++;
+                        else
+                            nKill--;
                     }
 
-                    //Attempt to spawn more determinants
-                    for (uint32_t j = 0; j < currentParticle.population; j++) {
-                        AttemptSpawn(I, currentParticle.population, tau, H_FCI.row(I));
-                    }
+                    if (nKill > abs(currentWalker.population))
+                        throw std::runtime_error("Cannot create anti-particles");
 
-                    SimpleDeathClone(tau, Hii, H00, shift, currentParticle.population);
+                    if (currentWalker.population > 0)
+                        currentWalker.population -= nKill;
+                    else
+                        currentWalker.population += nKill;
                 }
 
-                SimpleAnnihilation();
-
-                if (console)
-                    *console << "       Cycle(" << cycle + 1 << "; E(Projected) = " << runningTotalProjEnergy / double(
-                                cycle + 1)
-                            << '\n';
+                //Annihilation stage
+                for (uint32_t I = 0; I < walkers.size(); I++)
+                    walkers[I].population += spawn[I].population;
             }
 
-            if (console)
-                *console << "   Report Cycle(" << reportCycle + 1 << "; E(Projected) = " << runningTotalProjEnergy /
-                        NUM_CYCLES
-                        << '\n';
+            double projEnergy = rhfWavefunction.Energy;
+
+            if (walkers[0].population != 0)
+                for (uint32_t I = 1; I < walkers.size(); I++) {
+                    projEnergy += H_FCI(0, I) * double(walkers[I].population) / double(walkers[0].population);
+                }
+
+            if (reportCycle + 1 > NUM_REPORT_CYCLES - 100) {
+                runningTotalProjEnergy += projEnergy;
+                averageEnergy = runningTotalProjEnergy / double(reportCycle + 1 - (NUM_REPORT_CYCLES - 100));
+            }
 
 
-            nParticles = std::accumulate(walkers.begin(), walkers.end(), (size_t) 0,
-                                         [](size_t &&acc, const std::pair<uint32_t, Particle> &p) {
-                                             return acc + p.second.population;
+            std::cout << "  Cycle(" << reportCycle + 1 << "); E(Projected) = " << projEnergy << ", E(average) =" <<
+                    averageEnergy
+                    << '\n';
+
+            nParticles = std::accumulate(walkers.begin(), walkers.end(), 0,
+                                         [](int &&acc, const Particle &p)-> int {
+                                             return acc + p.population;
                                          });
+
+
+            if (reportCycle + 1 > 2 && nParticlesLast != 0)
+                shift = shift - (1.0 / (tau * 1000.0)) * log((double) nParticles / (double) nParticlesLast);
+
+            std::cout << "      Shift: " << shift << '\n';
+            std::cout << "      Number of particles: " << nParticles << '\n';
 
             nParticlesLast = nParticles;
         }
 
-        runningTotalProjEnergy /= NUM_CYCLES;
+        std::cout << "E(Projected) = " << averageEnergy << " hartrees\n";
+        std::cout << "E(FCI) = " << Energies(0) << " hartrees\n";
 
-        if (console)
-            *console << "Final total projected energy: " << runningTotalProjEnergy << '\n';
-
-        return runningTotalProjEnergy;
+        return averageEnergy;
     }
 } // SCESS
