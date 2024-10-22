@@ -67,7 +67,7 @@ namespace SCESS {
             sign = -1;
     }
 
-    uRef<CIResult> ConfigurationInteraction::FCI(const RHFResult &rhfWavefunction, double Vnn,
+    uRef<CIWavefunction> ConfigurationInteraction::FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
                                                  std::stringstream *console) {
         const Eigen::MatrixXd &C = rhfWavefunction.Coeffs;
         const ConfigIntegrals &ints = rhfWavefunction.Integrals;
@@ -139,10 +139,10 @@ namespace SCESS {
             *console << "   Generated " << Wavefunctions.rows() << " FCI wavefunctions\n";
         }
 
-        return std::make_unique<CIResult>(Energies, Wavefunctions, std::move(determinants));
+        return std::make_unique<CIWavefunction>(Energies, Wavefunctions, std::move(determinants));
     }
 
-    Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(const RHFResult &rhfWfn) {
+    Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(const RHFWavefunction &rhfWfn) {
         const Eigen::MatrixXd &C = rhfWfn.Coeffs;
         // Transform the one-electron Hamiltonian matrix into the MO basis set
         // and integrate out spin functions

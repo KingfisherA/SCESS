@@ -79,7 +79,7 @@ namespace SCESS {
                     nlohmann::json coefficients = shell["coefficients"];
 
                     for (const Eigen::Vector3i &angMom: angularMomenta) {
-                        GaussianCollection collection(a.GetPos());
+                        ContractedGaussian collection(a.GetPos());
                         for (nlohmann::json &coeffCollection: coefficients) {
                             for (size_t k = 0; k < coeffCollection.size(); k++) {
                                 double coefficient = std::stod(coeffCollection[k].get<std::string>());

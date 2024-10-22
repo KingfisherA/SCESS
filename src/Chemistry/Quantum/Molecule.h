@@ -87,7 +87,7 @@ namespace SCESS {
     private:
         std::vector<Atom> mAtoms;
         std::unordered_set<BondPair> mBonds;
-        std::vector<GaussianCollection> mOrbitals;
+        std::vector<ContractedGaussian> mOrbitals;
         size_t mNoElectrons;
 
     public:
@@ -146,19 +146,19 @@ namespace SCESS {
             return mBonds;
         }
 
-        GaussianCollection &GetOrbital(uint32_t i) {
+        ContractedGaussian &GetOrbital(uint32_t i) {
             return mOrbitals[i];
         }
 
-        const GaussianCollection &GetOrbital(uint32_t i) const {
+        const ContractedGaussian &GetOrbital(uint32_t i) const {
             return mOrbitals[i];
         }
 
-        std::vector<GaussianCollection> &GetOrbitals() {
+        std::vector<ContractedGaussian> &GetOrbitals() {
             return mOrbitals;
         }
 
-        const std::vector<GaussianCollection> &GetOrbitals() const {
+        const std::vector<ContractedGaussian> &GetOrbitals() const {
             return mOrbitals;
         }
 

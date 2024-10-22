@@ -1,25 +1,7 @@
 #pragma once
 
-/**************************************************************************
- *   This file is part of DFTCXX.                                         *
- *                                                                        *
- *   Author: Ivo Filot <ivo@ivofilot.nl>                                  *
- *                                                                        *
- *   DFTCXX is free software:                                             *
- *   you can redistribute it and/or modify it under the terms of the      *
- *   GNU General Public License as published by the Free Software         *
- *   Foundation, either version 3 of the License, or (at your option)     *
- *   any later version.                                                   *
- *                                                                        *
- *   DFTCXX is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty          *
- *   of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.              *
- *   See the GNU General Public License for more details.                 *
- *                                                                        *
- *   You should have received a copy of the GNU General Public License    *
- *   along with this program.  If not, see http://www.gnu.org/licenses/.  *
- *                                                                        *
- **************************************************************************/
+//Derived from DFTCXX
+//https://github.com/ifilot/dftcxx.git
 
 namespace SCESS 
 {
@@ -45,13 +27,13 @@ namespace SCESS
 		};
 
 		/* number of coefficients per order */
-		static constexpr unsigned int num_lebedev_points[11] = { 6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194 };
+		static constexpr unsigned int nLebedevPoints[11] = { 6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194 };
 
 		/* total size of lebedev_coefficient matrix */
-		static constexpr unsigned int num_lebedev_coefficients = 6 + 14 + 26 + 38 + 50 + 74 + 86 + 110 + 146 + 170 + 194;
+		static constexpr unsigned int nLebedevCoefficients = 6 + 14 + 26 + 38 + 50 + 74 + 86 + 110 + 146 + 170 + 194;
 
 		/* define Lebedev coefficients */
-		static constexpr double lebedev_coefficients[num_lebedev_coefficients][4] = {
+		static constexpr double lebedevCoefficients[nLebedevCoefficients][4] = {
 			{  1.000000000000,  0.000000000000,  0.000000000000,  0.166666666667},
 			{ -1.000000000000,  0.000000000000,  0.000000000000,  0.166666666667},
 			{  0.000000000000,  1.000000000000,  0.000000000000,  0.166666666667},

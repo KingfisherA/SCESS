@@ -13,6 +13,8 @@
 
 
 namespace SCESS {
+    using namespace Eigen;
+
     template<typename T>
     using MatrixType = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
     //
@@ -26,9 +28,7 @@ namespace SCESS {
         return tensor;
     }
 
-    uRef<CCSDResult> CoupledCluster::CCSD(const RHFResult &rhfResult, std::stringstream *console) {
-        using namespace Eigen;
-
+    uRef<CCSDResult> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
         //Maximum coupled cluster iterations
@@ -117,8 +117,7 @@ namespace SCESS {
     }
 
 
-    CoupledCluster::FockTensor CoupledCluster::TransformFockToMO(const RHFResult &rhfResult) {
-        using namespace Eigen;
+    CoupledCluster::FockTensor CoupledCluster::TransformFockToMO(const RHFWavefunction &rhfResult) {
         //Transform the Fock matrix into the MO basis set
         MatrixXd FockMat = rhfResult.Coeffs.transpose() * rhfResult.Fock * rhfResult.Coeffs;
 
@@ -139,8 +138,6 @@ namespace SCESS {
     void CoupledCluster::CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc,
                                                   const Eigen::Index nVirt, Eigen::Tensor<double, 2> &Dia,
                                                   Eigen::Tensor<double, 4> &Dijab) {
-        using namespace Eigen;
-
         //Slices of the Fock matricies for occupied and virtual orbitals
         Tensor<double, 2> Focc = F.slice(array<Eigen::Index, 2>{0, 0},
                                          array<Eigen::Index, 2>{nOcc, nOcc});
@@ -161,7 +158,6 @@ namespace SCESS {
     CoupledCluster::T2Tensor CoupledCluster::CreateInitialT2Tensor(const Eigen::Index nOcc, const Eigen::Index nVirt,
                                                                    const TEITensor &moTEI,
                                                                    const Eigen::Tensor<double, 4> &Dijab) {
-        using namespace Eigen;
         T2Tensor MOijab = moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
                                       array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt});
         return MOijab / Dijab;
@@ -169,8 +165,6 @@ namespace SCESS {
 
     //
     CoupledCluster::TauTensor CoupledCluster::MakeTildeTau(const T1Tensor &t1, const T2Tensor &t2) {
-        using namespace Eigen;
-
         Tensor<double, 4> tildeTau = t2;
 
         //ia,jb-> iajb -> ijab
@@ -184,7 +178,6 @@ namespace SCESS {
 
     //
     CoupledCluster::TauTensor CoupledCluster::MakeTau(const T1Tensor &t1, const T2Tensor &t2) {
-        using namespace Eigen;
         TauTensor tau = t2;
 
         //ia,jb-> iajb -> ijab
@@ -201,7 +194,6 @@ namespace SCESS {
                                                     const Eigen::Index nOcc, const Eigen::Index nVirt,
                                                     const T1Tensor &t1, const T2Tensor &t2,
                                                     const TauTensor &tildeTau) {
-        using namespace Eigen;
         FTensor Fae(nVirt, nVirt);
         Fae.setZero();
 
@@ -240,7 +232,6 @@ namespace SCESS {
                                                     const Eigen::Index nOcc, const Eigen::Index nVirt,
                                                     const T1Tensor &t1, const T2Tensor &t2,
                                                     const TauTensor &tildeTau) {
-        using namespace Eigen;
         FTensor Fmi(nOcc, nOcc);
         Fmi.setZero();
 
@@ -278,7 +269,6 @@ namespace SCESS {
     CoupledCluster::FTensor CoupledCluster::MakeFme(const TEITensor &moTEI, const FockTensor &F,
                                                     const Eigen::Index nOcc, const Eigen::Index nVirt,
                                                     const T1Tensor &t1, const T2Tensor &t2) {
-        using namespace Eigen;
         FTensor Fme = F.slice(array<Eigen::Index, 2>{0, nOcc},
                               array<Eigen::Index, 2>{nOcc, nVirt});
         //nf,mnef->me
@@ -295,7 +285,6 @@ namespace SCESS {
     CoupledCluster::WTensor CoupledCluster::MakeWmnij(const TEITensor &moTEI, const Eigen::Index nOcc,
                                                       const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
                                                       const TauTensor &tau) {
-        using namespace Eigen;
         WTensor Wmnij = moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, 0},
                                     array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc});
 
@@ -326,7 +315,6 @@ namespace SCESS {
     CoupledCluster::WTensor CoupledCluster::MakeWabef(const TEITensor &moTEI, const Eigen::Index nOcc,
                                                       const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
                                                       const TauTensor &tau) {
-        using namespace Eigen;
         WTensor Wabef = moTEI.slice(array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc},
                                     array<Eigen::Index, 4>{nVirt, nVirt, nVirt, nVirt});
 
@@ -359,7 +347,6 @@ namespace SCESS {
     CoupledCluster::WTensor CoupledCluster::MakeWmbej(const TEITensor &moTEI, const Eigen::Index nOcc,
                                                       const Eigen::Index nVirt, const T1Tensor &t1,
                                                       const T2Tensor &t2) {
-        using namespace Eigen;
         WTensor Wmbej = moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, 0},
                                     array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nOcc});
 
@@ -400,7 +387,6 @@ namespace SCESS {
     void CoupledCluster::IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                                      const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
                                      const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2) {
-        using namespace Eigen;
         TauTensor
                 tildeTau = MakeTildeTau(t1, t2),
                 tau = MakeTau(t1, t2);
@@ -563,7 +549,6 @@ namespace SCESS {
     double CoupledCluster::CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
                                                const TEITensor &moTEI,
                                                const T1Tensor &t1, const T2Tensor &t2) {
-        using namespace Eigen;
         Tensor<double, 0> correlationEnergyTensor =
                 F.slice(array<Eigen::Index, 2>{0, nOcc},
                         array<Eigen::Index, 2>{

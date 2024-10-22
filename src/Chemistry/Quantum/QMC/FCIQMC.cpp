@@ -3,12 +3,12 @@
 #include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
 #include "Utilities/Utilities.h"
 
-#include<boost/random/mersenne_twister.hpp>
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
 
 namespace SCESS {
-    double QuantumMonteCarlo::SimpleFCIQMC(const RHFResult &rhfWavefunction, double Vnn,
+    double QuantumMonteCarlo::SimpleFCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
                                            std::stringstream *console) {
         using namespace Eigen;
 
@@ -58,13 +58,14 @@ namespace SCESS {
         mt19937 generator(time(nullptr));
         uniform_01<mt19937, double> randomNumber(generator);
 
-        //The key is the determinant the given particle is on
-        std::vector<Particle> walkers(determinants.size(), Particle{0});
-        std::vector<Particle> spawn(determinants.size(), Particle{0});
+        using Particle = int;
+        //The populations of the walker and spawned particles 
+        std::vector<Particle> walkerPopulations(determinants.size(), 0);
+        std::vector<Particle> spawnPopulations(determinants.size(), 0);
 
         // Zero is the reference Hartree-Fock determinant
         // Give it an initial population of 100
-        walkers[0].population = 100;
+        walkerPopulations[0] = 100;
 
         //Reference determinant in the Hartree-Fock determinant which is given by the first index 0
         double runningTotalProjEnergy = 0.0, averageEnergy = 0.0;
@@ -78,18 +79,18 @@ namespace SCESS {
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
-                for (Particle &p: spawn)
-                    p.population = 0;
+                for (Particle &p: spawnPopulations)
+                    p = 0;
 
                 //  Loop over all determinants in the Hilbert space
                 //  These will all be considered to be "walkers"
                 for (uint32_t I = 0; I < determinants.size(); I++) {
                     double Hii = H_FCI(I, I);
 
-                    Particle &currentWalker = walkers[I];
+                    Particle &currentWalker = walkerPopulations[I];
 
                     //Attempt to spawn determinants from I onto other determinants
-                    for (uint32_t k = 0; k < abs(currentWalker.population); k++)
+                    for (uint32_t k = 0; k < abs(currentWalker); k++)
                         for (uint32_t J = 0; J < determinants.size(); J++) {
                             if (I == J) continue;
 
@@ -100,24 +101,24 @@ namespace SCESS {
                             pSpawn = pSpawn - nSpawn;
                             if (pSpawn > randomNumber()) nSpawn++;
 
-                            Particle &JSpawn = spawn[J];
+                            Particle &JSpawn = spawnPopulations[J];
                             if (H_FCI(I, J) >= 0.0) {
                                 //Opposite sign to parent
-                                if (currentWalker.population < 0)
-                                    JSpawn.population += nSpawn;
+                                if (currentWalker < 0)
+                                    JSpawn += nSpawn;
                                 else
-                                    JSpawn.population -= nSpawn;
+                                    JSpawn -= nSpawn;
                             } else {
                                 //Same sign as parent
-                                if (currentWalker.population > 0)
-                                    JSpawn.population += nSpawn;
+                                if (currentWalker > 0)
+                                    JSpawn += nSpawn;
                                 else
-                                    JSpawn.population -= nSpawn;
+                                    JSpawn -= nSpawn;
                             }
                         }
 
                     //Death cloning stage
-                    double pCloneDeath = abs(currentWalker.population) * tau * (Hii - rhfWavefunction.Energy - shift);
+                    double pCloneDeath = abs(currentWalker) * tau * (Hii - rhfWavefunction.Energy - shift);
                     int nKill = int(pCloneDeath);
                     pCloneDeath = pCloneDeath - nKill;
 
@@ -128,25 +129,25 @@ namespace SCESS {
                             nKill--;
                     }
 
-                    if (nKill > abs(currentWalker.population))
+                    if (nKill > abs(currentWalker))
                         throw std::runtime_error("Cannot create anti-particles");
 
-                    if (currentWalker.population > 0)
-                        currentWalker.population -= nKill;
+                    if (currentWalker > 0)
+                        currentWalker -= nKill;
                     else
-                        currentWalker.population += nKill;
+                        currentWalker += nKill;
                 }
 
                 //Annihilation stage
-                for (uint32_t I = 0; I < walkers.size(); I++)
-                    walkers[I].population += spawn[I].population;
+                for (uint32_t I = 0; I < walkerPopulations.size(); I++)
+                    walkerPopulations[I] += spawnPopulations[I];
             }
 
             double projEnergy = rhfWavefunction.Energy;
 
-            if (walkers[0].population != 0)
-                for (uint32_t I = 1; I < walkers.size(); I++) {
-                    projEnergy += H_FCI(0, I) * double(walkers[I].population) / double(walkers[0].population);
+            if (walkerPopulations[0] != 0)
+                for (uint32_t I = 1; I < walkerPopulations.size(); I++) {
+                    projEnergy += H_FCI(0, I) * double(walkerPopulations[I]) / double(walkerPopulations[0]);
                 }
 
             if (reportCycle + 1 > NUM_REPORT_CYCLES - 100) {
@@ -159,9 +160,9 @@ namespace SCESS {
                     averageEnergy
                     << '\n';
 
-            nParticles = std::accumulate(walkers.begin(), walkers.end(), 0,
+            nParticles = std::accumulate(walkerPopulations.begin(), walkerPopulations.end(), 0,
                                          [](int &&acc, const Particle &p)-> int {
-                                             return acc + p.population;
+                                             return acc + p;
                                          });
 
 

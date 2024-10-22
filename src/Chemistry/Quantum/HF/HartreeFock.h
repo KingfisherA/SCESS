@@ -6,9 +6,9 @@
 #include "Chemistry/Quantum/Integrals/Integrals.h"
 
 namespace SCESS {
-    class GaussianCollection;
-    struct RHFResult;
-    struct UHFResult;
+    class ContractedGaussian;
+    struct RHFWavefunction;
+    struct UHFWavefunction;
     class Molecule;
 
     class HartreeFock {
@@ -22,8 +22,8 @@ namespace SCESS {
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
         /// <param name="basisSet"></param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static uRef<RHFResult> Restricted(const Molecule &molecule, const Molecule *lastMolecule = nullptr,
-                                          const RHFResult *lastResult = nullptr, const double convergeLimit = 1E-5,
+        static uRef<RHFWavefunction> RHF(const Molecule &molecule, const Molecule *lastMolecule = nullptr,
+                                          const RHFWavefunction *lastResult = nullptr, const double convergeLimit = 1E-5,
                                           const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
                                           const std::string_view basisSet = "");
 
@@ -35,7 +35,7 @@ namespace SCESS {
         /// <param name="scfMaxIterations">Maximum amount of scf iterations to perform. The iterations are automatically terminated when the convergence limit has been achieved.</param>
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static uRef<UHFResult> Unrestricted(const Molecule &molecule, const double convergeLimit = 1E-5,
+        static uRef<UHFWavefunction> UHF(const Molecule &molecule, const double convergeLimit = 1E-5,
                                             const size_t scfMaxIterations = 100, std::stringstream *console = nullptr,
                                             const std::string_view basisSet = "");
 
@@ -70,14 +70,14 @@ namespace SCESS {
         /// </summary>
         /// <param name="result">Result from a RHF computation</param>
         /// <returns>MP2 correction energy</returns>
-        static double MP2ClosedShell(const RHFResult &result, std::stringstream *console = nullptr);
+        static double MP2ClosedShell(const RHFWavefunction &result, std::stringstream *console = nullptr);
         /**
          * Compute the closed-shell restricted HF Moller-Plesset Order 2 correction energy
          * @param result Result from a RHF computation
          * @param moTEI The tei transformed into a molecular orbital basis in chemist's notation
          * @return MP2 correction energy
          */
-        static double MP2ClosedShell(const RHFResult &result, const TEITensor &moTEI,
+        static double MP2ClosedShell(const RHFWavefunction &result, const TEITensor &moTEI,
                                      std::stringstream *console = nullptr);
 
     private:
@@ -95,27 +95,27 @@ namespace SCESS {
     };
 
 
-    struct HFResult {
-        HFResult() : Energy(0), Integrals() {
+    struct HFWavefunction {
+        HFWavefunction() : Energy(0), Integrals() {
         }
 
-        HFResult(const double energyIn, const ConfigIntegrals &integrals) : Energy(energyIn), Integrals(integrals) {
+        HFWavefunction(const double energyIn, const ConfigIntegrals &integrals) : Energy(energyIn), Integrals(integrals) {
         }
 
-        HFResult(const HFResult &res) = default;
+        HFWavefunction(const HFWavefunction &res) = default;
 
-        virtual ~HFResult() = default;
+        virtual ~HFWavefunction() = default;
 
 
         const double Energy;
         const ConfigIntegrals Integrals;
     };
 
-    struct RHFResult : public HFResult {
-        RHFResult() : HFResult() {
+    struct RHFWavefunction : public HFWavefunction {
+        RHFWavefunction() : HFWavefunction() {
         }
 
-        RHFResult(
+        RHFWavefunction(
             const Eigen::MatrixXd &Fock,
             const Eigen::MatrixXd &Hcore,
             const Eigen::MatrixXd &Density,
@@ -125,10 +125,10 @@ namespace SCESS {
             const ConfigIntegrals &integrals,
             const double Energy) : Fock(Fock), Hcore(Hcore),
                                    Density(Density), Coeffs(Coeffs), Energies(Energies), Occupation(Occupation),
-                                   HFResult(Energy, integrals) {
+                                   HFWavefunction(Energy, integrals) {
         }
 
-        RHFResult(const RHFResult &) = default;
+        RHFWavefunction(const RHFWavefunction &) = default;
         Eigen::MatrixXd Fock;
         Eigen::MatrixXd Hcore;
         Eigen::MatrixXd Density;
@@ -137,11 +137,11 @@ namespace SCESS {
         Eigen::VectorXi Occupation;
     };
 
-    struct UHFResult : public HFResult {
-        UHFResult() : HFResult() {
+    struct UHFWavefunction : public HFWavefunction {
+        UHFWavefunction() : HFWavefunction() {
         }
 
-        UHFResult(
+        UHFWavefunction(
             const Eigen::MatrixXd &FockAlpha,
             const Eigen::MatrixXd &FockBeta,
             const Eigen::MatrixXd &Hcore,
@@ -158,10 +158,10 @@ namespace SCESS {
                                    DensityAlpha(DensityAlpha), DensityBeta(DensityBeta), CoeffsAlpha(CoeffsAlpha),
                                    CoeffsBeta(CoeffsBeta), EnergiesAlpha(EnergiesAlpha), EnergiesBeta(EnergiesBeta),
                                    OccupationAlpha(OccupationAlpha), OccupationBeta(OccupationBeta),
-                                   HFResult(Energy, integrals) {
+                                   HFWavefunction(Energy, integrals) {
         }
 
-        UHFResult(const UHFResult &res) = default;
+        UHFWavefunction(const UHFWavefunction &res) = default;
         Eigen::MatrixXd FockAlpha, FockBeta;
         Eigen::MatrixXd Hcore;
         Eigen::MatrixXd DensityAlpha, DensityBeta;

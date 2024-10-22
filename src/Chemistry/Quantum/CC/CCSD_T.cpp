@@ -8,7 +8,9 @@
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 
 namespace SCESS {
-    uRef<CCSD_TResult> CoupledCluster::CCSD_T(const RHFResult &rhfResult, std::stringstream *console) {
+    using namespace Eigen;
+
+    uRef<CCSD_TResult> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
@@ -52,7 +54,6 @@ namespace SCESS {
     double CoupledCluster::CalculateTriplesCorrection(const CCSDResult &ccsd,
                                                       const FockTensor &F, const Eigen::Index nOcc,
                                                       const Eigen::Index nVirt) {
-        using namespace Eigen;
         using IdxP = Eigen::IndexPair<int>;
         const TEITensor &moTEI = ccsd.moTEI;
 

@@ -19,9 +19,9 @@ namespace GEng {
 
 namespace SCESS {
     struct CCSD_TResult;
-    class GaussianCollection;
-    struct RHFResult;
-    struct UHFResult;
+    class ContractedGaussian;
+    struct RHFWavefunction;
+    struct UHFWavefunction;
     struct CCSDResult;
     class TriSurf;
 
@@ -114,15 +114,15 @@ namespace SCESS {
 
         SCFMethod mSCFMethod = SCFMethod::RHF;
         CorrelationMethod mCorrelationMethod = CorrelationMethod::None;
-        uRef<RHFResult> mRHFResult;
-        uRef<UHFResult> mUHFResult;
+        uRef<RHFWavefunction> mRHFResult;
+        uRef<UHFWavefunction> mUHFResult;
         bool mUseLastSCF = true, mInvalidateLastSCF = false;
 
         uRef<CCSDResult> mCCSDResult;
         uRef<CCSD_TResult> mCCSD_TResult;
         std::optional<double> mMP2Energy;
 
-        uRef<CIResult> mFCIResult;
+        uRef<CIWavefunction> mFCIResult;
 
         double mDFTEnergy = 0.0;
         std::string mCalcBasiSet;

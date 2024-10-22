@@ -11,7 +11,7 @@
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 
 namespace SCESS {
-    struct RHFResult;
+    struct RHFWavefunction;
 }
 
 namespace SCESS {
@@ -74,7 +74,7 @@ namespace SCESS {
         OrbitalStr mAlphaOrbs, mBetaOrbs;
     };
 
-    struct CIResult {
+    struct CIWavefunction {
     public:
         Eigen::VectorXd Energies;
         Eigen::MatrixXd Wavefunctions;
@@ -88,7 +88,7 @@ namespace SCESS {
          * @param rhfWavefunction
          * @return
          */
-        static uRef<CIResult> FCI(const RHFResult &rhfWavefunction, double Vnn,
+        static uRef<CIWavefunction> FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
                                   std::stringstream *console = nullptr);
 
 
@@ -97,7 +97,7 @@ namespace SCESS {
          * functions integrated out
          * @return
          */
-        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFResult& rhfWfn);
+        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFWavefunction& rhfWfn);
 
         static CIDeterminant::OrbitalStr MixAlphaAndBeta(const CIDeterminant::OrbitalStr &alphaList,
                                                          const CIDeterminant::OrbitalStr &betaList);

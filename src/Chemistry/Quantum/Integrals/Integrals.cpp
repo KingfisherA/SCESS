@@ -159,8 +159,8 @@ namespace SCESS {
 
         for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
             for (size_t j = i; j < molecule.GetNoOrbitals(); j++) {
-                const GaussianCollection &c1 = molecule.GetOrbital(i);
-                const GaussianCollection &c2 = molecule.GetOrbital(j);
+                const ContractedGaussian &c1 = molecule.GetOrbital(i);
+                const ContractedGaussian &c2 = molecule.GetOrbital(j);
 
                 //Overlap Evaluation
                 S(i, j) = S(j, i) = EvaluateOverlap(c1, c2);
@@ -249,7 +249,7 @@ namespace SCESS {
             gto1.mPosition, gto2.mPosition);
     }
 
-    double Integrals::EvaluateOverlap(const GaussianCollection &c1, const GaussianCollection &c2) {
+    double Integrals::EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -356,7 +356,7 @@ namespace SCESS {
                                     gto1.mPosition, gto2.mPosition, gto1.mAngular, gto2.mAngular, nuclearPos);
     }
 
-    double Integrals::EvaluateNuclear(const GaussianCollection &c1, const GaussianCollection &c2,
+    double Integrals::EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                       const Eigen::Vector3d &nuclearPos, const int charge) {
         double result = 0.0;
 
@@ -471,7 +471,7 @@ namespace SCESS {
         return term0 + term1 + term2;
     }
 
-    double Integrals::EvaluateKinetic(const GaussianCollection &c1, const GaussianCollection &c2) {
+    double Integrals::EvaluateKinetic(const ContractedGaussian &c1, const ContractedGaussian &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -608,8 +608,8 @@ namespace SCESS {
         return teiTensor;
     }
 
-    double Integrals::EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
-                                          const GaussianCollection &c3, const GaussianCollection &c4) {
+    double Integrals::EvaluateTwoElectron(const ContractedGaussian &c1, const ContractedGaussian &c2,
+                                          const ContractedGaussian &c3, const ContractedGaussian &c4) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++)

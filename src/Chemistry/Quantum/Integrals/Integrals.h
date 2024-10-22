@@ -7,7 +7,7 @@
 
 namespace SCESS {
     class Gaussian;
-    class GaussianCollection;
+    class ContractedGaussian;
     class Atom;
     class Molecule;
 
@@ -169,7 +169,7 @@ namespace SCESS {
                                            const Eigen::Vector3i &angular2, const Eigen::Vector3d &pos1,
                                            const Eigen::Vector3d &pos2);
         static double OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2);
-        static double EvaluateOverlap(const GaussianCollection &c1, const GaussianCollection &c2);
+        static double EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2);
         static Eigen::MatrixXd CalculateOverlapMatrix(const Molecule &molecule);
         static Eigen::MatrixXd CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2);
         //Nuclear attraction integrals
@@ -185,14 +185,14 @@ namespace SCESS {
                                            const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
                                            const Eigen::Vector3d &nuclearPos);
         static double NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2, const Eigen::Vector3d &nuclearPos);
-        static double EvaluateNuclear(const GaussianCollection &c1, const GaussianCollection &c2,
+        static double EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                       const Eigen::Vector3d &nuclearPos,
                                       const int charge);
         static Eigen::MatrixXd CalculateNuclearMatrix(const Molecule &molecule);
 
         //Kinetic energy integrals
         static double KineticGaussian(const Gaussian &gto1, const Gaussian &gto2);
-        static double EvaluateKinetic(const GaussianCollection &c1, const GaussianCollection &c2);
+        static double EvaluateKinetic(const ContractedGaussian &c1, const ContractedGaussian &c2);
         static Eigen::MatrixXd CalculateKineticMatrix(const Molecule &molecule);
 
         /**
@@ -202,8 +202,8 @@ namespace SCESS {
          */
         static TEITensor CalculateTwoElectronTensor(const Molecule &molecule);
         static TEITensor CalculateTwoElectronTensorMultithread(const Molecule &molecule);
-        static double EvaluateTwoElectron(const GaussianCollection &c1, const GaussianCollection &c2,
-                                          const GaussianCollection &c3, const GaussianCollection &c4);
+        static double EvaluateTwoElectron(const ContractedGaussian &c1, const ContractedGaussian &c2,
+                                          const ContractedGaussian &c3, const ContractedGaussian &c4);
         static double TwoElectronGaussian(const Gaussian &gto1, const Gaussian &gto2,
                                           const Gaussian &gto3, const Gaussian &gto4);
         static double TwoElectronGaussian(const Eigen::Vector3d &a, const int la, const int ma, const int na,

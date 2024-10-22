@@ -7,7 +7,7 @@
 #include "Chemistry/Quantum/HF/HartreeFock.h"
 
 namespace SCESS {
-    struct RHFResult;
+    struct RHFWavefunction;
 }
 
 namespace SCESS {
@@ -52,21 +52,21 @@ namespace SCESS {
         * to single and double excitations for a closed shell molecule starting from a RHF determinant
          * @param rhfResult The RHF determinant
          */
-        static uRef<CCSDResult> CCSD(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDResult> CCSD(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
         /**
         * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant with DIIS acceleration.
          * @param rhfResult The RHF determinant
          */
-        static uRef<CCSDResult> CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDResult> CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
-        static uRef<CCSD_TResult> CCSD_T(const RHFResult &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSD_TResult> CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
         static double CalculateTriplesCorrection(const CCSDResult &ccsd, const FockTensor &F, const Eigen::Index nOcc,
                                                  const Eigen::Index nVirt);
 
-        static FockTensor TransformFockToMO(const RHFResult &rhfResult);
+        static FockTensor TransformFockToMO(const RHFWavefunction &rhfResult);
         static void CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
                                              Eigen::Tensor<double, 2> &Dia, Eigen::Tensor<double, 4> &Dijab);
         static T2Tensor CreateInitialT2Tensor(const Eigen::Index nOcc, const Eigen::Index nVirt, const TEITensor &moTEI,

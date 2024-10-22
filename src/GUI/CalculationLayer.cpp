@@ -298,7 +298,7 @@ namespace SCESS {
                 //Run SCF as RHF if a SCF determinant is not available
                 if (!mUseLastSCF || mInvalidateLastSCF)
                     mRHFResult =
-                            std::move(SCESS::HartreeFock::Restricted(
+                            std::move(SCESS::HartreeFock::RHF(
                                 *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
                                 mCalcBasiSet));
 
@@ -325,7 +325,7 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::FCI: {
-                        uRef<CIResult> ciResult = SCESS::ConfigurationInteraction::FCI(
+                        uRef<CIWavefunction> ciResult = SCESS::ConfigurationInteraction::FCI(
                             *mRHFResult, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
                         if (ciResult != nullptr) {
                             mFCIResult = std::move(ciResult);
@@ -341,22 +341,22 @@ namespace SCESS {
                     case SCFMethod::RHF:
                         if (mUseLastSCF)
                             mRHFResult =
-                                    std::move(SCESS::HartreeFock::Restricted(
+                                    std::move(SCESS::HartreeFock::RHF(
                                         *mMolecule, mLastMolecule.get(), mRHFResult.get(), 1E-5, 100, &mConsoleOutput,
                                         mCalcBasiSet));
                         else
                             mRHFResult =
-                                    std::move(SCESS::HartreeFock::Restricted(
+                                    std::move(SCESS::HartreeFock::RHF(
                                         *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
                                         mCalcBasiSet));
                         break;
                     case SCFMethod::UHF:
                         mUHFResult =
-                                std::move(SCESS::HartreeFock::Unrestricted(*mMolecule, 1E-5, 100, &mConsoleOutput,
+                                std::move(SCESS::HartreeFock::UHF(*mMolecule, 1E-5, 100, &mConsoleOutput,
                                                                            mCalcBasiSet));
                         break;
                     case SCFMethod::DFT:
-                        mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
+                        //mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
                         break;
                 }
             }

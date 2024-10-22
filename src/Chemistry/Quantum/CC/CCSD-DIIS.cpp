@@ -7,8 +7,9 @@
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 
 namespace SCESS {
-    uRef<CCSDResult> CoupledCluster::CCSD_DIIS(const RHFResult &rhfResult, std::stringstream *console) {
-        using namespace Eigen;
+    using namespace Eigen;
+
+    uRef<CCSDResult> CoupledCluster::CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console) {
 
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;

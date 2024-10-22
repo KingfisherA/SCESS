@@ -1,196 +1,175 @@
 #include <pch.h>
+#include<iostream>
 
-#include "DFT.h"
-#include "Chemistry/Quantum/HF/HartreeFock.h"
-#include <Eigen/Core>
+#include "Chemistry/Quantum/DFT/DFT.h"
 #include "Chemistry/Quantum/Integrals/Integrals.h"
-#include "Chemistry/Quantum/Molecule.h"
-#include "XCFunctional.h"
-#include "DFTGrid.h"
+#include "Chemistry/Quantum/Integrals/Grid/MolecularGrid.h"
+
 #include "xc.h"
+#include "XCFunctionals.h"
+#include "Chemistry/Quantum/Integrals/Grid/Quadrature.h"
 
 //
 //
-namespace SCESS
-{
-	double DFT::RunDFT(const Molecule &mol, std::stringstream *consoleStream, const std::string_view basisSet)
-	{
+namespace SCESS {
+    using namespace Eigen;
 
-		if (consoleStream)
-			*consoleStream << "---Density Functional Theory---\n Using " << basisSet << " basis set with " << mol.GetOrbitals().size() << " basis set functions \n No aux basis.\nBeginning integral evaluation...\n";
+    double DensityFunctional::DFT(const Molecule &mol) {
+        std::cout << "-- Density Functional Theory with B3LYP functional --\nEvaluating Molecular Integrals ....\n";
 
-		// RHFResult rhfResult = HF::RestrictedHF(mol, 1E-5, 100, consoleStream, basisSet);
+        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol);
 
-		ConfigIntegrals integrals = Integrals::CalculateConfiguration(mol);
-		const Eigen::MatrixXd &S = integrals.S;
-		const Eigen::MatrixXd &T = integrals.T;
-		const Eigen::MatrixXd &V = integrals.V;
-		const TEITensor &tei = integrals.tei; // Two-electron tensor
+        const MatrixXd &S = mints.S;
+        const MatrixXd &V = mints.V;
+        const MatrixXd &T = mints.T;
+        const TEITensor &tei = mints.tei;
 
-		// const Eigen::MatrixXd& S = rhfResult.Integrals.S;
-		// const Eigen::MatrixXd& T = rhfResult.Integrals.T;
-		// const Eigen::MatrixXd& V = rhfResult.Integrals.V;
-		// const TETensor& tei = rhfResult.Integrals.tei; //Two-electron tensor
-		DFTMolecularGrid dftGrid(mol);
-		if (consoleStream)
-			*consoleStream << "Constructing DFT Grid with 15 radial points and a lebbedev order of 7\n";
-		dftGrid.Construct(20, 7);
-		if (consoleStream)
-			*consoleStream << "DFT grid constructed!\n";
+        auto nElectrons = static_cast<uint32_t>(mol.GetNoElectrons());
 
-		if (consoleStream)
-			*consoleStream << "Integral evaluation completed\n";
+        SelfAdjointEigenSolver<MatrixXd> eigensolver;
+        eigensolver.compute(S);
+        const VectorXd &SEigenValues = eigensolver.eigenvalues().real();
+        const MatrixXd &SEigenVects = eigensolver.eigenvectors().real();
+        MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
+        //Matrix to transform from AO to orthogonal basis set
+        MatrixXd U = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
+        U = (U + U.transpose()) * 0.5;
 
-		Eigen::MatrixXd Hcore = T + V;
+        MolecularGrid molecularGrid(&mol);
+        molecularGrid.Create(30, Quadrature::LEBEDEV_194);
 
-		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver;
-		eigensolver.compute(S);
-		const Eigen::VectorXd &SEigenValues = eigensolver.eigenvalues().real();
-		const Eigen::MatrixXd &SEigenVects = eigensolver.eigenvectors().real();
-		Eigen::MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
-		Eigen::MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
-		// TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
+        //Hamiltonian matrix
+        MatrixXd H = T + V;
+        // The Kohn-Sham Fock matrix
+        MatrixXd F;
+        // The one particle density matrices
+        MatrixXd Density = MatrixXd::Zero(S.rows(), S.cols());
+        //The J couloumb matrix
+        MatrixXd J = MatrixXd::Zero(S.rows(), S.cols());
+        //The exchange-correlation matrix
+        MatrixXd ExchangeCorr = MatrixXd::Zero(S.rows(), S.cols());
+        // The wavefunction coefficient matrix
+        MatrixXd C;
+        // The Kohn-Sham orbital energies
+        VectorXd Energies;
 
-		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(S.rows(), S.rows());
-		Eigen::MatrixXd XCMat = Eigen::MatrixXd::Zero(S.rows(), S.rows());
-		Eigen::MatrixXd JMat = Eigen::MatrixXd::Zero(S.rows(), S.rows());
-		Eigen::MatrixXd KSMat, Coeffs, OldDensity;
+        //The total electronic energy of the system
+        double E = 0.0, lastE = 0.0;
+        //Nuclear-nuclear repulsion energy
+        double Vnn = mol.CalculateNuclearRepulsion();
 
-		double delta = 1.0,
-			   Vnn = mol.CalculateNuclearRepulsion(),
-			   totalE = 0.0,
-			   exchangeCorreE = 0.0;
-		Eigen::Index scfIterations = 0, scfMaxIterations = 200;
+        constexpr double E_CONVERGENCE = 1e-8;
+        constexpr uint32_t MAX_ITERATIONS = 100;
 
-		if (consoleStream)
-			*consoleStream << "Beginning SCF iterations...\n";
+        for (uint32_t iter = 0; iter < MAX_ITERATIONS; ++iter) {
+            F = H + J + ExchangeCorr;
+            F = U.transpose() * F * U;
 
-		while (delta > 1E-5 && scfIterations < scfMaxIterations)
-		{
-			KSMat = Hcore + 2.0 * JMat + XCMat;
-			KSMat = TransformMat * KSMat * TransformMat.transpose();
+            SelfAdjointEigenSolver<MatrixXd> eigensolver2(F);
+            Energies = eigensolver2.eigenvalues().real();
+            C = U * eigensolver2.eigenvectors().real();
 
-			Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver2(KSMat);
-			Eigen::MatrixXd CoeffsPrime = eigensolver2.eigenvectors().real();
+            Density = CreateDensityMatrix(C, nElectrons);
 
-			Coeffs = TransformMat * CoeffsPrime;
+            molecularGrid.SetDensity(Density);
+            molecularGrid.CorrectDensities();
 
-			OldDensity = DensityMat;
-			DensityMat = ConstructDensity(mol.GetNoElectrons(), Coeffs);
+            J = CreateColoumbMatrixTEI(tei, Density);
+            double E_XC = 0.0;
+            CalculateXCMatrix(mol, molecularGrid, ExchangeCorr, E_XC);
 
-			dftGrid.SetDensity(DensityMat);
-			dftGrid.CorrectDensities();
+            double kineticPotentialE = 2.0 * (Density * H).trace();
+            double electronRepulsion = 2.0 * (Density * J).trace();
 
-			JMat = ConstructCoulombMatrix(DensityMat, tei);
-			EvaluateExchangeCorrelation(dftGrid, mol, XCMat, exchangeCorreE);
+            E = kineticPotentialE + electronRepulsion + Vnn + E_XC;
 
-			// Calculate delta change to the density matrix
-			const Eigen::MatrixXd DensityMatriciesDelta = DensityMat - OldDensity;
-			delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
+            double dE = abs(E - lastE);
+            std::cout << "DFT(" << iter << ") E(DFT) = " << E << " dE = " << dE << '\n';
 
-			totalE = CalculateEnergy(DensityMat, Hcore, JMat, Vnn, exchangeCorreE);
+            if (dE < E_CONVERGENCE) {
+                std::cout << "--- DFT procedure has converged! ---\n";
+                break;
+            }
+            lastE = E;
+        }
 
-			// Calculate the current energy
-			if (consoleStream)
-				*consoleStream << "SCF(" << scfIterations << "); Delta=" << delta << ", E=" << totalE << " hartrees\n";
-			scfIterations++;
-		}
+        std::cout << "--- Final DFT Energy ---\n";
+        std::cout << "E(DFT) = " << E << " hartrees\n";
 
-		if (consoleStream)
-		{
-			if (scfIterations < scfMaxIterations)
-				*consoleStream << "SCF procedure achieved required convergence criteria!\n SCF converged after " << scfIterations << " iterations.\n DFT=" << totalE << " hartrees\n";
-			else
-				*consoleStream << "SCF procedure failed to achieve convergence criteria in " << scfMaxIterations << " iterations \n";
-		}
+        return E;
+    }
 
-		return totalE;
-	}
+    MatrixXd DensityFunctional::CreateColoumbMatrixTEI(const TEITensor &tei,
+                                                       const MatrixXd &Density) {
+        MatrixXd J = MatrixXd::Zero(Density.rows(), Density.cols());
 
-	Eigen::MatrixXd DFT::ConstructDensity(const Eigen::Index Nelecs, const Eigen::MatrixXd &coeffs)
-	{
-		Eigen::MatrixXd DensityMat = Eigen::MatrixXd::Zero(coeffs.rows(), coeffs.rows());
+        for (Eigen::Index i = 0; i < J.rows(); i++)
+            for (Eigen::Index j = 0; j < J.rows(); j++)
+                for (Eigen::Index k = 0; k < J.rows(); k++)
+                    for (Eigen::Index l = 0; l < J.rows(); l++) {
+                        //Coulomb integral; <ik | jl> = (ij | kl)
+                        J(i, j) += 2.0 * Density(k, l) * tei(i, j, k, l);
+                    }
 
-		for (Eigen::Index i = 0; i < DensityMat.rows(); i++)
-		{
-			for (Eigen::Index j = 0; j < DensityMat.cols(); j++)
-			{
-				for (Eigen::Index k = 0; k < Nelecs / 2; k++)
-				{
-					DensityMat(i, j) += coeffs(i, k) * coeffs(j, k);
-				}
-			}
-		}
+        return J;
+    }
 
-		// Mix the old and new density matrices??
-		return DensityMat;
-	}
-	Eigen::MatrixXd DFT::ConstructCoulombMatrix(const Eigen::MatrixXd &DensityMat, const TEITensor &tei)
-	{
-		Eigen::MatrixXd J = Eigen::MatrixXd::Zero(DensityMat.rows(), DensityMat.rows());
-		for (Eigen::Index i = 0; i < J.rows(); i++)
-		{
-			for (Eigen::Index j = 0; j < J.rows(); j++)
-			{
-				for (Eigen::Index k = 0; k < J.rows(); k++)
-				{
-					for (Eigen::Index l = 0; l < J.rows(); l++)
-					{
-						J(i, j) += DensityMat(k, l) * tei(i, j, k, l);
-					}
-				}
-			}
-		}
-		return J;
-	}
+    MatrixXd DensityFunctional::CreateDensityMatrix(const Eigen::MatrixXd &C, uint32_t Nelecs) {
+        MatrixXd Density = MatrixXd::Zero(C.rows(), C.rows());
+        for (int i = 0; i < Density.rows(); i++) {
+            for (int j = 0; j < Density.rows(); j++) {
+                for (int k = 0; k < (Nelecs / 2); k++) {
+                    Density(i, j) += C(i, k) * C(j, k);
+                }
+            }
+        }
 
-	void DFT::EvaluateExchangeCorrelation(const DFTMolecularGrid &dftGrid,
-										  const Molecule &mol,
-										  Eigen::MatrixXd &XCMatrix, double &energyOut)
-	{
-		Eigen::VectorXd densities = dftGrid.GetDensities();
-		Eigen::VectorXd weights = dftGrid.GetWeights();
-		Eigen::MatrixXd amplitudes = dftGrid.GetAmplitudes();
+        return Density;
+    }
 
-		Eigen::VectorXd exchangeE, exchangePotentialAlpha, exchangePotentialBeta;
-		Eigen::VectorXd correlationE, correlationPotentialAlpha, correlationPotentialBeta;
+    void DensityFunctional::CalculateXCMatrix(const Molecule &mol, const MolecularGrid &grid,
+                                              MatrixXd &ExchangeCorr, double &E_XC) {
 
-		Eigen::VectorXd densityAlpha = densities * 0.5,
-						densityBeta = densities * 0.5;
+        for (Eigen::Index i=0; i < ExchangeCorr.size();i++)
+            ExchangeCorr.data()[i] = 0.0;
 
-		XCFunctional::Exchange_AlphaX(densityAlpha, densityBeta, exchangeE, exchangePotentialAlpha, exchangePotentialBeta);
-		XCFunctional::Correlation_VMW(densityAlpha, densityBeta, correlationE, correlationPotentialAlpha, correlationPotentialBeta);
+        VectorXd densities = grid.GetDensities();
+        VectorXd weights = grid.GetWeights();
+        MatrixXd amplitudes = grid.GetAmplitudes();
 
-		energyOut = weights.dot(exchangeE + correlationE);
+        VectorXd ex; // exchange energy
+        VectorXd vxa; // exchange potential (spin-up)
+        VectorXd vxb; // exchange potential (spin-down)
 
-		Eigen::VectorXd wva = weights.cwiseProduct((exchangePotentialAlpha + exchangePotentialBeta + correlationPotentialAlpha + correlationPotentialBeta) * 0.5);
+        VectorXd ec; // correlation energy
+        VectorXd vca; // correlation potential (spin-up)
+        VectorXd vcb; // correlation potential (spin-down)
 
-		for (Eigen::Index i = 0; i < mol.GetOrbitals().size(); i++)
-		{
-			Eigen::VectorXd row = amplitudes.row(i);
-			Eigen::VectorXd wva_i = wva.cwiseProduct(row);
-			for (Eigen::Index j = 0; j < mol.GetOrbitals().size(); j++)
-			{
-				XCMatrix(i, j) = wva_i.dot(amplitudes.row(j));
-			}
-		}
-	}
+        VectorXd densitiesa = densities * 0.5;
+        VectorXd densitiesb = densities * 0.5;
 
-	double DFT::CalculateEnergy(const Eigen::MatrixXd &DensityMat,
-								const Eigen::MatrixXd &Hcore,
-								const Eigen::MatrixXd &JMat,
-								const double nuclearNuclearE,
-								const double exchangeCorEnergy)
-	{
-		double result = 0.0;
-		for (int i = 0; i < DensityMat.rows(); i++)
-		{
-			for (int j = 0; j < DensityMat.rows(); j++)
-			{
-				result += DensityMat(i, j) * (Hcore(i, j) + JMat(i, j));
-			}
-		}
+        // calculate exchange energies and potential
+        XCFunctionals::xalpha_x_functional(densitiesa, densitiesb, ex, vxa, vxb);
 
-		return result * 2.0 + nuclearNuclearE + exchangeCorEnergy;
-	}
+        // calculate correlation energy and potential
+        XCFunctionals::vwm_c_functional(densitiesa, densitiesb, ec, vca, vcb);
+
+        // calculate total exchange-correlation energy
+        E_XC = weights.dot(ex + ec);
+
+        // calculate gridpoint-wise xc potential
+
+        // I still don't understand why I need to put a 0.5 here... (see also the function above)
+        // Does it have anything to do how I construct the density matrix P?
+        // Can someone who knows the answer send me an e-mail?
+        VectorXd wva = weights.cwiseProduct((vxa + vxb + vca + vcb) * 0.5);
+
+        for (uint32_t i = 0; i < mol.GetNoOrbitals(); i++) {
+            VectorXd row = amplitudes.row(i);
+            VectorXd wva_i = wva.cwiseProduct(row);
+            for (uint32_t j = 0; j < mol.GetNoOrbitals(); j++) {
+                ExchangeCorr(i, j) = wva_i.dot(amplitudes.row(j));
+            }
+        }
+    }
 }
