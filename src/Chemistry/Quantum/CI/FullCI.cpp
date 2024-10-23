@@ -9,58 +9,38 @@
 #include <boost/range/irange.hpp>
 
 namespace SCESS {
-    void CIDeterminant::CalculateDifferences(const CIDeterminant &I, const CIDeterminant &J,
-                                             CIDeterminant::OrbitalStr &uniqueI, CIDeterminant::OrbitalStr &uniqueJ,
-                                             CIDeterminant::OrbitalStr &commonIJ,
+    void CIDeterminant::CalculateDifferences(CIDeterminant I,
+                                             CIDeterminant J,
+                                             size_t numOfAlphaOrbitals,
+                                             size_t numOfBetaOrbitals,
+                                             std::vector<uint8_t> &uniqueI,
+                                             std::vector<uint8_t> &uniqueJ,
+                                             std::vector<uint8_t> &commonIJ,
                                              int &sign) {
-        if (I.GetAlphaOrbitals().size() != J.GetAlphaOrbitals().size() ||
-            I.GetBetaOrbitals().size() != J.GetBetaOrbitals().size())
-            throw std::runtime_error("Alpha and beta electrons must be the same when calculating difference");
-
         uint32_t flips = 0;
-        auto CalcDifferences = [&flips, &commonIJ, &uniqueI, &uniqueJ](const CIDeterminant::OrbitalStr &I,
-                                                                       const CIDeterminant::OrbitalStr &J,
+        auto CalcDifferences = [&flips, &commonIJ, &uniqueI, &uniqueJ](const CIDeterminant::OrbitalBitStr I,
+                                                                       const CIDeterminant::OrbitalBitStr J,
+                                                                       size_t numOfOrbs,
                                                                        uint8_t (*func)(uint8_t)) {
-            uint32_t i = 0, j = 0,
-                    flipI = 0, flipJ = 0; // number of flips in I and J string to have max coincidence
+            OrbitalBitStr uniqueOrbs = I ^ J;
 
-            while ((i < I.size()) && (j < I.size())) {
-                if (I[i] == J[j]) {
-                    commonIJ.push_back(func(I[i]));
-                    i++;
-                    j++;
-                } else if (I[i] < J[j]) {
-                    flipI += i - uniqueI.size();
-                    uniqueI.push_back(func(I[i]));
-                    i++;
-                } else if (I[i] > J[j]) {
-                    flipJ += j - uniqueJ.size();
-                    uniqueJ.push_back(func(J[j]));
-                    j++;
-                }
-            }
-
-            if (i != j) {
-                if (i < j) {
-                    while (i < I.size()) {
-                        flipI += i - uniqueI.size();
-                        uniqueI.push_back(func(I[i]));
-                        i++;
+            for (uint32_t i = 0; i < numOfOrbs; ++i) {
+                if ((0x1 << i) & uniqueOrbs) {
+                    if ((0x1 << i) & I) {
+                        uniqueI.push_back(func(i));
+                    } else {
+                        uniqueJ.push_back(func(i));
                     }
-                } else {
-                    while (j < I.size()) {
-                        flipJ += j - uniqueJ.size();
-                        uniqueJ.push_back(func(J[j]));
-                        j++;
-                    }
-                }
+                    flips++;
+                } else if ((0x1 << i) & I)
+                    commonIJ.push_back(func(i));
             }
-
-            flips += flipI + flipJ;
         };
 
-        CalcDifferences(I.GetAlphaOrbitals(), J.GetAlphaOrbitals(), [](uint8_t i)-> uint8_t { return i * 2; });
-        CalcDifferences(I.GetBetaOrbitals(), J.GetBetaOrbitals(), [](uint8_t i)-> uint8_t { return i * 2 + 1; });
+        CalcDifferences(I.GetAlphaOrbitals(), J.GetAlphaOrbitals(), numOfAlphaOrbitals,
+                        [](uint8_t i)-> uint8_t { return i * 2; });
+        CalcDifferences(I.GetBetaOrbitals(), J.GetBetaOrbitals(), numOfBetaOrbitals,
+                        [](uint8_t i)-> uint8_t { return i * 2 + 1; });
 
         sign = 1;
         if (flips % 2 == 0)
@@ -68,7 +48,7 @@ namespace SCESS {
     }
 
     uRef<CIWavefunction> ConfigurationInteraction::FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
-                                                 std::stringstream *console) {
+                                                       std::stringstream *console) {
         const Eigen::MatrixXd &C = rhfWavefunction.Coeffs;
         const ConfigIntegrals &ints = rhfWavefunction.Integrals;
 
@@ -118,7 +98,9 @@ namespace SCESS {
         for (uint32_t i = 0; i < H_FCI.rows(); i++)
             for (uint32_t j = i; j < H_FCI.cols(); j++) {
                 H_FCI(i, j) = H_FCI(j, i) =
-                              CalculateHamiltonianElement(determinants[i], determinants[j], HSpin, moSpinTEI);
+                              CalculateHamiltonianElement(determinants[i], determinants[j],
+                                                          nSpatialOrbitals,
+                                                          nSpatialOrbitals, HSpin, moSpinTEI);
             }
 
         if (console)
@@ -166,17 +148,24 @@ namespace SCESS {
         return HSpin;
     }
 
-    double ConfigurationInteraction::CalculateHamiltonianElement(const CIDeterminant &detI, const CIDeterminant &detJ,
+    double ConfigurationInteraction::CalculateHamiltonianElement(CIDeterminant detI, CIDeterminant detJ,
+                                                                 size_t numOfAlphaOrbitals,
+                                                                 size_t numOfBetaOrbitals,
                                                                  const Eigen::MatrixXd &HSpin,
                                                                  const TEITensor &moSpinTEI) {
-        CIDeterminant::OrbitalStr uniqueI, uniqueJ, commonIJ;
+        if (numOfAlphaOrbitals != numOfBetaOrbitals)
+            throw std::runtime_error(
+                "Only RHF determinants with equal numbers of alpha and beta number of electrons are supported currently");
 
-        if (detI.GetAlphaOrbitals().size() != detJ.GetAlphaOrbitals().size() ||
-            detI.GetBetaOrbitals().size() != detJ.GetBetaOrbitals().size())
-            return 0.0;
+
+        std::vector<uint8_t> uniqueI, uniqueJ, commonIJ;
+        uniqueI.reserve(numOfAlphaOrbitals);
+        uniqueJ.reserve(numOfAlphaOrbitals);
+        commonIJ.reserve(numOfAlphaOrbitals);
 
         int sign = 0;
-        CIDeterminant::CalculateDifferences(detI, detJ, uniqueI, uniqueJ, commonIJ, sign);
+        CIDeterminant::CalculateDifferences(detI, detJ, numOfAlphaOrbitals, numOfBetaOrbitals,
+                                            uniqueI, uniqueJ, commonIJ, sign);
 
         switch (uniqueI.size()) {
             case 0: {
@@ -215,17 +204,18 @@ namespace SCESS {
         }
     }
 
-    CIDeterminant::OrbitalStr ConfigurationInteraction::MixAlphaAndBeta(const CIDeterminant::OrbitalStr &alphaList,
-                                                                        const CIDeterminant::OrbitalStr &betaList) {
-        CIDeterminant::OrbitalStr combinedIndices(alphaList.size() + betaList.size(), (uint8_t) 0);
-
+    CIDeterminant::OrbitalBitStr ConfigurationInteraction::MixAlphaAndBeta(const CIDeterminant::OrbitalBitStr alphaList,
+                                                                           size_t numAlpha,
+                                                                           const CIDeterminant::OrbitalBitStr betaList,
+                                                                           size_t numBeta) {
+        CIDeterminant::OrbitalBitStr combinedIndices = 0;
         size_t i = 0;
 
-        for (const auto &m: alphaList)
-            combinedIndices[i++] = m;
+        for (i = 0; i < numAlpha; i++)
+            combinedIndices |= (alphaList >> i) & 0x1;
 
-        for (const auto &m: betaList)
-            combinedIndices[i++] = m;
+        for (i = 0; i < numBeta; i++)
+            combinedIndices |= (betaList >> i) & 0x1;
 
         return combinedIndices;
     }
@@ -233,7 +223,6 @@ namespace SCESS {
     std::vector<CIDeterminant> ConfigurationInteraction::GenerateAllDeterminants(
         uint32_t nSpinOrbs, uint32_t nElectrons) {
         auto nDeterminants = static_cast<size_t>(Integrals::Binomial(nSpinOrbs, nElectrons));
-        nDeterminants = nDeterminants * nDeterminants;
         std::vector<CIDeterminant> determinants;
         determinants.reserve(nDeterminants);
 
@@ -241,37 +230,44 @@ namespace SCESS {
                  boost::irange<uint8_t>(0, nSpinOrbs), nElectrons)) {
             CIDeterminant &det = determinants.emplace_back();
 
-            CIDeterminant::OrbitalStr &alphaOrbs = det.GetAlphaOrbitals();
-            CIDeterminant::OrbitalStr &betaOrbs = det.GetBetaOrbitals();
-            alphaOrbs.reserve(nSpinOrbs);
-            betaOrbs.reserve(nSpinOrbs);
-
-            for (const auto &spinOrbIndx: spinOrbCombination) {
+            for (const auto spinOrbIndx: spinOrbCombination) {
                 // If even then alpha spin
                 if (spinOrbIndx % 2 == 0) {
-                    alphaOrbs.push_back(spinOrbIndx / 2);
+                    det.GetAlphaOrbitals() |= 1 << (spinOrbIndx / 2);
                     continue;
                 }
                 // If odd then beta spin
-                betaOrbs.push_back(spinOrbIndx / 2);
+                det.GetBetaOrbitals() |= 1 << (spinOrbIndx / 2);
             }
         }
 
         return determinants;
     }
 
+    size_t ConfigurationInteraction::GetNumberOfOccupiedOrbitals(CIDeterminant::OrbitalBitStr orbitalBitStr,
+                                                                 size_t numOfOrbitals) {
+        size_t numOccupied = 0;
 
-    void ConfigurationInteraction::PrintDeterminants(const std::vector<CIDeterminant> &determinants) {
-        for (auto &det: determinants) {
+        for (size_t i = 0; i < numOfOrbitals; i++)
+            if ((0x1 << i) & orbitalBitStr)
+                numOccupied++;
+
+        return numOccupied;
+    }
+
+
+    void ConfigurationInteraction::PrintDeterminants(const std::vector<CIDeterminant> &determinants,
+                                                     size_t numOfOrbitals) {
+        for (auto det: determinants) {
             std::cout << "[Alpha, ";
 
-            for (uint32_t i = 0; i < det.GetAlphaOrbitals().size(); i++)
-                std::cout << (int) det.GetAlphaOrbitals()[i] << ", ";
+            for (uint32_t i = 0; i < numOfOrbitals; i++)
+                std::cout << ((det.GetAlphaOrbitals() >> i) & 0x1) << ", ";
 
             std::cout << "Beta, ";
 
-            for (uint32_t i = 0; i < det.GetBetaOrbitals().size(); i++)
-                std::cout << (int) det.GetBetaOrbitals()[i] << ", ";
+            for (uint32_t i = 0; i < numOfOrbitals; i++)
+                std::cout << ((det.GetBetaOrbitals() >> i) & 0x1) << ", ";
 
 
             std::cout << "] \n";

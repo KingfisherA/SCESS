@@ -17,18 +17,18 @@ namespace SCESS {
 namespace SCESS {
     class CIDeterminant {
     public:
-        using OrbitalStr = std::basic_string<uint8_t>;
+        using OrbitalBitStr = uint64_t;
 
         CIDeterminant() {
         }
 
-        CIDeterminant(const OrbitalStr &alphaOrbs, const OrbitalStr &betaOrbs)
+        CIDeterminant(const OrbitalBitStr &alphaOrbs, const OrbitalBitStr &betaOrbs)
             : mAlphaOrbs(alphaOrbs), mBetaOrbs(betaOrbs) {
         }
 
-        CIDeterminant(OrbitalStr &&alphaOrbs, OrbitalStr &&betaOrbs)
-            : mAlphaOrbs(std::move(alphaOrbs)), mBetaOrbs(std::move(betaOrbs)) {
-        }
+        // CIDeterminant(OrbitalBitStr &&alphaOrbs, OrbitalBitStr &&betaOrbs)
+        //     : mAlphaOrbs(std::move(alphaOrbs)), mBetaOrbs(std::move(betaOrbs)) {
+        // }
 
         CIDeterminant(const CIDeterminant &o): mAlphaOrbs(o.mAlphaOrbs), mBetaOrbs(o.mBetaOrbs) {
         }
@@ -36,43 +36,46 @@ namespace SCESS {
         CIDeterminant(CIDeterminant &&o): mAlphaOrbs(std::move(o.mAlphaOrbs)), mBetaOrbs(std::move(o.mBetaOrbs)) {
         }
 
-        void Set(const OrbitalStr &alpha, const OrbitalStr &beta) {
+        void Set(OrbitalBitStr alpha, OrbitalBitStr beta) {
             mAlphaOrbs = alpha;
             mBetaOrbs = beta;
         }
 
-        void Set(OrbitalStr &&alpha, OrbitalStr &&beta) {
-            mAlphaOrbs = std::move(alpha);
-            mBetaOrbs = std::move(beta);
-        }
-
-        [[nodiscard]] OrbitalStr &GetAlphaOrbitals() {
+        [[nodiscard]] OrbitalBitStr &GetAlphaOrbitals() {
             return mAlphaOrbs;
         }
 
-        [[nodiscard]] const OrbitalStr &GetAlphaOrbitals() const {
+        [[nodiscard]] const OrbitalBitStr &GetAlphaOrbitals() const {
             return mAlphaOrbs;
         }
 
-        [[nodiscard]] OrbitalStr &GetBetaOrbitals() {
+        [[nodiscard]] OrbitalBitStr &GetBetaOrbitals() {
             return mBetaOrbs;
         }
 
-        [[nodiscard]] const OrbitalStr &GetBetaOrbitals() const {
+        [[nodiscard]] const OrbitalBitStr &GetBetaOrbitals() const {
             return mBetaOrbs;
         }
 
         static void CalculateDifferences(
-            const CIDeterminant &I,
-            const CIDeterminant &J,
-            CIDeterminant::OrbitalStr &uniqueI,
-            CIDeterminant::OrbitalStr &uniqueJ,
-            CIDeterminant::OrbitalStr &commonIJ,
+            CIDeterminant I,
+            CIDeterminant J,
+            size_t numOfAlphaOrbitals,
+            size_t numOfBetaOrbitals,
+            std::vector<uint8_t> &uniqueI,
+            std::vector<uint8_t> &uniqueJ,
+            std::vector<uint8_t> &commonIJ,
             int &sign);
 
     private:
-        OrbitalStr mAlphaOrbs, mBetaOrbs;
+        //Store the hatree products of orbitals in bitstrings
+        //i.e. 1111100 would be the ground-state hartree fock determinant of water in sto-3g
+        //Because of this we can only store a maximum of 64 orbitals in each bit string
+        OrbitalBitStr mAlphaOrbs = 0,
+                mBetaOrbs = 0;
     };
+
+    using Excitor = CIDeterminant;
 
     struct CIWavefunction {
     public:
@@ -89,7 +92,7 @@ namespace SCESS {
          * @return
          */
         static uRef<CIWavefunction> FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
-                                  std::stringstream *console = nullptr);
+                                        std::stringstream *console = nullptr);
 
 
         /**
@@ -97,16 +100,24 @@ namespace SCESS {
          * functions integrated out
          * @return
          */
-        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFWavefunction& rhfWfn);
+        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFWavefunction &rhfWfn);
 
-        static CIDeterminant::OrbitalStr MixAlphaAndBeta(const CIDeterminant::OrbitalStr &alphaList,
-                                                         const CIDeterminant::OrbitalStr &betaList);
+        static CIDeterminant::OrbitalBitStr MixAlphaAndBeta(const CIDeterminant::OrbitalBitStr alphaList,
+                                                            size_t numAlpha,
+                                                            const CIDeterminant::OrbitalBitStr betaList,
+                                                            size_t numBeta);
 
         static std::vector<CIDeterminant> GenerateAllDeterminants(uint32_t nSpinOrbs, uint32_t nElectrons);
 
-        static double CalculateHamiltonianElement(const CIDeterminant &detI, const CIDeterminant &detJ,
+        static size_t GetNumberOfOccupiedOrbitals(CIDeterminant::OrbitalBitStr orbitalBitStr, size_t numOfOrbitals);
+
+        //numOfOrbitals is the total size of occupied and virtual orbitals.
+        //
+        static double CalculateHamiltonianElement(CIDeterminant detI, CIDeterminant detJ, size_t numOfAlphaOrbitals,
+                                                  size_t numOfBetaOrbitals,
                                                   const Eigen::MatrixXd &HSpin, const TEITensor &moSpinTEI);
 
-        static void PrintDeterminants(const std::vector<CIDeterminant> &determinants);
+        static void PrintDeterminants(const std::vector<CIDeterminant> &determinants,
+                                      size_t numOrbitals);
     };
 } // SCESS

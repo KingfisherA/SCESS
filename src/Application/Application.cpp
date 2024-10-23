@@ -46,14 +46,14 @@ int main(int argc, char **argv) {
     SCESS::Tests::TestFCIQMC();
     //SCESS::Tests::TestDFT();
 
-    // if (!app.Init()) {
-    //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";
-    //     std::cout << "Press any key to continue...\n";
-    //     std::cin.get();
-    //     return 1;
-    // }
-    //
-    // app.Run();
+    if (!app.Init()) {
+        std::cout << "Failed to initialise SCESS application. Program will now close. \n";
+        std::cout << "Press any key to continue...\n";
+        std::cin.get();
+        return 1;
+    }
+
+    app.Run();
 
     return 0;
 }

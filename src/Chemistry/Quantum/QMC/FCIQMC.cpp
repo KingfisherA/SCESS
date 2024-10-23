@@ -33,7 +33,7 @@ namespace SCESS {
                 for (uint32_t j = i; j < H_FCI.cols(); j++)
                     H_FCI(i, j) = H_FCI(j, i) =
                                   ConfigurationInteraction::CalculateHamiltonianElement(determinants[i],
-                                      determinants[j], HSpin, moSpinTEI);
+                                      determinants[j], nSpatialOrbitals, nSpatialOrbitals, HSpin, moSpinTEI);
         }
 
 
@@ -51,7 +51,7 @@ namespace SCESS {
         //Implementation of the QMC algorithm
 
         constexpr size_t NUM_CYCLES = 1000,
-                NUM_REPORT_CYCLES = 1000;
+                NUM_REPORT_CYCLES = 5000;
         constexpr double EPSILON = 0.01;
 
         using namespace boost::random;

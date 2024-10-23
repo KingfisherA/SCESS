@@ -4,10 +4,6 @@
 
 namespace SCESS {
     struct RHFWavefunction;
-    struct Excitor {
-        public:
-        std::array<int, 10> occIndices, virtIndices;
-    };
 
     class QuantumMonteCarlo {
     public:

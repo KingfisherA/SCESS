@@ -181,7 +181,7 @@ namespace SCESS {
         return ConfigIntegrals{S, T, V, tei};
     }
 
-    double Integrals::Binomial(int a, int b) {
+    double Integrals::Binomial(int64_t a, int64_t b) {
         if ((a < 0) || (b < 0) || (a - b < 0)) {
             return 1.0;
         }
