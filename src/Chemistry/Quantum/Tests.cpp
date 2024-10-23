@@ -4,7 +4,7 @@
 #include"GraphicsEngine/Utilities/Memory.h"
 #include "Chemistry/Quantum/Molecule.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
-#include "Chemistry/Quantum/DFT/DFT.h"
+#include "Chemistry/Quantum/DFT/DensityFunctional.h"
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 #include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
 #include "Chemistry/Quantum/QMC/QMC.h"
@@ -13,12 +13,12 @@ namespace SCESS::Tests {
     void TestDFT() {
         std::cout << "--- Performing DFT Calculation on water ---\n";
 
-        constexpr const char *BASIS_SET_NAME = "def2-svp.1";
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
 
         Molecule waterMolecule = GenerateWaterMolecule();
         waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
-        DensityFunctional::DFT(waterMolecule);
+        uRef<KSWavefunction> ksWavefunction = DensityFunctional::KohnShamDFT(waterMolecule, MolecularGrid::MEDIUM_RES);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();
@@ -39,7 +39,7 @@ namespace SCESS::Tests {
         ss.clear();
         ss.str("");
 
-        uRef<CCSDResult> result = CoupledCluster::CCSD(*rhfResult);
+        uRef<CCSDWavefunction> result = CoupledCluster::CCSD(*rhfResult);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

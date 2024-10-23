@@ -28,7 +28,7 @@ namespace SCESS {
         return tensor;
     }
 
-    uRef<CCSDResult> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, std::stringstream *console) {
+    uRef<CCSDWavefunction> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
         //Maximum coupled cluster iterations
@@ -113,7 +113,7 @@ namespace SCESS {
                     " hartrees\n\n\n";
         }
 
-        return std::make_unique<CCSDResult>(mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI);
+        return std::make_unique<CCSDWavefunction>(mp2Energy, correlationEnergy, t1Amps, t2Amps, moTEI);
     }
 
 

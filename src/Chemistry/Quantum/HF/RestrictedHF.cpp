@@ -175,7 +175,7 @@ namespace SCESS {
 
         VectorXi Occupation = VectorXi::Zero(Hcore.rows());
 
-        for (long i = (molecule.GetNoElectrons() / 2) - 1; i >= 0; --i) {
+        for (int64_t i = ((int64_t)molecule.GetNoElectrons() / 2) - 1; i >= 0; --i) {
             Occupation(i) = 2;
         }
 

@@ -10,12 +10,12 @@
 namespace SCESS {
     using namespace Eigen;
 
-    uRef<CCSD_TResult> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console) {
+    uRef<CCSD_TWavefunction> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
         //Perform CCSD with DIIS acceleration and get t1 and t2 amplitudes
-        uRef<CCSDResult> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
+        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
 
         if (ccsd == nullptr) {
             if (console)
@@ -47,11 +47,11 @@ namespace SCESS {
                     ccsdCorrelationEnergy + triplesCorrection << '\n';
         }
 
-        return std::make_unique<CCSD_TResult>(*ccsd, triplesCorrection);
+        return std::make_unique<CCSD_TWavefunction>(*ccsd, triplesCorrection);
     }
 
     //Computes the triple correction energy with the spin integrated out
-    double CoupledCluster::CalculateTriplesCorrection(const CCSDResult &ccsd,
+    double CoupledCluster::CalculateTriplesCorrection(const CCSDWavefunction &ccsd,
                                                       const FockTensor &F, const Eigen::Index nOcc,
                                                       const Eigen::Index nVirt) {
         using IdxP = Eigen::IndexPair<int>;

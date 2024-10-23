@@ -7,6 +7,7 @@
 
 #include"Chemistry/Quantum/Molecule.h"
 #include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
+#include "Chemistry/Quantum/DFT/DensityFunctional.h"
 #include "Maths/Isosurfaces.h"
 
 
@@ -18,11 +19,12 @@ namespace GEng {
 }
 
 namespace SCESS {
-    struct CCSD_TResult;
+    struct CCSD_TWavefunction;
     class ContractedGaussian;
     struct RHFWavefunction;
     struct UHFWavefunction;
-    struct CCSDResult;
+    struct KSWavefunction;
+    struct CCSDWavefunction;
     class TriSurf;
 
     enum class SCFMethod:int {
@@ -114,17 +116,19 @@ namespace SCESS {
 
         SCFMethod mSCFMethod = SCFMethod::RHF;
         CorrelationMethod mCorrelationMethod = CorrelationMethod::None;
-        uRef<RHFWavefunction> mRHFResult;
-        uRef<UHFWavefunction> mUHFResult;
+
+        uRef<RHFWavefunction> mRHFWfn;
+        uRef<UHFWavefunction> mUHFWfn;
+        //Kohn-Sham DFT wavefunction
+        uRef<KSWavefunction> mKSWfn;
         bool mUseLastSCF = true, mInvalidateLastSCF = false;
 
-        uRef<CCSDResult> mCCSDResult;
-        uRef<CCSD_TResult> mCCSD_TResult;
+        uRef<CCSDWavefunction> mCCSDWfn;
+        uRef<CCSD_TWavefunction> mCCSD_TWfn;
         std::optional<double> mMP2Energy;
 
-        uRef<CIWavefunction> mFCIResult;
+        uRef<CIWavefunction> mFCIWfn;
 
-        double mDFTEnergy = 0.0;
         std::string mCalcBasiSet;
 
         std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;

@@ -42,16 +42,16 @@ namespace SCESS {
             for (uint32_t a = lebedevOffset; a < angularPoints + lebedevOffset; a++) {
                 // create a new grid point given the coordinates on the unit sphere; these
                 // coordinates are multiplied by the radius as calculated above
-                Vector3d lebedevPoint = Vector3d(Quadrature::lebedevCoefficients[a][0],
-                                                 Quadrature::lebedevCoefficients[a][1],
-                                                 Quadrature::lebedevCoefficients[a][2]) * r;
+                Vector3d lebedevPoint = Vector3d(Quadrature::LEBEDEV_COEFFICIENTS[a][0],
+                                                 Quadrature::LEBEDEV_COEFFICIENTS[a][1],
+                                                 Quadrature::LEBEDEV_COEFFICIENTS[a][2]) * r;
                 GridPoint &gridPoint =
                         mGridPoints.emplace_back(lebedevPoint + atom.GetPos(), lebedevPoint);
 
                 // set the total integration weight by multiplying the Gauss-Chebyshev weight by the Lebedev weight
                 // note that the 'weight' from the Jacobian due to spherical coordinates and the weight
                 // due to Becke grid are calculated later
-                gridPoint.SetWeight(w * Quadrature::lebedevCoefficients[a][3]);
+                gridPoint.SetWeight(w * Quadrature::LEBEDEV_COEFFICIENTS[a][3]);
 
                 // set the amplitudes of the basis functions at this grid point
                 gridPoint.SetBasisSetAmplitudes(mol);

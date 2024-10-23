@@ -3,15 +3,27 @@
 #include<vector>
 
 #include "AtomicGrid.h"
+#include "Quadrature.h"
 
 namespace SCESS {
     class Molecule;
+    enum class LebedevOrder;
 
     class MolecularGrid {
     public:
+        struct Resolution {
+            uint32_t radialPoints;
+            LebedevOrder lebedevOrder;
+        };
+
+        constexpr static Resolution LOW_RES{10, LebedevOrder::LEBEDEV_50};
+        constexpr static Resolution MEDIUM_RES{15, LebedevOrder::LEBEDEV_74};
+        constexpr static Resolution HIGH_RES{20, LebedevOrder::LEBEDEV_110};
+        constexpr static Resolution ULTRAFINE_RES{30, LebedevOrder::LEBEDEV_194};
+
         explicit MolecularGrid(const Molecule *mol);
 
-        void Create(uint32_t radialPoints, uint32_t lebedevOrder);
+        void Create(Resolution resolution);
 
         [[nodiscard]] Eigen::VectorXd GetWeights() const;
         [[nodiscard]] Eigen::VectorXd GetDensities() const;
@@ -22,6 +34,11 @@ namespace SCESS {
         [[nodiscard]] double CalculateDensity() const;
 
         [[nodiscard]] double GetBeckeWeight(uint32_t i, const Eigen::Vector3d &p0) const;
+
+        std::vector<AtomicGrid> &GetAtomicGrids() { return mAtomicGrids; }
+        const std::vector<AtomicGrid> &GetAtomicGrids() const { return mAtomicGrids; }
+
+        size_t GetGridSize() const { return mGridSize; }
 
     private:
         std::vector<AtomicGrid> mAtomicGrids;

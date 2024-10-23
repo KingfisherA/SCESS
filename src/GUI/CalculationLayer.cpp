@@ -14,7 +14,7 @@
 #include "Chemistry/Quantum/Molecule.h"
 #include "Chemistry/Quantum/Basis/Gaussian.h"
 #include "Chemistry/Quantum/HF/HartreeFock.h"
-#include "Chemistry/Quantum/DFT/DFT.h"
+#include "Chemistry/Quantum/DFT/DensityFunctional.h"
 #include "Chemistry/Quantum/CC/CoupledCluster.h"
 #include "Chemistry/Quantum/CI/ConfigurationInteraction.h"
 
@@ -179,9 +179,9 @@ namespace SCESS {
         mNegTrisurf.Stop();
 
         if (mSCFMethod == SCFMethod::RHF) {
-            coeffsM = &mRHFResult->Coeffs;
+            coeffsM = &mRHFWfn->Coeffs;
         } else {
-            coeffsM = mSelectedSpin == 1 ? &mUHFResult->CoeffsAlpha : &mUHFResult->CoeffsBeta;
+            coeffsM = mSelectedSpin == 1 ? &mUHFWfn->CoeffsAlpha : &mUHFWfn->CoeffsBeta;
         }
 
         std::shared_ptr<ScalarField> field = std::make_shared<ScalarField>();
@@ -297,38 +297,38 @@ namespace SCESS {
 
                 //Run SCF as RHF if a SCF determinant is not available
                 if (!mUseLastSCF || mInvalidateLastSCF)
-                    mRHFResult =
+                    mRHFWfn =
                             std::move(SCESS::HartreeFock::RHF(
                                 *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
                                 mCalcBasiSet));
 
                 switch (mCorrelationMethod) {
                     case CorrelationMethod::MP2:
-                        mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFResult, &mConsoleOutput);
+                        mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFWfn, &mConsoleOutput);
                         break;
                     case CorrelationMethod::CCSD: {
-                        uRef<CCSDResult> ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFResult, &mConsoleOutput);
+                        uRef<CCSDWavefunction> ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFWfn, &mConsoleOutput);
                         if (ccResult != nullptr) {
-                            mCCSDResult = std::move(ccResult);
-                            mMP2Energy = mCCSDResult->mp2CorrelationEnergy;
+                            mCCSDWfn = std::move(ccResult);
+                            mMP2Energy = mCCSDWfn->mp2CorrelationEnergy;
                         }
                         break;
                     }
 
                     case CorrelationMethod::CCSD_T: {
-                        uRef<CCSD_TResult> ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFResult, &mConsoleOutput);
+                        uRef<CCSD_TWavefunction> ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFWfn, &mConsoleOutput);
                         if (ccResult != nullptr) {
-                            mCCSD_TResult = std::move(ccResult);
-                            mMP2Energy = mCCSD_TResult->mp2CorrelationEnergy;
+                            mCCSD_TWfn = std::move(ccResult);
+                            mMP2Energy = mCCSD_TWfn->mp2CorrelationEnergy;
                         }
                         break;
                     }
 
                     case CorrelationMethod::FCI: {
                         uRef<CIWavefunction> ciResult = SCESS::ConfigurationInteraction::FCI(
-                            *mRHFResult, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
+                            *mRHFWfn, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
                         if (ciResult != nullptr) {
-                            mFCIResult = std::move(ciResult);
+                            mFCIWfn = std::move(ciResult);
                         }
                         break;
                     }
@@ -340,23 +340,24 @@ namespace SCESS {
                 switch (mSCFMethod) {
                     case SCFMethod::RHF:
                         if (mUseLastSCF)
-                            mRHFResult =
+                            mRHFWfn =
                                     std::move(SCESS::HartreeFock::RHF(
-                                        *mMolecule, mLastMolecule.get(), mRHFResult.get(), 1E-5, 100, &mConsoleOutput,
+                                        *mMolecule, mLastMolecule.get(), mRHFWfn.get(), 1E-5, 100, &mConsoleOutput,
                                         mCalcBasiSet));
                         else
-                            mRHFResult =
+                            mRHFWfn =
                                     std::move(SCESS::HartreeFock::RHF(
                                         *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
                                         mCalcBasiSet));
                         break;
                     case SCFMethod::UHF:
-                        mUHFResult =
+                        mUHFWfn =
                                 std::move(SCESS::HartreeFock::UHF(*mMolecule, 1E-5, 100, &mConsoleOutput,
-                                                                           mCalcBasiSet));
+                                                                  mCalcBasiSet));
                         break;
                     case SCFMethod::DFT:
-                        //mDFTEnergy = SCESS::DFT::RunDFT(*mMolecule, &mConsoleOutput, mCalcBasiSet);
+                        mKSWfn = DensityFunctional::KohnShamDFT(*mMolecule, MolecularGrid::MEDIUM_RES,
+                                                                &mConsoleOutput, mCalcBasiSet);
                         break;
                 }
             }
@@ -447,10 +448,10 @@ namespace SCESS {
 
         mMOLabels.clear();
         if (mSCFMethod == SCFMethod::RHF)
-            sortCoeffs(mRHFResult->Energies, mRHFResult->Coeffs, mRHFResult->Occupation);
+            sortCoeffs(mRHFWfn->Energies, mRHFWfn->Coeffs, mRHFWfn->Occupation);
         else {
-            sortCoeffs(mUHFResult->EnergiesAlpha, mUHFResult->CoeffsAlpha, mUHFResult->OccupationAlpha);
-            sortCoeffs(mUHFResult->EnergiesBeta, mUHFResult->CoeffsBeta, mUHFResult->OccupationBeta);
+            sortCoeffs(mUHFWfn->EnergiesAlpha, mUHFWfn->CoeffsAlpha, mUHFWfn->OccupationAlpha);
+            sortCoeffs(mUHFWfn->EnergiesBeta, mUHFWfn->CoeffsBeta, mUHFWfn->OccupationBeta);
         }
     }
 
@@ -474,9 +475,9 @@ namespace SCESS {
                 }
                 ImGui::Unindent(100.0);
 
-                ImGui::SeparatorText("Density Functional Theory");
+                ImGui::SeparatorText("Kohn-Sham Density Functional Theory");
                 ImGui::Indent(100.0);
-                if (ImGui::RadioButton("LYP", reinterpret_cast<int *>(&mSCFMethod), 2)) {
+                if (ImGui::RadioButton("Slater-X + VWM Corr", reinterpret_cast<int *>(&mSCFMethod), 2)) {
                     mCorrelationMethod = CorrelationMethod::None;
                     mSCFMethod = SCFMethod::DFT;
                     mInvalidateLastSCF = true;
@@ -526,7 +527,7 @@ namespace SCESS {
 
                 ImGui::Unindent(100.0);
 
-                if (mRHFResult != nullptr)
+                if (mRHFWfn != nullptr)
                     ImGui::Checkbox("Use Last SCF Result", &mUseLastSCF);
                 if (mInvalidateLastSCF) {
                     ImGui::SameLine();
@@ -556,42 +557,42 @@ namespace SCESS {
                         ImGui::Text("E(MP2) = %.8f hartrees", mMP2Energy.value());
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
                                            "E(Total) = E(Hartree-Fock) + E(MP2) = %.8f hartrees",
-                                           mMP2Energy.value() + mRHFResult->Energy);
+                                           mMP2Energy.value() + mRHFWfn->Energy);
                         ImGui::Unindent();
                     };
 
                     auto DrawCCSD = [this]() {
-                        if (!mCCSDResult)return;
+                        if (!mCCSDWfn)return;
                         ImGui::SeparatorText("Coupled Cluster Singles & Doubles");
                         ImGui::Indent();
-                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSDResult->ccsdCorrelationEnergy);
+                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSDWfn->ccsdCorrelationEnergy);
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
                                            "E(Total) = E(Hartree-Fock) + E(CCSD) = %.8f hartrees",
-                                           mCCSDResult->ccsdCorrelationEnergy + mRHFResult->Energy);
+                                           mCCSDWfn->ccsdCorrelationEnergy + mRHFWfn->Energy);
                         ImGui::Unindent();
                     };
 
                     auto DrawCCSD_T = [this]() {
-                        if (!mCCSD_TResult)return;
+                        if (!mCCSD_TWfn)return;
                         ImGui::SeparatorText("Coupled Cluster Singles & Doubles with Pertubative Triples");
                         ImGui::Indent();
-                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSD_TResult->ccsdCorrelationEnergy);
-                        ImGui::Text("E(T) = %.8f hartrees", mCCSD_TResult->triplesCorrectionE);
+                        ImGui::Text("E(CCSD) = %.8f hartrees", mCCSD_TWfn->ccsdCorrelationEnergy);
+                        ImGui::Text("E(T) = %.8f hartrees", mCCSD_TWfn->triplesCorrectionE);
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
                                            "E(Total) = E(Hartree-Fock) + E(CCSD) + E(T) = %.8f hartrees",
-                                           mCCSD_TResult->ccsdCorrelationEnergy + mRHFResult->Energy + mCCSD_TResult->
+                                           mCCSD_TWfn->ccsdCorrelationEnergy + mRHFWfn->Energy + mCCSD_TWfn->
                                            triplesCorrectionE);
                         ImGui::Unindent();
                     };
 
                     auto DrawFCI = [this]() {
-                        if (!mFCIResult)return;
+                        if (!mFCIWfn)return;
                         ImGui::SeparatorText("Full Configuration Interaction");
                         ImGui::Indent();
-                        ImGui::Text("E(FCI Correlation) = %.8f hartrees", mFCIResult->Energies(0) - mRHFResult->Energy);
+                        ImGui::Text("E(FCI Correlation) = %.8f hartrees", mFCIWfn->Energies(0) - mRHFWfn->Energy);
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
                                            "E(Total) = E(Hartree Fock) + E(FCI Correlation) = %.8f hartrees",
-                                           mFCIResult->Energies(0));
+                                           mFCIWfn->Energies(0));
                         ImGui::Unindent();
                     };
 
@@ -633,29 +634,29 @@ namespace SCESS {
 
                         ImGui::BulletText("Basis Set: %s", mCalcBasiSet.c_str());
                         ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
-                                          mSCFMethod == SCFMethod::RHF ? mRHFResult->Energy : mUHFResult->Energy);
+                                          mSCFMethod == SCFMethod::RHF ? mRHFWfn->Energy : mUHFWfn->Energy);
 
                         ImGui::Indent();
                         if (ImGui::CollapsingHeader("Orbitals", ImGuiTreeNodeFlags_DefaultOpen)) {
                             if (mSelectedMO != -1) {
                                 if (mSCFMethod == SCFMethod::RHF) {
                                     ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i", mSelectedMO + 1);
-                                    if (mSelectedMO + 1 < mRHFResult->Occupation.rows())
-                                        if (mRHFResult->Occupation(mSelectedMO + 1) == 0 && mRHFResult->Occupation(
+                                    if (mSelectedMO + 1 < mRHFWfn->Occupation.rows())
+                                        if (mRHFWfn->Occupation(mSelectedMO + 1) == 0 && mRHFWfn->Occupation(
                                                 mSelectedMO) > 0)
                                             ImGui::TextColored({1.0f, 0.0f, 0.0f, 1.0f}, "HOMO");
                                     if (mSelectedMO - 1 > 0)
-                                        if (mRHFResult->Occupation(mSelectedMO - 1) > 0 && mRHFResult->Occupation(
+                                        if (mRHFWfn->Occupation(mSelectedMO - 1) > 0 && mRHFWfn->Occupation(
                                                 mSelectedMO) == 0)
                                             ImGui::TextColored({0.0f, 0.5f, 0.5f, 1.0f}, "LUMO");
-                                    ImGui::BulletText("Energy: %.3f hartrees", mRHFResult->Energies(mSelectedMO));
-                                    ImGui::BulletText("Occupation: %i e-", mRHFResult->Occupation(mSelectedMO));
+                                    ImGui::BulletText("Energy: %.3f hartrees", mRHFWfn->Energies(mSelectedMO));
+                                    ImGui::BulletText("Occupation: %i e-", mRHFWfn->Occupation(mSelectedMO));
                                 } else {
                                     const auto &energies =
-                                            mSelectedSpin == 1 ? mUHFResult->EnergiesAlpha : mUHFResult->EnergiesBeta;
+                                            mSelectedSpin == 1 ? mUHFWfn->EnergiesAlpha : mUHFWfn->EnergiesBeta;
                                     const auto &occupation = mSelectedSpin == 1
-                                                                 ? mUHFResult->OccupationAlpha
-                                                                 : mUHFResult->OccupationBeta;
+                                                                 ? mUHFWfn->OccupationAlpha
+                                                                 : mUHFWfn->OccupationBeta;
                                     ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i", mSelectedMO + 1);
                                     if (mSelectedMO + 1 < occupation.rows())
                                         if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
@@ -691,11 +692,11 @@ namespace SCESS {
                                     ImGui::Text("Beta (spin down) Orbitals");
                                     ImGui::PushItemWidth(width);
                                     ImGui::ListBox("##listbox1", &selectedOption, &orbitalLabels[0],
-                                                   (int) mUHFResult->EnergiesAlpha.rows());
+                                                   (int) mUHFWfn->EnergiesAlpha.rows());
                                     ImGui::SameLine();
                                     ImGui::ListBox("##listbox2", &selectedOption2,
-                                                   &orbitalLabels[mUHFResult->EnergiesAlpha.rows()],
-                                                   (int) mUHFResult->EnergiesBeta.rows());
+                                                   &orbitalLabels[mUHFWfn->EnergiesAlpha.rows()],
+                                                   (int) mUHFWfn->EnergiesBeta.rows());
                                     ImGui::PopItemWidth();
                                 }
                             }
@@ -781,7 +782,7 @@ namespace SCESS {
                         }
                     } else if (mSCFMethod == SCFMethod::DFT) {
                         ImGui::TextColored({0.0, 1.0, 0.0, 1.0}, "Density Functional calculation finished!");
-                        ImGui::BulletText("Total DFT Energy : %.4f hartrees", mDFTEnergy);
+                        ImGui::BulletText("Total DFT Electronic Energy : %.4f hartrees", mKSWfn->ElectronicE);
                     }
                 }
             }

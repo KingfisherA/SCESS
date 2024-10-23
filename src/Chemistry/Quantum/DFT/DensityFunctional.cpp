@@ -1,7 +1,7 @@
 #include <pch.h>
 #include<iostream>
 
-#include "Chemistry/Quantum/DFT/DFT.h"
+#include "Chemistry/Quantum/DFT/DensityFunctional.h"
 #include "Chemistry/Quantum/Integrals/Integrals.h"
 #include "Chemistry/Quantum/Integrals/Grid/MolecularGrid.h"
 
@@ -14,11 +14,21 @@
 namespace SCESS {
     using namespace Eigen;
 
-    double DensityFunctional::DFT(const Molecule &mol) {
-        std::cout << "-- Density Functional Theory with B3LYP functional --\nEvaluating Molecular Integrals ....\n";
+    uRef<KSWavefunction> DensityFunctional::KohnShamDFT(const Molecule &mol, MolecularGrid::Resolution gridRes,
+                                                        std::stringstream *console, std::string_view basisSetName) {
+        if (console) {
+            *console << "--- Kohn-Sham Density Functional Theory ---\n";
+            *console << "--- Selected Functionals ---\n";
+            *console << "   - Exchange = Slater-X-LDA\n";
+            *console << "   - Correlation = VWM-C-LDA\n\n";
+            *console << "Evaluating Molecular Integrals ....\n";
+        }
 
         constexpr double ALPHA = 0.9;
         const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol);
+
+        if (console)
+            *console << "Molecular Integrals Evaluated!\n";
 
         const MatrixXd &S = mints.S;
         const MatrixXd &V = mints.V;
@@ -35,12 +45,18 @@ namespace SCESS {
         //Matrix to transform from AO to orthogonal basis set
         MatrixXd U = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
 
+        if (console)
+            *console << "Creating Molecular Gauss-Chebyshev-Lebedev grid...\n";
         MolecularGrid molecularGrid(&mol);
-        //Coarse
-        //molecularGrid.Create(10, Quadrature::LEBEDEV_50);
-        molecularGrid.Create(15, Quadrature::LEBEDEV_110);
-        //Ultrafine
-        //molecularGrid.Create(30, Quadrature::LEBEDEV_194);
+        molecularGrid.Create(gridRes);
+        if (console) {
+            *console << "Molecular Gauss-Chebyshev-Lebedev grid created with:\n";
+            *console << "   - Radial Points: " << gridRes.radialPoints << '\n';
+            *console << "   - Lebedev Points: " << Quadrature::nLebedevPoints[(int) gridRes.lebedevOrder] << '\n';
+            *console << "   - Atomic Grids: " << molecularGrid.GetAtomicGrids().size() << '\n';
+            *console << "   - Total Number of Points: " << molecularGrid.GetGridSize() << '\n';
+        }
+
 
         //Hamiltonian matrix
         MatrixXd H = T + V;
@@ -62,8 +78,11 @@ namespace SCESS {
         //Nuclear-nuclear repulsion energy
         double Vnn = mol.CalculateNuclearRepulsion();
 
-        constexpr double E_CONVERGENCE = 1e-8;
+        constexpr double E_CONVERGENCE = 1e-5;
         constexpr uint32_t MAX_ITERATIONS = 500;
+
+        if(console)
+            *console<<"--- Starting SCF cycles ---\n";
 
         for (uint32_t iter = 0; iter < MAX_ITERATIONS; ++iter) {
             F = H + 2.0 * J + ExchangeCorr;
@@ -84,28 +103,38 @@ namespace SCESS {
             molecularGrid.CorrectDensities();
 
             J = CreateColoumbMatrixTEI(tei, Density);
+            //Exchange-correlation energy
             double E_XC = 0.0;
             CalculateXCMatrix(mol, molecularGrid, ExchangeCorr, E_XC);
 
+            //Single electron energy
             double kineticPotentialE = 2.0 * (Density * H).trace();
+            //Coulomb repulsion energy
             double electronRepulsion = 2.0 * (Density * J).trace();
 
             E = kineticPotentialE + electronRepulsion + Vnn + E_XC;
 
             double dE = abs(E - lastE);
-            std::cout << "DFT(" << iter << ") E(DFT) = " << E << " dE = " << dE << '\n';
+            if (console) *console << "   DFT(" << iter << "): E(DFT) = " << E << "          dE = " << dE << '\n';
 
             if (dE < E_CONVERGENCE) {
-                std::cout << "--- DFT procedure has converged! ---\n";
+                if (console) *console << "--- DFT procedure has converged! ---\n";
                 break;
             }
             lastE = E;
         }
 
-        std::cout << "--- Final DFT Energy ---\n";
-        std::cout << "E(DFT) = " << E << " hartrees\n";
+        if (console) {
+            *console << "--- Final DFT Energy ---\n";
+            *console << "  E(DFT) = " << E << " hartrees\n";
+        }
 
-        return E;
+        VectorXi Occupation = VectorXi::Zero(H.rows());
+
+        for (int64_t i = ((int64_t) mol.GetNoElectrons() / 2) - 1; i >= 0; --i)
+            Occupation(i) = 2;
+
+        return std::make_unique<KSWavefunction>(F, C, Density, E, Energies, Occupation, mints);
     }
 
     MatrixXd DensityFunctional::CreateColoumbMatrixTEI(const TEITensor &tei,

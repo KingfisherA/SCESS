@@ -12,8 +12,6 @@ namespace SCESS {
 
 #pragma region Marching Cubes
 
-#pragma endregion
-
     int MarchingCubes::CalculateCubeIndex(GridCell &cell, float isovalue) {
         int cubeIndex = 0;
         for (int i = 0; i < 8; i++)
@@ -110,7 +108,7 @@ namespace SCESS {
             }
         }
     }
-
+#pragma endregion
 
 #pragma region Isosurface
 

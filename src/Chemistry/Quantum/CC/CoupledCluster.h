@@ -11,16 +11,16 @@ namespace SCESS {
 }
 
 namespace SCESS {
-    struct CCSDResult {
+    struct CCSDWavefunction {
     public:
-        CCSDResult(double mp2, double ccsdCorr, const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2,
+        CCSDWavefunction(double mp2, double ccsdCorr, const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2,
                    const TEITensor &tei)
             : mp2CorrelationEnergy(mp2), ccsdCorrelationEnergy(ccsdCorr), t1Amps(t1), t2Amps(t2), moTEI(tei) {
         }
 
-        CCSDResult(const CCSDResult &other) = default;
+        CCSDWavefunction(const CCSDWavefunction &other) = default;
 
-        virtual ~CCSDResult() = default;
+        virtual ~CCSDWavefunction() = default;
 
         double mp2CorrelationEnergy = 0.0;
         double ccsdCorrelationEnergy = 0.0;
@@ -29,10 +29,10 @@ namespace SCESS {
         TEITensor moTEI;
     };
 
-    struct CCSD_TResult : public CCSDResult {
+    struct CCSD_TWavefunction : public CCSDWavefunction {
     public:
-        CCSD_TResult(const CCSDResult &result, double tripE)
-            : CCSDResult(result), triplesCorrectionE(tripE) {
+        CCSD_TWavefunction(const CCSDWavefunction &result, double tripE)
+            : CCSDWavefunction(result), triplesCorrectionE(tripE) {
         }
 
         double triplesCorrectionE = 0.0;
@@ -52,18 +52,18 @@ namespace SCESS {
         * to single and double excitations for a closed shell molecule starting from a RHF determinant
          * @param rhfResult The RHF determinant
          */
-        static uRef<CCSDResult> CCSD(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDWavefunction> CCSD(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
         /**
         * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant with DIIS acceleration.
          * @param rhfResult The RHF determinant
          */
-        static uRef<CCSDResult> CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSDWavefunction> CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
-        static uRef<CCSD_TResult> CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSD_TWavefunction> CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
 
-        static double CalculateTriplesCorrection(const CCSDResult &ccsd, const FockTensor &F, const Eigen::Index nOcc,
+        static double CalculateTriplesCorrection(const CCSDWavefunction &ccsd, const FockTensor &F, const Eigen::Index nOcc,
                                                  const Eigen::Index nVirt);
 
         static FockTensor TransformFockToMO(const RHFWavefunction &rhfResult);

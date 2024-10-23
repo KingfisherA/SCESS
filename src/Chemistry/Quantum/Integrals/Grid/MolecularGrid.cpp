@@ -11,14 +11,14 @@ namespace SCESS {
     MolecularGrid::MolecularGrid(const Molecule *mol): mMolecule(mol) {
     }
 
-    void MolecularGrid::Create(uint32_t radialPoints, uint32_t lebedevOrder) {
-        mAngularPoints = Quadrature::nLebedevPoints[lebedevOrder];
+    void MolecularGrid::Create(Resolution res) {
+        mAngularPoints = Quadrature::nLebedevPoints[(int)res.lebedevOrder];
 
         // The Lebedev coefficients and radial points are stored in a large matrix.
         // Given a particular order for the integration, we have to start reading
         // this matrix from a specific position. Here, we calculate that position.
         uint32_t lebedevOffset = 0;
-        for (uint32_t i = 0; i < lebedevOrder; i++)
+        for (uint32_t i = 0; i < (int)res.lebedevOrder; i++)
             lebedevOffset += Quadrature::nLebedevPoints[i];
 
         // generate for each atom an atomic grid
@@ -28,7 +28,7 @@ namespace SCESS {
             grid.Create(mMolecule->GetAtom(i),
                         *mMolecule,
                         mAngularPoints,
-                        radialPoints,
+                        res.radialPoints,
                         lebedevOffset);
 
             mGridSize += grid.GetNoOfGridPoints();
