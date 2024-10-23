@@ -43,8 +43,8 @@ int main(int argc, char **argv) {
     }
 
     //SCESS::Tests::TestFullCI();
-    //SCESS::Tests::TestFCIQMC();
-    SCESS::Tests::TestDFT();
+    SCESS::Tests::TestFCIQMC();
+    //SCESS::Tests::TestDFT();
 
     // if (!app.Init()) {
     //     std::cout << "Failed to initialise SCESS application. Program will now close. \n";

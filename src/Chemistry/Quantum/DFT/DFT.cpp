@@ -17,6 +17,7 @@ namespace SCESS {
     double DensityFunctional::DFT(const Molecule &mol) {
         std::cout << "-- Density Functional Theory with B3LYP functional --\nEvaluating Molecular Integrals ....\n";
 
+        constexpr double ALPHA = 0.9;
         const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol);
 
         const MatrixXd &S = mints.S;
@@ -33,10 +34,13 @@ namespace SCESS {
         MatrixXd SValsInvSqrt = SEigenValues.cwiseInverse().cwiseSqrt().asDiagonal();
         //Matrix to transform from AO to orthogonal basis set
         MatrixXd U = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
-        U = (U + U.transpose()) * 0.5;
 
         MolecularGrid molecularGrid(&mol);
-        molecularGrid.Create(30, Quadrature::LEBEDEV_194);
+        //Coarse
+        //molecularGrid.Create(10, Quadrature::LEBEDEV_50);
+        molecularGrid.Create(15, Quadrature::LEBEDEV_110);
+        //Ultrafine
+        //molecularGrid.Create(30, Quadrature::LEBEDEV_194);
 
         //Hamiltonian matrix
         MatrixXd H = T + V;
@@ -44,7 +48,7 @@ namespace SCESS {
         MatrixXd F;
         // The one particle density matrices
         MatrixXd Density = MatrixXd::Zero(S.rows(), S.cols());
-        //The J couloumb matrix
+        //The J coulomb matrix
         MatrixXd J = MatrixXd::Zero(S.rows(), S.cols());
         //The exchange-correlation matrix
         MatrixXd ExchangeCorr = MatrixXd::Zero(S.rows(), S.cols());
@@ -59,17 +63,22 @@ namespace SCESS {
         double Vnn = mol.CalculateNuclearRepulsion();
 
         constexpr double E_CONVERGENCE = 1e-8;
-        constexpr uint32_t MAX_ITERATIONS = 100;
+        constexpr uint32_t MAX_ITERATIONS = 500;
 
         for (uint32_t iter = 0; iter < MAX_ITERATIONS; ++iter) {
-            F = H + J + ExchangeCorr;
-            F = U.transpose() * F * U;
+            F = H + 2.0 * J + ExchangeCorr;
+            MatrixXd Fprime = U.transpose() * F * U;
 
-            SelfAdjointEigenSolver<MatrixXd> eigensolver2(F);
+            SelfAdjointEigenSolver<MatrixXd> eigensolver2(Fprime);
             Energies = eigensolver2.eigenvalues().real();
             C = U * eigensolver2.eigenvectors().real();
 
-            Density = CreateDensityMatrix(C, nElectrons);
+            MatrixXd NewDensity = CreateDensityMatrix(C, nElectrons);
+
+            if (iter == 0)
+                Density = NewDensity;
+            else
+                Density = ALPHA * Density + (1 - ALPHA) * NewDensity;
 
             molecularGrid.SetDensity(Density);
             molecularGrid.CorrectDensities();
@@ -108,13 +117,13 @@ namespace SCESS {
                 for (Eigen::Index k = 0; k < J.rows(); k++)
                     for (Eigen::Index l = 0; l < J.rows(); l++) {
                         //Coulomb integral; <ik | jl> = (ij | kl)
-                        J(i, j) += 2.0 * Density(k, l) * tei(i, j, k, l);
+                        J(i, j) += Density(k, l) * tei(i, j, k, l);
                     }
 
         return J;
     }
 
-    MatrixXd DensityFunctional::CreateDensityMatrix(const Eigen::MatrixXd &C, uint32_t Nelecs) {
+    MatrixXd DensityFunctional::CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs) {
         MatrixXd Density = MatrixXd::Zero(C.rows(), C.rows());
         for (int i = 0; i < Density.rows(); i++) {
             for (int j = 0; j < Density.rows(); j++) {
@@ -129,8 +138,7 @@ namespace SCESS {
 
     void DensityFunctional::CalculateXCMatrix(const Molecule &mol, const MolecularGrid &grid,
                                               MatrixXd &ExchangeCorr, double &E_XC) {
-
-        for (Eigen::Index i=0; i < ExchangeCorr.size();i++)
+        for (Eigen::Index i = 0; i < ExchangeCorr.size(); i++)
             ExchangeCorr.data()[i] = 0.0;
 
         VectorXd densities = grid.GetDensities();

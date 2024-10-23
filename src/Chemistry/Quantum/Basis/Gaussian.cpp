@@ -14,9 +14,8 @@ namespace SCESS {
     using boost::math::double_factorial;
 
     void Gaussian::CalculateNormalisationConstant() {
-        double numerator = std::pow(2 * mExponent / pi, 0.75) * std::pow(
-                               4 * mExponent, (double) (mAngular[0] + mAngular[1] + mAngular[2]) * 0.5);
-
+        double numerator = std::pow(2 * mExponent / pi, 0.75) *
+                           std::pow(4 * mExponent, (mAngular[0] + mAngular[1] + mAngular[2]) * 0.5);
 
         double denominator = std::sqrt(
             (mAngular[0] < 1 ? 1 : double_factorial<double>(2 * mAngular[0] - 1)) *
@@ -76,7 +75,7 @@ namespace SCESS {
     }
 
     void ContractedGaussian::Add(const Eigen::Vector3i &angMom, const Gaussian &gaussianIn) {
-        Gaussian g(gaussianIn.mExponent, gaussianIn.mCoeff, gaussianIn.mPosition, angMom);
+        Gaussian g(gaussianIn.mExponent, gaussianIn.mCoeff, this->mPosition, angMom);
         g.CalculateNormalisationConstant();
         mGaussians.push_back(g);
     }

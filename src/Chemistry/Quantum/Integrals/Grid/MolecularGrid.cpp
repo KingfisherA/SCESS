@@ -65,14 +65,10 @@ namespace SCESS {
         VectorXd weights = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
-        for (uint32_t i = 0; i < mAtomicGrids.size(); i++) {
-            VectorXd atomicWeights = mAtomicGrids[i].GetWeights();
-
-            for (uint32_t j = 0; j < mAtomicGrids.size(); j++)
-                weights(idx + j) = atomicWeights(j);
-
-
-            idx += atomicWeights.size();
+        for (const AtomicGrid &grid: mAtomicGrids) {
+            VectorXd atomicWeights = grid.GetWeights();
+            for (const double &weight: atomicWeights)
+                weights(idx++) = weight;
         }
 
         return weights;
@@ -82,14 +78,10 @@ namespace SCESS {
         VectorXd densities = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
-        for (uint32_t i = 0; i < mAtomicGrids.size(); i++) {
-            VectorXd atomicDensities = mAtomicGrids[i].GetDensities();
-
-            for (uint32_t j = 0; j < mAtomicGrids.size(); j++)
-                densities(idx + j) = atomicDensities(j);
-
-
-            idx += atomicDensities.size();
+        for (const AtomicGrid &grid: mAtomicGrids) {
+            VectorXd atomicDensities = grid.GetDensities();
+            for (const double &density: atomicDensities)
+                densities(idx++) = density;
         }
 
         return densities;
@@ -101,14 +93,14 @@ namespace SCESS {
             static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
-        for (uint32_t i = 0; i < mAtomicGrids.size(); i++) {
-            MatrixXd atomicAmplitudes = mAtomicGrids[i].GetAmplitudes();
+        for (const AtomicGrid &grid: mAtomicGrids) {
+            MatrixXd atomicAmplitudes = grid.GetAmplitudes();
 
-            for (uint32_t j = 0; j < mAtomicGrids[i].GetNoOfGridPoints(); j++)
-                for (uint32_t k = 0; k < mMolecule->GetNoOrbitals(); k++)
+            for (uint32_t k = 0; k < mMolecule->GetNoOrbitals(); k++)
+                for (uint32_t j = 0; j < grid.GetNoOfGridPoints(); j++)
                     amplitudes(k, idx + j) = atomicAmplitudes(k, j);
 
-            idx += mAtomicGrids[i].GetNoOfGridPoints();
+            idx += grid.GetNoOfGridPoints();
         }
 
         return amplitudes;
@@ -167,7 +159,7 @@ namespace SCESS {
             }
 
             // get position of other atom
-            const Vector3d &p2 = mMolecule->GetAtom(i).GetPos();
+            const Vector3d &p2 = mMolecule->GetAtom(j).GetPos();
 
             // calculate mu (eq. 11 in A.D. Becke J.Chem.Phys. 88, 2547)
             double mu = ((p0 - p1).norm()

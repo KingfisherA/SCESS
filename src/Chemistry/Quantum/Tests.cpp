@@ -13,7 +13,7 @@ namespace SCESS::Tests {
     void TestDFT() {
         std::cout << "--- Performing DFT Calculation on water ---\n";
 
-        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        constexpr const char *BASIS_SET_NAME = "def2-svp.1";
 
         Molecule waterMolecule = GenerateWaterMolecule();
         waterMolecule.MakeOrbitals(BASIS_SET_NAME);

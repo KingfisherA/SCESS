@@ -18,25 +18,25 @@ namespace SCESS {
         mLebedevOffset = lebedevOffset;
         mNumBasisSetFuncs = mol.GetNoOrbitals();
 
-        const double f = pi / static_cast<double>(radialPoints + 1);
         mRadialPoints = VectorXd::Zero(radialPoints);
 
         // loop over all the radial points
         for (uint32_t p = 1; p <= radialPoints; p++) {
+            double rm = BRAGG_RADII[abs(atom.GetCharge())] * 0.5;
+
             // calculate weight function of the Gauss-Chebyshev integration
-            double w = std::sin(f * static_cast<double>(p));
-            w = f * w * w;
+            double w = sin((pi / double(radialPoints + 1)) * static_cast<double>(p));
+            w = (pi / double(radialPoints + 1)) * w * w;
 
             // calculate x point in the interval [-1,1] for Gauss-Chebyshev integration
-            double x = std::cos(f * static_cast<double>(p));
+            double x = cos((2.0 * p - 1.0) * pi / (2 * radialPoints));
 
             // convert x to r so that the interval is converted from [-1,1] to [0, infinity]
-            const double r = (1.0 + x) / (1.0 - x);
+            double r = rm * (1.0 + x) / (1.0 - x);
             mRadialPoints(p - 1) = r;
 
             // calculate weight function of the Gauss-Chebyshev integration
-            w = w / std::sqrt(1.0 - x * x) *
-                2.0 / std::pow(1.0 - x, 2.0);
+            w = w * (2 * rm / (sqrt(1 - x * x) * pow(1 - x, 2.0)));
 
             // loop over all the angular points
             for (uint32_t a = lebedevOffset; a < angularPoints + lebedevOffset; a++) {
@@ -72,9 +72,8 @@ namespace SCESS {
     VectorXd AtomicGrid::GetDensities() const {
         VectorXd densities = VectorXd::Zero(static_cast<Eigen::Index>(mGridPoints.size()));
 
-        for (uint32_t i = 0; i < mGridPoints.size(); i++) {
+        for (uint32_t i = 0; i < mGridPoints.size(); i++)
             densities(i) = mGridPoints[i].GetDensity();
-        }
 
         return densities;
     }
