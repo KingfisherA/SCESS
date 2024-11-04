@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5119F49E-3D7C-8343-E601-BCF9D2434FC6}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>QuantumSCESS</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>bin\linux\Debug-x64\QuantumSCESS\</OutDir>
+    <IntDir>bin-obj\linux\Debug-x64\QuantumSCESS\</IntDir>
+    <TargetName>QuantumSCESS</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>bin\linux\Release-x64\QuantumSCESS\</OutDir>
+    <IntDir>bin-obj\linux\Release-x64\QuantumSCESS\</IntDir>
+    <TargetName>QuantumSCESS</TargetName>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>EIGEN_USE_BLAS;EIGEN_USE_LAPACKE;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries;..\..\Libraries\cppitertools;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExternalWarningLevel>Level3</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>lapack.lib;lapacke.lib;blas.lib;libint2.a.lib;libxc.a.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>bin\linux\Debug-x64\QuantumSCESS\QuantumSCESS.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>EIGEN_USE_BLAS;EIGEN_USE_LAPACKE;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries;..\..\Libraries\cppitertools;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExternalWarningLevel>Level3</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>lapack.lib;lapacke.lib;blas.lib;libint2.a.lib;libxc.a.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>bin\linux\Release-x64\QuantumSCESS\QuantumSCESS.lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Quantum\Basis\BasisUtils.h" />
+    <ClInclude Include="src\Quantum\Basis\Gaussian.h" />
+    <ClInclude Include="src\Quantum\CC\CoupledCluster.h" />
+    <ClInclude Include="src\Quantum\CI\ConfigurationInteraction.h" />
+    <ClInclude Include="src\Quantum\DFT\DensityFunctional.h" />
+    <ClInclude Include="src\Quantum\DFT\XCFunctionals.h" />
+    <ClInclude Include="src\Quantum\HF\HartreeFock.h" />
+    <ClInclude Include="src\Quantum\Integrals\BoysFunc.h" />
+    <ClInclude Include="src\Quantum\Integrals\Grid\AtomicGrid.h" />
+    <ClInclude Include="src\Quantum\Integrals\Grid\GridPoint.h" />
+    <ClInclude Include="src\Quantum\Integrals\Grid\MolecularGrid.h" />
+    <ClInclude Include="src\Quantum\Integrals\Grid\Quadrature.h" />
+    <ClInclude Include="src\Quantum\Integrals\Integrals.h" />
+    <ClInclude Include="src\Quantum\Integrals\IntegralsF12.h" />
+    <ClInclude Include="src\Quantum\Molecule.h" />
+    <ClInclude Include="src\Quantum\PeriodicTable.h" />
+    <ClInclude Include="src\Quantum\QMC\QMC.h" />
+    <ClInclude Include="src\Quantum\Tests.h" />
+    <ClInclude Include="src\Utilities\Intrinsics.h" />
+    <ClInclude Include="src\Utilities\Resources.h" />
+    <ClInclude Include="src\Utilities\Utilities.h" />
+    <ClInclude Include="src\pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Quantum\Basis\BasisUtils.cpp" />
+    <ClCompile Include="src\Quantum\Basis\Gaussian.cpp" />
+    <ClCompile Include="src\Quantum\CC\CCSD-DIIS.cpp" />
+    <ClCompile Include="src\Quantum\CC\CCSD.cpp" />
+    <ClCompile Include="src\Quantum\CC\CCSD_T.cpp" />
+    <ClCompile Include="src\Quantum\CI\FullCI.cpp" />
+    <ClCompile Include="src\Quantum\DFT\DensityFunctional.cpp" />
+    <ClCompile Include="src\Quantum\DFT\XCFunctionals.cpp" />
+    <ClCompile Include="src\Quantum\HF\RestrictedHF.cpp" />
+    <ClCompile Include="src\Quantum\HF\UnrestrictedHF.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\BoysFunc.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\Grid\AtomicGrid.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\Grid\GridPoint.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\Grid\MolecularGrid.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\Grid\Quadrature.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\Integrals.cpp" />
+    <ClCompile Include="src\Quantum\Integrals\IntegralsF12.cpp" />
+    <ClCompile Include="src\Quantum\Molecule.cpp" />
+    <ClCompile Include="src\Quantum\PeriodicTable.cpp" />
+    <ClCompile Include="src\Quantum\QMC\CCQMC.cpp" />
+    <ClCompile Include="src\Quantum\QMC\FCIQMC.cpp" />
+    <ClCompile Include="src\Quantum\Tests.cpp" />
+    <ClCompile Include="src\Utilities\Utilities.cpp" />
+    <ClCompile Include="src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

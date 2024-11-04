@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7612E14B-62DF-3B57-8BF8-29FF772471E5}</ProjectGuid>
+    <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Explorer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>bin\linux\Debug-x64\Explorer\</OutDir>
+    <IntDir>bin-obj\linux\Debug-x64\Explorer\</IntDir>
+    <TargetName>Explorer</TargetName>
+    <TargetExt>.exe</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>bin\linux\Release-x64\Explorer\</OutDir>
+    <IntDir>bin-obj\linux\Release-x64\Explorer\</IntDir>
+    <TargetName>Explorer</TargetName>
+    <TargetExt>.exe</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries\glm;..\..\Libraries;..\..\Libraries\ImGui;..\..\Libraries\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExternalWarningLevel>Level3</ExternalWarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries\glm;..\..\Libraries;..\..\Libraries\ImGui;..\..\Libraries\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;boost_filesystem.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\Libraries\nativefiledialog\build;..\GraphicsEngine\bin\linux\Debug-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries\glm;..\..\Libraries;..\..\Libraries\ImGui;..\..\Libraries\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <StringPooling>true</StringPooling>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExternalWarningLevel>Level3</ExternalWarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;..\GraphicsEngine\src;..\..\Libraries\json-develop\include;..\..\Libraries\eigen-3.4.90;..\..\Libraries\glm;..\..\Libraries;..\..\Libraries\ImGui;..\..\Libraries\nativefiledialog\src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;boost_filesystem.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\Libraries\nativefiledialog\build;..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="src\Explorer\Application\Application.h" />
+    <ClInclude Include="src\Explorer\GUI\AtomStyle.h" />
+    <ClInclude Include="src\Explorer\GUI\CalculationLayer.h" />
+    <ClInclude Include="src\Explorer\GUI\ImSpinner.h" />
+    <ClInclude Include="src\Explorer\GUI\ShaderSources.h" />
+    <ClInclude Include="src\Explorer\Isosurfaces\Isosurfaces.h" />
+    <ClInclude Include="src\Utilities\Intrinsics.h" />
+    <ClInclude Include="src\Utilities\Resources.h" />
+    <ClInclude Include="src\Utilities\Utilities.h" />
+    <ClInclude Include="src\pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Explorer\Application\Application.cpp" />
+    <ClCompile Include="src\Explorer\GUI\CalculationLayer.cpp" />
+    <ClCompile Include="src\Explorer\GUI\ShaderSources.cpp" />
+    <ClCompile Include="src\Explorer\Isosurfaces\IsosurfaceConstants.cpp" />
+    <ClCompile Include="src\Explorer\Isosurfaces\Isosurfaces.cpp" />
+    <ClCompile Include="src\Utilities\Utilities.cpp" />
+    <ClCompile Include="src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SCESS.APS" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="SCESS.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="QuantumSCESS.vcxproj">
+      <Project>{5119F49E-3D7C-8343-E601-BCF9D2434FC6}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,184 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="src">
-      <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
+    <Filter Include="SCESS">
+      <UniqueIdentifier>{E6DF020E-52F4-2ABF-1B76-CE1E874927F0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\Application">
-      <UniqueIdentifier>{701253C7-DC9D-C08B-E5AE-438051B91C8C}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry">
-      <UniqueIdentifier>{F458D00D-6019-4C44-2954-95C195D39020}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum">
-      <UniqueIdentifier>{6E848C7E-DAF0-4779-A3E4-DFD60F106AE1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\Basis">
-      <UniqueIdentifier>{AF8DE9C4-1B9B-17AB-A481-1396108EE361}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\CC">
-      <UniqueIdentifier>{8326ABCB-6F4B-FA4B-9896-DFDB841AF969}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\DFT">
-      <UniqueIdentifier>{DBFB0F41-47BE-43CB-906E-D257FC6F1CA9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\HF">
-      <UniqueIdentifier>{2B27ABCB-174C-FA4B-4097-DFDB2C1BF969}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\Integrals">
-      <UniqueIdentifier>{06561287-7239-21C7-7B3C-4F03E79EE717}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Chemistry\Quantum\Tests">
-      <UniqueIdentifier>{B07931C6-1C87-5FAC-A56D-5B97117A2B63}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\GUI">
-      <UniqueIdentifier>{C1782FA9-2D58-AE44-3670-391BA2CE14A6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Maths">
-      <UniqueIdentifier>{599964B3-C503-192A-0E42-CACF7AEBF67E}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Platform">
-      <UniqueIdentifier>{21CA02E5-0D2D-9289-B6B2-CA3FA2F45D0C}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Utilities">
-      <UniqueIdentifier>{D86B3A83-442C-B6B9-0D67-FF3679E6FA95}</UniqueIdentifier>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{010A8043-6D74-34BA-B6B2-E55F225C120F}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="src\Application\Application.h">
-      <Filter>src\Application</Filter>
+    <ClInclude Include="src\Utilities\Intrinsics.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\Chemistry\PeriodicTable.h">
-      <Filter>src\Chemistry</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Basis\BasisUtils.h">
-      <Filter>src\Chemistry\Quantum\Basis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Basis\Gaussian.h">
-      <Filter>src\Chemistry\Quantum\Basis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\CC\CoupledCluster.h">
-      <Filter>src\Chemistry\Quantum\CC</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\DFT\DFT.h">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\DFT\DFTGrid.h">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\DFT\XCFunctional.h">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\HF\HartreeFock.h">
-      <Filter>src\Chemistry\Quantum\HF</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Integrals\Gamma.h">
-      <Filter>src\Chemistry\Quantum\Integrals</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Integrals\Integrals.h">
-      <Filter>src\Chemistry\Quantum\Integrals</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Molecule.h">
-      <Filter>src\Chemistry\Quantum</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Chemistry\Quantum\Tests\Tests.h">
-      <Filter>src\Chemistry\Quantum\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\CalculationLayer.h">
-      <Filter>src\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\ImSpinner.h">
-      <Filter>src\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GUI\ShaderSources.h">
-      <Filter>src\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Maths\Isosurfaces.h">
-      <Filter>src\Maths</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Maths\Quadrature.h">
-      <Filter>src\Maths</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Platform\Intrinsics.h">
-      <Filter>src\Platform</Filter>
+    <ClInclude Include="src\Utilities\Resources.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="src\Utilities\Utilities.h">
-      <Filter>src\Utilities</Filter>
+      <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\pch.h">
-      <Filter>src</Filter>
-    </ClInclude>
+    <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Application\Application.cpp">
-      <Filter>src\Application</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\PeriodicTable.cpp">
-      <Filter>src\Chemistry</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Basis\BasisUtils.cpp">
-      <Filter>src\Chemistry\Quantum\Basis</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Basis\Gaussian.cpp">
-      <Filter>src\Chemistry\Quantum\Basis</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD-DIIS.cpp">
-      <Filter>src\Chemistry\Quantum\CC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD.cpp">
-      <Filter>src\Chemistry\Quantum\CC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\CC\CCSD_T.cpp">
-      <Filter>src\Chemistry\Quantum\CC</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\DFT\DFT.cpp">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\DFT\DFTGrid.cpp">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\DFT\XCFunctional.cpp">
-      <Filter>src\Chemistry\Quantum\DFT</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\HF\HartreeFock.cpp">
-      <Filter>src\Chemistry\Quantum\HF</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Integrals\Gamma.cpp">
-      <Filter>src\Chemistry\Quantum\Integrals</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Integrals\Integrals.cpp">
-      <Filter>src\Chemistry\Quantum\Integrals</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Chemistry\Quantum\Molecule.cpp">
-      <Filter>src\Chemistry\Quantum</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\CalculationLayer.cpp">
-      <Filter>src\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GUI\ShaderSources.cpp">
-      <Filter>src\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Maths\Isosurfaces.cpp">
-      <Filter>src\Maths</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Maths\Quadrature.cpp">
-      <Filter>src\Maths</Filter>
+    <ClCompile Include="src\SCESS\Application.cpp">
+      <Filter>SCESS</Filter>
     </ClCompile>
     <ClCompile Include="src\Utilities\Utilities.cpp">
-      <Filter>src\Utilities</Filter>
+      <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="SCESS.APS" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="SCESS.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="Eigen.natvis" />
+    <ClCompile Include="src\pch.cpp" />
   </ItemGroup>
 </Project>
