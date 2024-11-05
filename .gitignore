@@ -37,10 +37,6 @@
 # Fonts
 *.tff
 
-# CMake Files
-CMakeLists.txt
-*.cmake
-
 # Excluded Folders
 Python/
 Releases/
