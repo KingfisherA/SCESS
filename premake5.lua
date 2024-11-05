@@ -10,7 +10,7 @@ workspace "SCESS"
 	filter{"system:linux"}
 		defines{"OS_LINUX"}
 
-	outputdir = "%{os.host()}/%{cfg.buildcfg}-x64/%{prj.name}"
+	outputdir = "%{os.host()}/%{cfg.buildcfg}-x64/"
 	libDir = "%{wks.location}/libs/"
 
 project "QuantumSCESS"
@@ -18,6 +18,7 @@ project "QuantumSCESS"
 	language "C++"
 	cppdialect "C++20"
 	systemversion "latest"
+	location ("./Projects/" .. _ACTION)
 	
 	targetdir("bin/" .. outputdir)
 	objdir("bin-obj/" .. outputdir)
@@ -76,6 +77,7 @@ project "SCESS"
 	language "C++"
 	cppdialect "C++20"
 	systemversion "latest"
+	location ("./Projects/" .. _ACTION)
 	
 	targetdir("bin/" .. outputdir)
 	objdir("bin-obj/" .. outputdir)
@@ -123,11 +125,12 @@ project "SCESS"
 		vectorextensions "AVX2"
 		symbols "Off"
 
-project "Explorer"
+project "ViewerSCESS"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++20"
 	systemversion "latest"
+	location ("./Projects/" .. _ACTION)
 
 	targetdir("bin/" .. outputdir)
 	objdir("bin-obj/" .. outputdir)
@@ -139,9 +142,6 @@ project "Explorer"
 	  "%{wks.location}/src/Explorer/**.h",
 	  "%{wks.location}/src/Explorer/**.hpp",
 	  "%{wks.location}/src/Explorer/**.cpp",
-	  "%{wks.location}/resource.h",
-	  "%{wks.location}/SCESS.APS",
-	  "%{wks.location}/SCESS.rc",
 	  "%{wks.location}/src/Utilities/**.h",
 	  "%{wks.location}/src/Utilities/**.hpp",
 	  "%{wks.location}/src/Utilities/**.cpp"

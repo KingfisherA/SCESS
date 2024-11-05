@@ -11,10 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E6DF020E-52F4-2ABF-1B76-CE1E874927F0}</ProjectGuid>
+    <ProjectGuid>{D8AB4097-4461-B98C-CD55-B363390AB090}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>SCESS</RootNamespace>
+    <RootNamespace>ViewerSCESS</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -42,25 +42,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>bin\linux\Debug-x64\SCESS\</OutDir>
-    <IntDir>bin-obj\linux\Debug-x64\SCESS\</IntDir>
-    <TargetName>SCESS</TargetName>
+    <OutDir>..\..\bin\linux\Debug-x64\</OutDir>
+    <IntDir>..\..\bin-obj\linux\Debug-x64\Debug\ViewerSCESS\</IntDir>
+    <TargetName>ViewerSCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>bin\linux\Release-x64\SCESS\</OutDir>
-    <IntDir>bin-obj\linux\Release-x64\SCESS\</IntDir>
-    <TargetName>SCESS</TargetName>
+    <OutDir>..\..\bin\linux\Release-x64\</OutDir>
+    <IntDir>..\..\bin-obj\linux\Release-x64\Release\ViewerSCESS\</IntDir>
+    <TargetName>ViewerSCESS</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;\opt\etsf\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries\glm;..\..\..\..\Libraries;..\..\..\..\Libraries\ImGui;..\..\..\..\Libraries\nativefiledialog\src\include;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -69,21 +69,24 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\..\..\Libraries\nativefiledialog\build\lib\Release\x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;\usr\include;\usr\local\include;\opt\etsf\include;..\..\Libraries\eigen-3.4.90;..\GraphicsEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries\glm;..\..\..\..\Libraries;..\..\..\..\Libraries\ImGui;..\..\..\..\Libraries\nativefiledialog\src\include;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
@@ -92,20 +95,29 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\..\..\Libraries\nativefiledialog\build\lib\Release\x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\Utilities\Intrinsics.h" />
-    <ClInclude Include="src\Utilities\Resources.h" />
-    <ClInclude Include="src\Utilities\Utilities.h" />
-    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="..\..\src\Explorer\Application\Application.h" />
+    <ClInclude Include="..\..\src\Explorer\GUI\AtomStyle.h" />
+    <ClInclude Include="..\..\src\Explorer\GUI\CalculationLayer.h" />
+    <ClInclude Include="..\..\src\Explorer\GUI\ImSpinner.h" />
+    <ClInclude Include="..\..\src\Explorer\GUI\ShaderSources.h" />
+    <ClInclude Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.h" />
+    <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
+    <ClInclude Include="..\..\src\Utilities\Resources.h" />
+    <ClInclude Include="..\..\src\Utilities\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\SCESS\Application.cpp" />
-    <ClCompile Include="src\Utilities\Utilities.cpp" />
-    <ClCompile Include="src\pch.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\Application\Application.cpp" />
+    <ClCompile Include="..\..\src\Explorer\GUI\AtomStyle.cpp" />
+    <ClCompile Include="..\..\src\Explorer\GUI\CalculationLayer.cpp" />
+    <ClCompile Include="..\..\src\Explorer\GUI\ShaderSources.cpp" />
+    <ClCompile Include="..\..\src\Explorer\Isosurfaces\IsosurfaceConstants.cpp" />
+    <ClCompile Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.cpp" />
+    <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="QuantumSCESS.vcxproj">

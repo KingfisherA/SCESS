@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Explorer">
+      <UniqueIdentifier>{7612E14B-62DF-3B57-8BF8-29FF772471E5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Explorer\Application">
+      <UniqueIdentifier>{39AF972A-253E-21F4-CE5C-35EFBACA319A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Explorer\GUI">
+      <UniqueIdentifier>{8A5C8CA2-76BF-1B47-1F45-54FD0B87E7C9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Explorer\Isosurfaces">
+      <UniqueIdentifier>{CC9CF521-B82B-7FEB-614A-93E64DB88F91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{010A8043-6D74-34BA-B6B2-E55F225C120F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\Explorer\Application\Application.h">
+      <Filter>Explorer\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Explorer\GUI\AtomStyle.h">
+      <Filter>Explorer\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Explorer\GUI\CalculationLayer.h">
+      <Filter>Explorer\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Explorer\GUI\ImSpinner.h">
+      <Filter>Explorer\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Explorer\GUI\ShaderSources.h">
+      <Filter>Explorer\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.h">
+      <Filter>Explorer\Isosurfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\Intrinsics.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\Resources.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\Utilities.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\Explorer\Application\Application.cpp">
+      <Filter>Explorer\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\GUI\AtomStyle.cpp">
+      <Filter>Explorer\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\GUI\CalculationLayer.cpp">
+      <Filter>Explorer\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\GUI\ShaderSources.cpp">
+      <Filter>Explorer\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\Isosurfaces\IsosurfaceConstants.cpp">
+      <Filter>Explorer\Isosurfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.cpp">
+      <Filter>Explorer\Isosurfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Utilities\Utilities.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

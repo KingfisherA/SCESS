@@ -6,7 +6,7 @@ namespace SCESS {
     class Resources {
     public:
         //Relative Assets: "./Assets"
-#define ASSETS_PATH "../../../../Assets"
+#define ASSETS_PATH "../../../Assets"
         [[nodiscard]] static const char *GetAssetsPath() { return ASSETS_PATH; }
 
         [[nodiscard]] static boost::filesystem::path GetResourcePath(const std::string &resource) {

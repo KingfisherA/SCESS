@@ -33,141 +33,133 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Quantum\Basis\BasisUtils.h">
+    <ClInclude Include="..\..\src\Quantum\Basis\BasisUtils.h">
       <Filter>Quantum\Basis</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Basis\Gaussian.h">
+    <ClInclude Include="..\..\src\Quantum\Basis\Gaussian.h">
       <Filter>Quantum\Basis</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\CC\CoupledCluster.h">
+    <ClInclude Include="..\..\src\Quantum\CC\CoupledCluster.h">
       <Filter>Quantum\CC</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\CI\ConfigurationInteraction.h">
+    <ClInclude Include="..\..\src\Quantum\CI\ConfigurationInteraction.h">
       <Filter>Quantum\CI</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\DFT\DensityFunctional.h">
+    <ClInclude Include="..\..\src\Quantum\DFT\DensityFunctional.h">
       <Filter>Quantum\DFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\DFT\XCFunctionals.h">
+    <ClInclude Include="..\..\src\Quantum\DFT\XCFunctionals.h">
       <Filter>Quantum\DFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\HF\HartreeFock.h">
+    <ClInclude Include="..\..\src\Quantum\HF\HartreeFock.h">
       <Filter>Quantum\HF</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\BoysFunc.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\BoysFunc.h">
       <Filter>Quantum\Integrals</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\Grid\AtomicGrid.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\Grid\AtomicGrid.h">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\Grid\GridPoint.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\Grid\GridPoint.h">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\Grid\MolecularGrid.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\Grid\MolecularGrid.h">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\Grid\Quadrature.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\Grid\Quadrature.h">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\Integrals.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\Integrals.h">
       <Filter>Quantum\Integrals</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Integrals\IntegralsF12.h">
+    <ClInclude Include="..\..\src\Quantum\Integrals\IntegralsF12.h">
       <Filter>Quantum\Integrals</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Molecule.h">
+    <ClInclude Include="..\..\src\Quantum\Molecule.h">
       <Filter>Quantum</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\PeriodicTable.h">
+    <ClInclude Include="..\..\src\Quantum\PeriodicTable.h">
       <Filter>Quantum</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\QMC\QMC.h">
+    <ClInclude Include="..\..\src\Quantum\QMC\QMC.h">
       <Filter>Quantum\QMC</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quantum\Tests.h">
-      <Filter>Quantum</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Utilities\Intrinsics.h">
+    <ClInclude Include="..\..\src\Utilities\Intrinsics.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utilities\Resources.h">
+    <ClInclude Include="..\..\src\Utilities\Resources.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utilities\Utilities.h">
+    <ClInclude Include="..\..\src\Utilities\Utilities.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="src\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Quantum\Basis\BasisUtils.cpp">
+    <ClCompile Include="..\..\src\Quantum\Basis\BasisUtils.cpp">
       <Filter>Quantum\Basis</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Basis\Gaussian.cpp">
+    <ClCompile Include="..\..\src\Quantum\Basis\Gaussian.cpp">
       <Filter>Quantum\Basis</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\CC\CCSD-DIIS.cpp">
+    <ClCompile Include="..\..\src\Quantum\CC\CCSD-DIIS.cpp">
       <Filter>Quantum\CC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\CC\CCSD.cpp">
+    <ClCompile Include="..\..\src\Quantum\CC\CCSD.cpp">
       <Filter>Quantum\CC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\CC\CCSD_T.cpp">
+    <ClCompile Include="..\..\src\Quantum\CC\CCSD_T.cpp">
       <Filter>Quantum\CC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\CI\FullCI.cpp">
+    <ClCompile Include="..\..\src\Quantum\CI\FullCI.cpp">
       <Filter>Quantum\CI</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\DFT\DensityFunctional.cpp">
+    <ClCompile Include="..\..\src\Quantum\DFT\DensityFunctional.cpp">
       <Filter>Quantum\DFT</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\DFT\XCFunctionals.cpp">
+    <ClCompile Include="..\..\src\Quantum\DFT\XCFunctionals.cpp">
       <Filter>Quantum\DFT</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\HF\RestrictedHF.cpp">
+    <ClCompile Include="..\..\src\Quantum\HF\RestrictedHF.cpp">
       <Filter>Quantum\HF</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\HF\UnrestrictedHF.cpp">
+    <ClCompile Include="..\..\src\Quantum\HF\UnrestrictedHF.cpp">
       <Filter>Quantum\HF</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\BoysFunc.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\BoysFunc.cpp">
       <Filter>Quantum\Integrals</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\Grid\AtomicGrid.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\Grid\AtomicGrid.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\Grid\GridPoint.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\Grid\GridPoint.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\Grid\MolecularGrid.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\Grid\MolecularGrid.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\Grid\Quadrature.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\Grid\Quadrature.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\Integrals.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\Integrals.cpp">
       <Filter>Quantum\Integrals</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Integrals\IntegralsF12.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\IntegralsF12.cpp">
       <Filter>Quantum\Integrals</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Molecule.cpp">
+    <ClCompile Include="..\..\src\Quantum\Molecule.cpp">
       <Filter>Quantum</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\PeriodicTable.cpp">
+    <ClCompile Include="..\..\src\Quantum\PeriodicTable.cpp">
       <Filter>Quantum</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\QMC\CCQMC.cpp">
+    <ClCompile Include="..\..\src\Quantum\QMC\CCQMC.cpp">
       <Filter>Quantum\QMC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\QMC\FCIQMC.cpp">
+    <ClCompile Include="..\..\src\Quantum\QMC\FCIQMC.cpp">
       <Filter>Quantum\QMC</Filter>
     </ClCompile>
-    <ClCompile Include="src\Quantum\Tests.cpp">
-      <Filter>Quantum</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Utilities\Utilities.cpp">
+    <ClCompile Include="..\..\src\Utilities\Utilities.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp" />
   </ItemGroup>
 </Project>
