@@ -1,6 +1,6 @@
 #include <pch.h>
 
-#include "Explorer/Application/Application.h"
+#include "Viewer/Application/Application.h"
 #include <ImGui/imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -13,7 +13,7 @@
 #include "GraphicsEngine/GUI/ImGuiLayer.h"
 #include "GraphicsEngine/Utilities/Assert.h"
 
-#include "Explorer/GUI/CalculationLayer.h"
+#include "Viewer/GUI/CalculationLayer.h"
 #include <filesystem>
 
 #include "xc.h"

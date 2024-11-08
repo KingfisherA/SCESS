@@ -8,7 +8,7 @@
 #include "Quantum/Molecule.h"
 #include  "Quantum/CI/ConfigurationInteraction.h"
 #include  "Quantum/DFT/DensityFunctional.h"
-#include "Explorer/Isosurfaces/Isosurfaces.h"
+#include "Viewer/Isosurfaces/Isosurfaces.h"
 
 
 namespace GEng {

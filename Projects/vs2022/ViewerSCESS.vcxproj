@@ -100,26 +100,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\Explorer\Application\Application.h" />
-    <ClInclude Include="..\..\src\Explorer\GUI\AtomStyle.h" />
-    <ClInclude Include="..\..\src\Explorer\GUI\CalculationLayer.h" />
-    <ClInclude Include="..\..\src\Explorer\GUI\ImSpinner.h" />
-    <ClInclude Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.h" />
     <ClInclude Include="..\..\src\Resources\Resources.h" />
     <ClInclude Include="..\..\src\Utilities\Assets.h" />
     <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
     <ClInclude Include="..\..\src\Utilities\Utilities.h" />
+    <ClInclude Include="..\..\src\Viewer\Application\Application.h" />
+    <ClInclude Include="..\..\src\Viewer\GUI\AtomStyle.h" />
+    <ClInclude Include="..\..\src\Viewer\GUI\CalculationLayer.h" />
+    <ClInclude Include="..\..\src\Viewer\GUI\ImSpinner.h" />
+    <ClInclude Include="..\..\src\Viewer\Isosurfaces\Isosurfaces.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\Explorer\Application\Application.cpp" />
-    <ClCompile Include="..\..\src\Explorer\GUI\AtomStyle.cpp" />
-    <ClCompile Include="..\..\src\Explorer\GUI\CalculationLayer.cpp" />
-    <ClCompile Include="..\..\src\Explorer\Isosurfaces\IsosurfaceConstants.cpp" />
-    <ClCompile Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.cpp" />
     <ClCompile Include="..\..\src\Resources\AssetFolder.cpp" />
     <ClCompile Include="..\..\src\Resources\Fonts.cpp" />
     <ClCompile Include="..\..\src\Resources\ShaderSources.cpp" />
     <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
+    <ClCompile Include="..\..\src\Viewer\Application\Application.cpp" />
+    <ClCompile Include="..\..\src\Viewer\GUI\AtomStyle.cpp" />
+    <ClCompile Include="..\..\src\Viewer\GUI\CalculationLayer.cpp" />
+    <ClCompile Include="..\..\src\Viewer\Isosurfaces\IsosurfaceConstants.cpp" />
+    <ClCompile Include="..\..\src\Viewer\Isosurfaces\Isosurfaces.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="QuantumSCESS.vcxproj">

@@ -11,7 +11,7 @@
 #include "GraphicsEngine/3D/VertexArray.h"
 #include "GraphicsEngine/3D/ShaderProgram.h"
 #include "GraphicsEngine/Maths/Geometry.h"
-#include "Explorer/GUI/ImSpinner.h"
+#include "Viewer/GUI/ImSpinner.h"
 
 #include  "Quantum/Basis/BasisUtils.h"
 #include  "Quantum/Molecule.h"
@@ -21,9 +21,9 @@
 #include  "Quantum/CC/CoupledCluster.h"
 #include  "Quantum/CI/ConfigurationInteraction.h"
 
-#include "Explorer/Isosurfaces/Isosurfaces.h"
+#include "Viewer/Isosurfaces/Isosurfaces.h"
 
-#include "Explorer/Application/Application.h"
+#include "Viewer/Application/Application.h"
 #include "Resources/Resources.h"
 #include "GraphicsEngine/Resources/Resources.h"
 

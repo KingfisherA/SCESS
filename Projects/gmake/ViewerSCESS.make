@@ -69,15 +69,15 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/AssetFolder.o \
+	$(OBJDIR)/Fonts.o \
+	$(OBJDIR)/ShaderSources.o \
+	$(OBJDIR)/Utilities.o \
 	$(OBJDIR)/Application.o \
 	$(OBJDIR)/AtomStyle.o \
 	$(OBJDIR)/CalculationLayer.o \
 	$(OBJDIR)/IsosurfaceConstants.o \
 	$(OBJDIR)/Isosurfaces.o \
-	$(OBJDIR)/AssetFolder.o \
-	$(OBJDIR)/Fonts.o \
-	$(OBJDIR)/ShaderSources.o \
-	$(OBJDIR)/Utilities.o \
 
 RESOURCES := \
 
@@ -136,21 +136,6 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/Application.o: ../../src/Explorer/Application/Application.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/AtomStyle.o: ../../src/Explorer/GUI/AtomStyle.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/CalculationLayer.o: ../../src/Explorer/GUI/CalculationLayer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/IsosurfaceConstants.o: ../../src/Explorer/Isosurfaces/IsosurfaceConstants.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Isosurfaces.o: ../../src/Explorer/Isosurfaces/Isosurfaces.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -161,6 +146,21 @@ $(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Utilities.o: ../../src/Utilities/Utilities.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Application.o: ../../src/Viewer/Application/Application.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AtomStyle.o: ../../src/Viewer/GUI/AtomStyle.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/CalculationLayer.o: ../../src/Viewer/GUI/CalculationLayer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/IsosurfaceConstants.o: ../../src/Viewer/Isosurfaces/IsosurfaceConstants.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Isosurfaces.o: ../../src/Viewer/Isosurfaces/Isosurfaces.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

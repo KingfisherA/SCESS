@@ -139,9 +139,9 @@ project "ViewerSCESS"
 	
 	files
 	{
-	  "./src/Explorer/**.h",
-	  "./src/Explorer/**.hpp",
-	  "./src/Explorer/**.cpp",
+	  "./src/Viewer/**.h",
+	  "./src/Viewer/**.hpp",
+	  "./src/Viewer/**.cpp",
 	  "./src/Utilities/**.h",
 	  "./src/Utilities/**.hpp",
 	  "./src/Utilities/**.cpp",
