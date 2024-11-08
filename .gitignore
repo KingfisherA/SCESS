@@ -11,10 +11,6 @@
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
 
 # Program Debug Databases
 *.pdb
@@ -22,12 +18,6 @@
 # Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
 
 # Executables
 *.out
