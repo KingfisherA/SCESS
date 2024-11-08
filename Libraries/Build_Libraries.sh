@@ -1,7 +1,7 @@
 if [ ! -d "./LibXC/build" ]; then
 	cmake -H./LibXC/ -B./LibXC/build
 fi
-(cd ./LibXC/build && make)
+(cd ./LibXC/build && make -j 10)
 if [ ! -d "./LibXC/lib" ]; then
 	mkdir "./LibXC/lib"
 	mkdir "./LibXC/lib/include"
