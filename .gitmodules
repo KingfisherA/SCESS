@@ -1,0 +1,18 @@
+[submodule "Libraries/Eigen"]
+	path = Libraries/Eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "Libraries/cppitertools"]
+	path = Libraries/cppitertools
+	url = https://github.com/ryanhaining/cppitertools.git
+[submodule "Libraries/JSON"]
+	path = Libraries/JSON
+	url = https://github.com/nlohmann/json.git
+[submodule "Libraries/LibXC"]
+	path = Libraries/LibXC
+	url = https://gitlab.com/libxc/libxc.git
+[submodule "Libraries/nfd"]
+	path = Libraries/nfd
+	url = https://github.com/mlabbe/nativefiledialog.git
+[submodule "Libraries/glm"]
+	path = Libraries/glm
+	url = https://github.com/icaven/glm.git

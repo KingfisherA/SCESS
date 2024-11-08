@@ -7,5 +7,6 @@ namespace SCESS::Tests {
     void TestFCIQMC();
     void TestCCQMC();
     void TestHelium();
-    void TestIntegrals();
+    void TestRepulsionIntegrals();
+    void TestF12Integrals();
 }

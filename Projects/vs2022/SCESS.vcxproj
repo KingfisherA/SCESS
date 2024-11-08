@@ -57,10 +57,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;\opt\etsf\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\GraphicsEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -69,16 +69,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>\opt\etsf\lib;..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xc.a.lib;GraphicsEngine.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\LibXC\lib;..\..\Libraries\GraphicsEngine-1.0.0;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;\opt\etsf\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\GraphicsEngine\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -94,22 +95,16 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>\opt\etsf\lib;..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xc.a.lib;GraphicsEngine.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\LibXC\lib;..\..\Libraries\GraphicsEngine-1.0.0;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\SCESS\Tests.h" />
-    <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
-    <ClInclude Include="..\..\src\Utilities\Resources.h" />
-    <ClInclude Include="..\..\src\Utilities\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\SCESS\Application.cpp" />
     <ClCompile Include="..\..\src\SCESS\Tests.cpp" />
-    <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="\opt\etsf\include" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="QuantumSCESS.vcxproj">

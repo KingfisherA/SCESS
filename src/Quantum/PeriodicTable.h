@@ -5,7 +5,7 @@
 #include <optional>
 #include <iostream>
 
-#include "Utilities/Resources.h"
+#include "Resources/Resources.h"
 
 namespace SCESS
 {
@@ -18,7 +18,7 @@ namespace SCESS
 		{
 			if (sPeriodicTable == nlohmann::json(nullptr))
 			{
-				std::ifstream stream(Resources::GetResourcePath("Data/Periodic Table Data.json").string());
+				std::ifstream stream(Res::AssetsFolder::Get().GetResourcePath("Data/Periodic Table Data.json").string());
 				sPeriodicTable = nlohmann::json::parse(stream);
 				stream.close();
 			}

@@ -1,9 +1,11 @@
 #pragma once
 #include<Eigen/Core>
-#include <unsupported/Eigen/CXX11/Tensor>
-#include<unordered_map>
+#include<unsupported/Eigen/CXX11/Tensor>
 
-#include  "Quantum/Molecule.h"
+#include<unordered_map>
+#include<concepts>
+
+#include "Quantum/Molecule.h"
 
 namespace SCESS {
     class Gaussian;
@@ -13,75 +15,6 @@ namespace SCESS {
 
     //Note that the tei is in chemists’ notation
     using TEITensor = Eigen::Tensor<double, 4>;
-
-    // struct TETensor
-    // {
-    // public:
-    //
-    //     TETensor(){}
-    //     TETensor(const TETensor& tensorIn):mTEIntegrals(tensorIn.mTEIntegrals) {}
-    //
-    //     double& operator()(size_t i, size_t j, size_t k, size_t l)
-    //     {
-    //         size_t index = YoshimineIndex(i, j, k, l);
-    //
-    //         return mTEIntegrals.operator[](index);
-    //     }
-    //
-    //     double operator()(size_t i, size_t j, size_t k, size_t l) const
-    //     {
-    //         size_t index = YoshimineIndex(i, j, k, l);
-    //
-    //         return mTEIntegrals.at(index);
-    //     }
-    //
-    //     double& Get(size_t i, size_t j, size_t k, size_t l)
-    //     {
-    //         size_t index = YoshimineIndex(i, j, k, l);
-    //
-    //         return mTEIntegrals.operator[](index);
-    //     }
-    //
-    //     double Get(size_t i, size_t j, size_t k, size_t l) const
-    //     {
-    //         size_t index = YoshimineIndex(i, j, k, l);
-    //
-    //         return mTEIntegrals.at(index);
-    //     }
-    //
-    //     void Insert(size_t i, size_t j, size_t k, size_t l, double val)
-    //     {
-    //         mTEIntegrals[YoshimineIndex(i, j, k, l)] = val;
-    //     }
-    //
-    //     bool Exists(size_t i, size_t j, size_t k, size_t l) const
-    //     {
-    //         size_t index = YoshimineIndex(i, j, k, l);
-    //         return mTEIntegrals.find(index) != mTEIntegrals.end();
-    //     }
-    //
-    //     static size_t YoshimineIndex(size_t i, size_t j, size_t k, size_t l)
-    //     {
-    //         if (i < j) {
-    //             std::swap(i, j);
-    //         }
-    //         if (k < l) {
-    //             std::swap(k, l);
-    //         }
-    //
-    //         size_t ij = i * (i + 1) / 2 + j;
-    //         size_t kl = k * (k + 1) / 2 + l;
-    //
-    //         if (ij < kl) {
-    //             std::swap(ij, kl);
-    //         }
-    //
-    //         return ij * (ij + 1) / 2 + kl;
-    //     }
-    //
-    // private:
-    //     std::unordered_map<size_t, double> mTEIntegrals;
-    // };
 
     struct ConfigIntegrals {
         ConfigIntegrals() = default;
@@ -149,13 +82,41 @@ namespace SCESS {
         void CloseLibInt();
 
         //Helper functions
-        double Binomial(int64_t a, int64_t b);
-        double PolynomialCoeff(int s, int ia, int ib,
-                               double xpa, double xpb);
-        Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,
-                                       const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2);
+        /**
+         * Raises -1 to the given integer power
+         * @tparam intT
+         * @param power
+         * @return
+         */
+        template<std::integral intT>
+        inline intT powMinus1(intT power) {
+            if (power % 2 == 0)
+                return 1;
+            return -1;
+        }
+        double PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb);
+        inline Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,
+                                              const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
+            return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
+        }
+        template<std::integral intT>
+        inline intT TEIYoshimineIdx(intT i, intT j, intT k, intT l) {
+            if (i < j) {
+                std::swap(i, j);
+            }
+            if (k < l) {
+                std::swap(k, l);
+            }
 
-        size_t TEIYoshimineIdx(size_t i, size_t j, size_t k, size_t l);
+            intT ij = i * (i + 1) / 2 + j;
+            intT kl = k * (k + 1) / 2 + l;
+
+            if (ij < kl) {
+                std::swap(ij, kl);
+            }
+
+            return ij * (ij + 1) / 2 + kl;
+        }
 
         /**
          * Evaluate all the required integrals for a qunatum calculation on a given molecule.
@@ -205,22 +166,14 @@ namespace SCESS {
          * @return The tei in chemist's notation
          */
         TEITensor TwoElectronRepulsionTensor(const Molecule &molecule);
+        TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol);
         TEITensor TwoElectronRepulsionTensorMultithread(const Molecule &molecule);
         //Calculates <ij | 1/r12 | kl> (I1) for a contgacted
-        double EvaluateTwoElectron(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                   const ContractedGaussian &c3, const ContractedGaussian &c4);
+        double TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
+                                    const ContractedGaussian &c3, const ContractedGaussian &c4);
         //Calculates <ij | 1/r12 | kl> (I1)
         double TwoElectronRepulsion(const Gaussian &gto1, const Gaussian &gto2,
                                     const Gaussian &gto3, const Gaussian &gto4);
-        //Calculates <ij | 1/r12 | kl> (I1)
-        double TwoElectronRepulsion(const Eigen::Vector3d &a, const int la, const int ma, const int na,
-                                    const double alphaa,
-                                    const Eigen::Vector3d &b, const int lb, const int mb, const int nb,
-                                    const double alphab,
-                                    const Eigen::Vector3d &c, const int lc, const int mc, const int nc,
-                                    const double alphac,
-                                    const Eigen::Vector3d &d, const int ld, const int md, const int nd,
-                                    const double alphad);
         //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
         std::vector<double> B_Array(const int l1, const int l2, const int l3, const int l4,
                                     const double p, const double a, const double b, const double q,

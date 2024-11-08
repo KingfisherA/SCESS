@@ -1,12 +1,7 @@
 ﻿add_executable("SCESS"
-      "/opt/etsf/include"
-      "src/SCESS/Application.cpp"
-      "src/SCESS/Tests.cpp"
-      "src/SCESS/Tests.h"
-      "src/Utilities/Intrinsics.h"
-      "src/Utilities/Resources.h"
-      "src/Utilities/Utilities.cpp"
-      "src/Utilities/Utilities.h"
+  "src/SCESS/Application.cpp"
+  "src/SCESS/Tests.cpp"
+  "src/SCESS/Tests.h"
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   add_dependencies("SCESS"
@@ -14,18 +9,20 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
   )
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Debug-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/SCESS/src>
-  $<$<CONFIG:Debug>:/usr/include>
-  $<$<CONFIG:Debug>:/usr/local/include>
-  $<$<CONFIG:Debug>:/opt/etsf/include>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/Libraries/eigen-3.4.90>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:OS_LINUX>
@@ -33,11 +30,13 @@ target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Debug>:_DEBUG>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Debug>:/opt/etsf/lib>
-  $<$<CONFIG:Debug>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
+  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Debug>:QuantumSCESS>
+  $<$<CONFIG:Debug>:xc.a>
+  $<$<CONFIG:Debug>:GraphicsEngine>
 )
 target_compile_options("SCESS" PRIVATE
   $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-m64>
@@ -58,7 +57,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
   )
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-target_precompile_headers("SCESS" PUBLIC src/pch.h)
+target_precompile_headers("SCESS" PUBLIC ./src/pch.h)
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   add_dependencies("SCESS"
@@ -66,29 +65,33 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
   )
   set_target_properties("SCESS" PROPERTIES
     OUTPUT_NAME "SCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "/media/charlie/Data/dev/C++/SCESS/bin/linux/Release-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
   )
 endif()
 target_include_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/SCESS/src>
-  $<$<CONFIG:Release>:/usr/include>
-  $<$<CONFIG:Release>:/usr/local/include>
-  $<$<CONFIG:Release>:/opt/etsf/include>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/Libraries/eigen-3.4.90>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/GraphicsEngine/src>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
 )
 target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:Release>:OS_LINUX>
   $<$<CONFIG:Release>:CONFIG_RELEASE>
 )
 target_link_directories("SCESS" PRIVATE
-  $<$<CONFIG:Release>:/opt/etsf/lib>
-  $<$<CONFIG:Release>:/media/charlie/Data/dev/C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
+  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
 )
 target_link_libraries("SCESS"
   $<$<CONFIG:Release>:QuantumSCESS>
+  $<$<CONFIG:Release>:xc.a>
+  $<$<CONFIG:Release>:GraphicsEngine>
 )
 target_compile_options("SCESS" PRIVATE
   $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-m64>
@@ -109,5 +112,5 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
   )
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-target_precompile_headers("SCESS" PUBLIC src/pch.h)
+target_precompile_headers("SCESS" PUBLIC ./src/pch.h)
 endif()

@@ -20,7 +20,7 @@
 #include "Quantum/Basis/BasisUtils.h"
 #include "Quantum/CC/CoupledCluster.h"
 #include "Quantum/Integrals/Integrals.h"
-#include "Utilities/Resources.h"
+#include "Resources/Resources.h"
 
 #pragma region Entry Point
 
@@ -35,21 +35,18 @@ int main(int argc, char **argv) {
     xc_version(&vmajor, &vminor, &vmicro);
     printf("    Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
 
+    SCESS::Application app;
+
     //Initilise libint2
     SCESS::Integrals::InitLibInt();
 
-    SCESS::Application app;
-
-    if (!std::filesystem::exists(SCESS::Resources::GetAssetsPath())) {
-        std::cout << "Required assets directory not found relative to executable. Program will now close. \n";
-        std::cout << "Press any key to continue...\n";
-        std::cin.get();
-        return 1;
-    }
-
-    if (!app.Init()) {
+    if (!SCESS::Res::AssetsFolder::Get().Init() || !app.Init()) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
+
+        //Close connection to libint2
+        SCESS::Integrals::CloseLibInt();
+
         std::cin.get();
         return 1;
     }
@@ -76,7 +73,7 @@ namespace SCESS {
 #define BIND_EVENT_FNC(x) std::bind(&Application::x, this, std::placeholders::_1)
 
     Application::Application() : GraphicsApp("Schrodinger's Cat's Electronic System Solver",
-                                             Resources::GetFontPath(), 800, 600,
+                                             800, 600,
                                              FramebufferSpecification{
                                                  800, 600, 1,
                                                  {
@@ -110,7 +107,7 @@ namespace SCESS {
         mCam.SetZoom(10.0f);
         UpdateProjectionMatrix();
 
-        TextureLoader loader(Resources::GetResourcePath("Icon/SCESS Small.png").string());
+        TextureLoader loader(Res::AssetsFolder::Get().GetResourcePath("Icon/SCESS Small.png").string());
         mAppIcon = Texture2D::Create(loader);
 
         return true;

@@ -196,9 +196,6 @@ namespace SCESS {
 
         // calculate gridpoint-wise xc potential
 
-        // I still don't understand why I need to put a 0.5 here... (see also the function above)
-        // Does it have anything to do how I construct the density matrix P?
-        // Can someone who knows the answer send me an e-mail?
         VectorXd wva = weights.cwiseProduct((vxa + vxb + vca + vcb) * 0.5);
 
         for (uint32_t i = 0; i < mol.GetNoOrbitals(); i++) {

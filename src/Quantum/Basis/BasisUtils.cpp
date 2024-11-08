@@ -1,7 +1,7 @@
 #include<pch.h>
 
 #include  "Quantum/Basis/BasisUtils.h"
-#include"Utilities/Resources.h"
+#include "Resources/Resources.h"
 
 #include<boost/filesystem.hpp>
 
@@ -12,7 +12,7 @@ namespace SCESS::BasisUtils {
     std::vector<std::string> ListBasisSets() {
         namespace fs = boost::filesystem;
         std::vector<std::string> basisSets;
-        fs::path basisSetPath = Resources::GetResourcePath("Basis");
+        fs::path basisSetPath = Res::AssetsFolder::Get().GetResourcePath("Basis");
 
         fs::recursive_directory_iterator itr(basisSetPath);
 
@@ -31,7 +31,7 @@ namespace SCESS::BasisUtils {
     }
 
     std::optional<nlohmann::json> LoadBasisSetJSON(
-        const std::string_view jsonFilePath) {
+    std::string_view jsonFilePath) {
         if (!std::filesystem::exists(jsonFilePath)) {
             return std::nullopt;
         }

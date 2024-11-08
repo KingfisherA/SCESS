@@ -3,7 +3,7 @@
 #include <boost/filesystem.hpp>
 
 namespace SCESS {
-    class Resources {
+    class Assets {
     public:
         //Relative Assets: "./Assets"
 #define ASSETS_PATH "../../../Assets"

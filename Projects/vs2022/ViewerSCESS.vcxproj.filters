@@ -13,6 +13,9 @@
     <Filter Include="Explorer\Isosurfaces">
       <UniqueIdentifier>{CC9CF521-B82B-7FEB-614A-93E64DB88F91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{000BCD17-6C75-818E-B5B3-3234215D5FE3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Utilities">
       <UniqueIdentifier>{010A8043-6D74-34BA-B6B2-E55F225C120F}</UniqueIdentifier>
     </Filter>
@@ -30,16 +33,16 @@
     <ClInclude Include="..\..\src\Explorer\GUI\ImSpinner.h">
       <Filter>Explorer\GUI</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Explorer\GUI\ShaderSources.h">
-      <Filter>Explorer\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.h">
       <Filter>Explorer\Isosurfaces</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Utilities\Intrinsics.h">
+    <ClInclude Include="..\..\src\Resources\Resources.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\Assets.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Utilities\Resources.h">
+    <ClInclude Include="..\..\src\Utilities\Intrinsics.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Utilities\Utilities.h">
@@ -56,14 +59,20 @@
     <ClCompile Include="..\..\src\Explorer\GUI\CalculationLayer.cpp">
       <Filter>Explorer\GUI</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Explorer\GUI\ShaderSources.cpp">
-      <Filter>Explorer\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\Explorer\Isosurfaces\IsosurfaceConstants.cpp">
       <Filter>Explorer\Isosurfaces</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.cpp">
       <Filter>Explorer\Isosurfaces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Resources\AssetFolder.cpp">
+      <Filter>Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Resources\Fonts.cpp">
+      <Filter>Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Resources\ShaderSources.cpp">
+      <Filter>Resources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Utilities\Utilities.cpp">
       <Filter>Utilities</Filter>

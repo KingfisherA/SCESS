@@ -1,18 +1,15 @@
 //Class for performing integral calculations
 //Code modified from https://github.com/ifilot/pyqint?tab=readme-ov-file
 
-
 #include<pch.h>
-#include"Integrals.h"
-
-#include<boost/math/special_functions/binomial.hpp>
 #include<boost/math/special_functions/factorials.hpp>
+#include<boost/math/special_functions/binomial.hpp>
+#include<libint2.hpp>
 
+#include"Integrals.h"
 #include "Quantum/Integrals/BoysFunc.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Molecule.h"
-
-#include<libint2.hpp>
 
 namespace SCESS {
     void Integrals::InitLibInt() {
@@ -22,6 +19,8 @@ namespace SCESS {
     void Integrals::CloseLibInt() {
         libint2::finalize();
     }
+
+
 
 #pragma region Transforms
     //
@@ -135,27 +134,20 @@ namespace SCESS {
 
 #pragma region Helper Functions
 
-    Eigen::Vector3d Integrals::GaussianCenter(double exponent1, double exponent2,
-                                              const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
-        return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
-    }
+    double Integrals::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
+        using boost::math::binomial_coefficient;
+        double result = 0.0;
 
-    size_t Integrals::TEIYoshimineIdx(size_t i, size_t j, size_t k, size_t l) {
-        if (i < j) {
-            std::swap(i, j);
-        }
-        if (k < l) {
-            std::swap(k, l);
-        }
-
-        size_t ij = i * (i + 1) / 2 + j;
-        size_t kl = k * (k + 1) / 2 + l;
-
-        if (ij < kl) {
-            std::swap(ij, kl);
+        for (int t = 0; t < s + 1; t++) {
+            if ((s - ia <= t) && (t <= ib)) {
+                result += binomial_coefficient<double>(ia, s - t) *
+                        binomial_coefficient<double>(ib, t) *
+                        std::pow(xpa, ia - s + t) *
+                        std::pow(xpb, ib - t);
+            }
         }
 
-        return ij * (ij + 1) / 2 + kl;
+        return result;
     }
 
     ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule) {
@@ -188,29 +180,6 @@ namespace SCESS {
         TEITensor tei = TwoElectronRepulsionTensorMultithread(molecule);
 
         return ConfigIntegrals{S, T, V, tei};
-    }
-
-    double Integrals::Binomial(int64_t a, int64_t b) {
-        if ((a < 0) || (b < 0) || (a - b < 0)) {
-            return 1.0;
-        }
-        return boost::math::factorial<double>(a) /
-               (boost::math::factorial<double>(b) * boost::math::factorial<double>(a - b));
-    }
-
-    double Integrals::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
-        double result = 0.0;
-
-        for (int t = 0; t < s + 1; t++) {
-            if ((s - ia <= t) && (t <= ib)) {
-                result += Binomial(ia, s - t) *
-                        Binomial(ib, t) *
-                        std::pow(xpa, ia - s + t) *
-                        std::pow(xpb, ib - t);
-            }
-        }
-
-        return result;
     }
 
 #pragma endregion
@@ -300,7 +269,7 @@ namespace SCESS {
 
     double Integrals::AFactor(const int i, const int r, const int u, const int ang1, const int ang2,
                               const double posA_P, double posB_P, double posNuc_P, double gamma) {
-        double numerator = std::pow(-1, i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * std::pow(-1, u) *
+        double numerator = powMinus1(i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * powMinus1(u) *
                            boost::math::factorial<double>(i) * std::pow(posNuc_P, i - 2 * r - 2 * u) * std::pow(
                                0.25 / gamma, r + u);
         double denominator = boost::math::factorial<double>(r) *
@@ -522,7 +491,7 @@ namespace SCESS {
             for (Eigen::Index j = 0; j < molecule.GetNoOrbitals(); j++) {
                 for (Eigen::Index k = 0; k < molecule.GetNoOrbitals(); k++) {
                     for (Eigen::Index l = 0; l < molecule.GetNoOrbitals(); l++) {
-                        returnTensor(i, j, k, l) = EvaluateTwoElectron(
+                        returnTensor(i, j, k, l) = TwoElectronRepulsion(
                             molecule.GetOrbital(i),
                             molecule.GetOrbital(j),
                             molecule.GetOrbital(k),
@@ -570,7 +539,7 @@ namespace SCESS {
 
             for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
                 const Eigen::Vector4i &indices = it->second[0];
-                integralResult[it->first] = EvaluateTwoElectron(molecule.GetOrbital(indices.x()),
+                integralResult[it->first] = TwoElectronRepulsion(molecule.GetOrbital(indices.x()),
                                                                 molecule.GetOrbital(indices.y()),
                                                                 molecule.GetOrbital(indices.z()),
                                                                 molecule.GetOrbital(indices.w()));
@@ -617,7 +586,7 @@ namespace SCESS {
         return teiTensor;
     }
 
-    double Integrals::EvaluateTwoElectron(const ContractedGaussian &c1, const ContractedGaussian &c2,
+    double Integrals::TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                           const ContractedGaussian &c3, const ContractedGaussian &c4) {
         double result = 0.0;
 
@@ -639,19 +608,24 @@ namespace SCESS {
 
     double Integrals::TwoElectronRepulsion(const Gaussian &gto1, const Gaussian &gto2,
                                            const Gaussian &gto3, const Gaussian &gto4) {
-        return TwoElectronRepulsion(
-            gto1.mPosition, gto1.mAngular[0], gto1.mAngular[1], gto1.mAngular[2], gto1.mExponent,
-            gto2.mPosition, gto2.mAngular[0], gto2.mAngular[1], gto2.mAngular[2], gto2.mExponent,
-            gto3.mPosition, gto3.mAngular[0], gto3.mAngular[1], gto3.mAngular[2], gto3.mExponent,
-            gto4.mPosition, gto4.mAngular[0], gto4.mAngular[1], gto4.mAngular[2], gto4.mExponent);
-    }
-
-    double Integrals::TwoElectronRepulsion(
-        const Eigen::Vector3d &a, const int la, const int ma, const int na, const double alphaa,
-        const Eigen::Vector3d &b, const int lb, const int mb, const int nb, const double alphab,
-        const Eigen::Vector3d &c, const int lc, const int mc, const int nc, const double alphac,
-        const Eigen::Vector3d &d, const int ld, const int md, const int nd, const double alphad) {
         constexpr double pi = std::numbers::pi_v<double>;
+
+        const Eigen::Vector3d &a = gto1.mPosition;
+        const int& la = gto1.mAngular[0], ma = gto1.mAngular[1], na = gto1.mAngular[2];
+        const double& alphaa = gto1.mExponent;
+
+        const Eigen::Vector3d &b = gto2.mPosition;
+        const int& lb = gto2.mAngular[0], mb = gto2.mAngular[1], nb = gto2.mAngular[2];
+        const double& alphab = gto2.mExponent;
+
+        const Eigen::Vector3d &c = gto3.mPosition;
+        const int& lc = gto3.mAngular[0], mc = gto3.mAngular[1], nc = gto3.mAngular[2];
+        const double& alphac = gto3.mExponent;
+
+        const Eigen::Vector3d &d = gto4.mPosition;
+        const int& ld = gto4.mAngular[0], md = gto4.mAngular[1], nd = gto4.mAngular[2];
+        const double& alphad = gto4.mExponent;
+
 
         double rab2 = (a - b).squaredNorm();
         double rcd2 = (c - d).squaredNorm();
@@ -712,8 +686,8 @@ namespace SCESS {
                                              const double dx, const double gamma1,
                                              const double gamma2, const double delta)-> double {
             return fB(i1, l1, l2, px, ax, bx, r1, gamma1) *
-                   pow(-1, i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
-                   pow(-1, u) * factRatio2(i1 + i2 - 2 * (r1 + r2), u) *
+                   powMinus1(i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
+                   powMinus1(u) * factRatio2(i1 + i2 - 2 * (r1 + r2), u) *
                    pow(qx - px, i1 + i2 - 2 * (r1 + r2) - 2 * u) /
                    pow(delta, i1 + i2 - 2 * (r1 + r2) - u);
         };

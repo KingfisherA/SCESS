@@ -10,6 +10,9 @@
     <Filter Include="src">
       <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Resources">
+      <UniqueIdentifier>{D76C8757-432D-038E-0C68-4C0B78E7476A}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\SCESS">
       <UniqueIdentifier>{3DEEBFB3-A958-742A-F296-25D05E40527F}</UniqueIdentifier>
     </Filter>
@@ -18,13 +21,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\Resources\Resources.h">
+      <Filter>src\Resources</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\SCESS\Tests.h">
       <Filter>src\SCESS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Utilities\Intrinsics.h">
-      <Filter>src\Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Utilities\Resources.h">
       <Filter>src\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Utilities\Utilities.h">
@@ -32,6 +35,15 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Resources\AssetFolder.cpp">
+      <Filter>src\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Resources\Fonts.cpp">
+      <Filter>src\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Resources\ShaderSources.cpp">
+      <Filter>src\Resources</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\SCESS\Application.cpp">
       <Filter>src\SCESS</Filter>
     </ClCompile>

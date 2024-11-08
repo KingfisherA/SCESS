@@ -8,14 +8,9 @@
 
 namespace SCESS::BasisUtils 
 {
-	struct BasisSet
-	{
-	public:
-
-	};
 
 	std::vector<std::string> ListBasisSets();
-	std::optional<nlohmann::json> LoadBasisSetJSON(const std::string_view jsonFilePath);
+	std::optional<nlohmann::json> LoadBasisSetJSON(std::string_view jsonFilePath);
 
-	std::vector<Eigen::Vector3i> GenerateAngularMomenta(const size_t angMom);
+	std::vector<Eigen::Vector3i> GenerateAngularMomenta(size_t angMom);
 }

@@ -11,7 +11,6 @@ workspace "SCESS"
 		defines{"OS_LINUX"}
 
 	outputdir = "%{os.host()}/%{cfg.buildcfg}-x64/"
-	libDir = "%{wks.location}/libs/"
 
 project "QuantumSCESS"
 	kind "SharedLib"
@@ -23,40 +22,42 @@ project "QuantumSCESS"
 	targetdir("bin/" .. outputdir)
 	objdir("bin-obj/" .. outputdir)
 	debugdir("bin/" .. outputdir)
+	
+	pchheader("./src/pch.h")
+	pchsource("./src/pch.cpp")
 
 	
 	files
 	{
-	  "%{wks.location}/src/Quantum/**.h",
-	  "%{wks.location}/src/Quantum/**.hpp",
-	  "%{wks.location}/src/Quantum/**.cpp",
-	  "%{wks.location}/src/Utilities/**.h",
-	  "%{wks.location}/src/Utilities/**.hpp",
-	  "%{wks.location}/src/Utilities/**.cpp"
+	  "./src/Quantum/**.h",
+	  "./src/Quantum/**.hpp",
+	  "./src/Quantum/**.cpp",
+	  "./src/Utilities/**.h",
+	  "./src/Utilities/**.hpp",
+	  "./src/Utilities/**.cpp",
+	  "./src/Resources/**.cpp",
+	  "./src/Resources/**.hpp",
+	  "./src/Resources/**.h"
 	}
 	
 	defines{ "EIGEN_USE_BLAS", "EIGEN_USE_LAPACKE" }
 	includedirs
 	{
-	  "%{wks.location}/src/",
-	  "/usr/include",
-	  "/usr/local/include",
-	  "../../C++/GraphicsEngine/src",
-	  "../../Libraries/json-develop/include/",
-	  "../../Libraries/eigen-3.4.90/",
-          "../../Libraries/",
-          "../../Libraries/cppitertools",
-          "/opt/etsf/include"
+	  "./src/",
+	  "./Libraries/GraphicsEngine-1.0.0/include/",
+	   "./Libraries/glm",
+	  "./Libraries/cppitertools/",
+	  "./Libraries/JSON/include/",
+	  "./Libraries/Eigen/",
+	  "./Libraries/LibInt2/include",
+	  "./Libraries/LibXC/lib/include"
 	}
-	
-	pchheader("%{wks.location}/src/pch.h")
-	pchsource("%{wks.location}/src/pch.cpp")
 	
 	libdirs
 	{
-	    "../../C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine",
-	    "../../Libraries/ImGui/bin/linux/Release-x64",
-	    "/opt/etsf/lib/"
+	    "./Libraries/GraphicsEngine-1.0.0/",
+	    "./Libraries/LibInt2/",
+	    "./Libraries/LibXC/lib"
 	}
 	links {"lapack", "lapacke", "blas", "boost_filesystem", "GraphicsEngine", "libint2.a", "libxc.a" }
 	
@@ -85,34 +86,33 @@ project "SCESS"
 	
 	files
 	{
-	  "%{wks.location}/src/SCESS/**.h",
-	  "%{wks.location}/src/SCESS/**.hpp",
-	  "%{wks.location}/src/SCESS/**.cpp",
-	  "%{wks.location}/src/Utilities/**.h",
-	  "%{wks.location}/src/Utilities/**.hpp",
-	  "%{wks.location}/src/Utilities/**.cpp",
-          "/opt/etsf/include"
+	  "./src/SCESS/**.h",
+	  "./src/SCESS/**.hpp",
+	  "./src/SCESS/**.cpp"
 	}
 
 	includedirs
 	{
-	  "%{wks.location}/src/",
-	  "/usr/include",
-	  "/usr/local/include",
-	  "/opt/etsf/include",
-           "../../Libraries/eigen-3.4.90/",
-           "../../C++/GraphicsEngine/src",
+	  "./src/",
+	  "./Libraries/GraphicsEngine-1.0.0/include/",
+	  "./Libraries/glm",
+	  "./Libraries/cppitertools/",
+	  "./Libraries/JSON/include/",
+	  "./Libraries/Eigen/",
+	  "./Libraries/LibInt2/include",
+ 	  "./Libraries/LibInt2/include",
+	  "./Libraries/LibXC/lib/include"
 	}
 	
-	pchheader("%{wks.location}/src/pch.h")
-	pchsource("%{wks.location}/src/pch.cpp")
+	pchheader("./src/pch.h")
+	pchsource("./src/pch.cpp")
 	
 	libdirs
-	{  
-		"/opt/etsf/lib/",
-		"../../C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine"
+	{
+		"./Libraries/LibXC/lib",
+		"./Libraries/GraphicsEngine-1.0.0/"
 	}
-	links { "QuantumSCESS" }
+	links { "QuantumSCESS", "xc.a", "GraphicsEngine" }
 		
 	filter {  "configurations:Debug" }
 		defines { "CONFIG_DEBUG", "_DEBUG" }
@@ -139,41 +139,40 @@ project "ViewerSCESS"
 	
 	files
 	{
-	  "%{wks.location}/src/Explorer/**.h",
-	  "%{wks.location}/src/Explorer/**.hpp",
-	  "%{wks.location}/src/Explorer/**.cpp",
-	  "%{wks.location}/src/Utilities/**.h",
-	  "%{wks.location}/src/Utilities/**.hpp",
-	  "%{wks.location}/src/Utilities/**.cpp"
+	  "./src/Explorer/**.h",
+	  "./src/Explorer/**.hpp",
+	  "./src/Explorer/**.cpp",
+	  "./src/Utilities/**.h",
+	  "./src/Utilities/**.hpp",
+	  "./src/Utilities/**.cpp",
+	  "./src/Resources/**.cpp",
+	  "./src/Resources/**.hpp",
+	  "./src/Resources/**.h"
 	}
 
 	includedirs
 	{
-	  "%{wks.location}/src/",
-	  "/usr/include",
-	  "/usr/local/include",
-          "../../C++/GraphicsEngine/src",
-	  "../../Libraries/json-develop/include",
-	  "../../Libraries/eigen-3.4.90",
-	  "../../Libraries/glm",
-          "../../Libraries/",
-	  "../../Libraries/ImGui",
-          "../../Libraries/nativefiledialog/src/include",
-          "/opt/etsf/include"
+	  "./src/",
+	  "./Libraries/GraphicsEngine-1.0.0/include/",
+	  "./Libraries/glm",
+	  "./Libraries/cppitertools/",
+	  "./Libraries/JSON/include/",
+	  "./Libraries/Eigen/",
+	  "./Libraries/LibInt2/include",
+	  "./Libraries/nfd/src/include/",
+  	  "./Libraries/LibXC/lib/include"
 	}
 	
-	pchheader("%{wks.location}/src/pch.h")
-	pchsource("%{wks.location}/src/pch.cpp")
+	pchheader("./src/pch.h")
+	pchsource("./src/pch.cpp")
 	
 	libdirs
 	{
-	    "../../C++/GraphicsEngine/bin/linux/Release-x64/GraphicsEngine",
-	    "../../Libraries/ImGui/bin/linux/Release-x64",
-	    "../../Libraries/nativefiledialog/build/lib/Release/x64",
-	    "/opt/etsf/lib/"
+	    "./Libraries/GraphicsEngine-1.0.0/",
+	    "./Libraries/nfd/build/lib/Release/x64",
+	    "./Libraries/LibXC/lib"
 	}
-	links { "QuantumSCESS", "GraphicsEngine", "glfw3", "ImGui", "GLEW.a", "GL", "m", 
-		"Xrandr", "Xi", "X11", "Xxf86vm", "pthread", "nfd", "gtk-3", "z", "gdk-3", "glib-2.0" }
+	links { "QuantumSCESS", "GraphicsEngine", "xc.a", "nfd.a", "gtk-3", "gdk-3", "glib-2.0" }
 		
 	filter {  "configurations:Debug" }
 		--libdirs { "../../C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine" }

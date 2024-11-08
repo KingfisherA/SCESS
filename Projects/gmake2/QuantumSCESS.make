@@ -19,10 +19,10 @@ endif
 # #############################################
 
 RESCOMP = windres
-PCH = src/pch.h
+PCH = ../../src/pch.h
 PCH_PLACEHOLDER = $(OBJDIR)/$(notdir $(PCH))
 GCH = $(PCH_PLACEHOLDER).gch
-INCLUDES += -I../../src -I/usr/include -I/usr/local/include -I../../../GraphicsEngine/src -I../../../../Libraries/json-develop/include -I../../../../Libraries/eigen-3.4.90 -I../../../../Libraries -I../../../../Libraries/cppitertools -I/opt/etsf/include
+INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/LibXC/lib/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -43,7 +43,7 @@ OBJDIR = ../../bin-obj/linux/Debug-x64/Debug/QuantumSCESS
 DEFINES += -DOS_LINUX -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE -DCONFIG_DEBUG -D_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -fPIC -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -fPIC -g -std=c++20
-ALL_LDFLAGS += $(LDFLAGS) -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L../../../../Libraries/ImGui/bin/linux/Release-x64 -L/opt/etsf/lib -L/usr/lib64 -m64 -shared -Wl,-soname=libQuantumSCESS.so
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/LibInt2 -L../../Libraries/LibXC/lib -L/usr/lib64 -m64 -shared -Wl,-soname=libQuantumSCESS.so
 
 else ifeq ($(config),release)
 TARGETDIR = ../../bin/linux/Release-x64
@@ -52,7 +52,7 @@ OBJDIR = ../../bin-obj/linux/Release-x64/Release/QuantumSCESS
 DEFINES += -DOS_LINUX -DEIGEN_USE_BLAS -DEIGEN_USE_LAPACKE -DCONFIG_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -fPIC -mavx2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -fPIC -mavx2 -std=c++20
-ALL_LDFLAGS += $(LDFLAGS) -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L../../../../Libraries/ImGui/bin/linux/Release-x64 -L/opt/etsf/lib -L/usr/lib64 -m64 -shared -Wl,-soname=libQuantumSCESS.so -s
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/LibInt2 -L../../Libraries/LibXC/lib -L/usr/lib64 -m64 -shared -Wl,-soname=libQuantumSCESS.so -s
 
 endif
 
@@ -66,6 +66,7 @@ endif
 GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/AssetFolder.o
 GENERATED += $(OBJDIR)/AtomicGrid.o
 GENERATED += $(OBJDIR)/BasisUtils.o
 GENERATED += $(OBJDIR)/BoysFunc.o
@@ -75,6 +76,7 @@ GENERATED += $(OBJDIR)/CCSD.o
 GENERATED += $(OBJDIR)/CCSD_T.o
 GENERATED += $(OBJDIR)/DensityFunctional.o
 GENERATED += $(OBJDIR)/FCIQMC.o
+GENERATED += $(OBJDIR)/Fonts.o
 GENERATED += $(OBJDIR)/FullCI.o
 GENERATED += $(OBJDIR)/Gaussian.o
 GENERATED += $(OBJDIR)/GridPoint.o
@@ -85,9 +87,11 @@ GENERATED += $(OBJDIR)/Molecule.o
 GENERATED += $(OBJDIR)/PeriodicTable.o
 GENERATED += $(OBJDIR)/Quadrature.o
 GENERATED += $(OBJDIR)/RestrictedHF.o
+GENERATED += $(OBJDIR)/ShaderSources.o
 GENERATED += $(OBJDIR)/UnrestrictedHF.o
 GENERATED += $(OBJDIR)/Utilities.o
 GENERATED += $(OBJDIR)/XCFunctionals.o
+OBJECTS += $(OBJDIR)/AssetFolder.o
 OBJECTS += $(OBJDIR)/AtomicGrid.o
 OBJECTS += $(OBJDIR)/BasisUtils.o
 OBJECTS += $(OBJDIR)/BoysFunc.o
@@ -97,6 +101,7 @@ OBJECTS += $(OBJDIR)/CCSD.o
 OBJECTS += $(OBJDIR)/CCSD_T.o
 OBJECTS += $(OBJDIR)/DensityFunctional.o
 OBJECTS += $(OBJDIR)/FCIQMC.o
+OBJECTS += $(OBJDIR)/Fonts.o
 OBJECTS += $(OBJDIR)/FullCI.o
 OBJECTS += $(OBJDIR)/Gaussian.o
 OBJECTS += $(OBJDIR)/GridPoint.o
@@ -107,6 +112,7 @@ OBJECTS += $(OBJDIR)/Molecule.o
 OBJECTS += $(OBJDIR)/PeriodicTable.o
 OBJECTS += $(OBJDIR)/Quadrature.o
 OBJECTS += $(OBJDIR)/RestrictedHF.o
+OBJECTS += $(OBJDIR)/ShaderSources.o
 OBJECTS += $(OBJDIR)/UnrestrictedHF.o
 OBJECTS += $(OBJDIR)/Utilities.o
 OBJECTS += $(OBJDIR)/XCFunctionals.o
@@ -234,6 +240,15 @@ $(OBJDIR)/CCQMC.o: ../../src/Quantum/QMC/CCQMC.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/FCIQMC.o: ../../src/Quantum/QMC/FCIQMC.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Fonts.o: ../../src/Resources/Fonts.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Utilities.o: ../../src/Utilities/Utilities.cpp

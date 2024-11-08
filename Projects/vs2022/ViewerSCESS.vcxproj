@@ -57,10 +57,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries\glm;..\..\..\..\Libraries;..\..\..\..\Libraries\ImGui;..\..\..\..\Libraries\nativefiledialog\src\include;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -69,17 +69,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\..\..\Libraries\nativefiledialog\build\lib\Release\x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries\glm;..\..\..\..\Libraries;..\..\..\..\Libraries\ImGui;..\..\..\..\Libraries\nativefiledialog\src\include;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -95,8 +95,8 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>GraphicsEngine.lib;glfw3.lib;ImGui.lib;GLEW.a.lib;GL.lib;m.lib;Xrandr.lib;Xi.lib;X11.lib;Xxf86vm.lib;pthread.lib;nfd.lib;gtk-3.lib;z.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;..\..\..\..\Libraries\nativefiledialog\build\lib\Release\x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -104,19 +104,21 @@
     <ClInclude Include="..\..\src\Explorer\GUI\AtomStyle.h" />
     <ClInclude Include="..\..\src\Explorer\GUI\CalculationLayer.h" />
     <ClInclude Include="..\..\src\Explorer\GUI\ImSpinner.h" />
-    <ClInclude Include="..\..\src\Explorer\GUI\ShaderSources.h" />
     <ClInclude Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.h" />
+    <ClInclude Include="..\..\src\Resources\Resources.h" />
+    <ClInclude Include="..\..\src\Utilities\Assets.h" />
     <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
-    <ClInclude Include="..\..\src\Utilities\Resources.h" />
     <ClInclude Include="..\..\src\Utilities\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Explorer\Application\Application.cpp" />
     <ClCompile Include="..\..\src\Explorer\GUI\AtomStyle.cpp" />
     <ClCompile Include="..\..\src\Explorer\GUI\CalculationLayer.cpp" />
-    <ClCompile Include="..\..\src\Explorer\GUI\ShaderSources.cpp" />
     <ClCompile Include="..\..\src\Explorer\Isosurfaces\IsosurfaceConstants.cpp" />
     <ClCompile Include="..\..\src\Explorer\Isosurfaces\Isosurfaces.cpp" />
+    <ClCompile Include="..\..\src\Resources\AssetFolder.cpp" />
+    <ClCompile Include="..\..\src\Resources\Fonts.cpp" />
+    <ClCompile Include="..\..\src\Resources\ShaderSources.cpp" />
     <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>

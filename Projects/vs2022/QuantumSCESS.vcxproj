@@ -57,10 +57,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>EIGEN_USE_BLAS;EIGEN_USE_LAPACKE;CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries;..\..\..\..\Libraries\cppitertools;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -70,17 +70,17 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>lapack.lib;lapacke.lib;blas.lib;boost_filesystem.lib;GraphicsEngine.lib;libint2.a.lib;libxc.a.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\LibInt2;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImportLibrary>..\..\bin\linux\Debug-x64\QuantumSCESS.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>../../src/pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>EIGEN_USE_BLAS;EIGEN_USE_LAPACKE;CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;\usr\include;\usr\local\include;..\..\..\GraphicsEngine\src;..\..\..\..\Libraries\json-develop\include;..\..\..\..\Libraries\eigen-3.4.90;..\..\..\..\Libraries;..\..\..\..\Libraries\cppitertools;\opt\etsf\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -97,7 +97,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>lapack.lib;lapacke.lib;blas.lib;boost_filesystem.lib;GraphicsEngine.lib;libint2.a.lib;libxc.a.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\GraphicsEngine\bin\linux\Release-x64\GraphicsEngine;..\..\..\..\Libraries\ImGui\bin\linux\Release-x64;\opt\etsf\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\LibInt2;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ImportLibrary>..\..\bin\linux\Release-x64\QuantumSCESS.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
@@ -119,8 +119,9 @@
     <ClInclude Include="..\..\src\Quantum\Molecule.h" />
     <ClInclude Include="..\..\src\Quantum\PeriodicTable.h" />
     <ClInclude Include="..\..\src\Quantum\QMC\QMC.h" />
+    <ClInclude Include="..\..\src\Resources\Resources.h" />
+    <ClInclude Include="..\..\src\Utilities\Assets.h" />
     <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
-    <ClInclude Include="..\..\src\Utilities\Resources.h" />
     <ClInclude Include="..\..\src\Utilities\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
@@ -145,6 +146,9 @@
     <ClCompile Include="..\..\src\Quantum\PeriodicTable.cpp" />
     <ClCompile Include="..\..\src\Quantum\QMC\CCQMC.cpp" />
     <ClCompile Include="..\..\src\Quantum\QMC\FCIQMC.cpp" />
+    <ClCompile Include="..\..\src\Resources\AssetFolder.cpp" />
+    <ClCompile Include="..\..\src\Resources\Fonts.cpp" />
+    <ClCompile Include="..\..\src\Resources\ShaderSources.cpp" />
     <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

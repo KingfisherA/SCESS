@@ -26,3 +26,5 @@
 #include<Eigen/Eigenvalues>
 #include<unsupported/Eigen/CXX11/Tensor>
 #include<unsupported/Eigen/CXX11/TensorSymmetry>
+
+#include<nlohmann/json.hpp>

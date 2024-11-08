@@ -2,7 +2,8 @@
 #include "CalculationLayer.h"
 
 #include <ImGui/imgui.h>
-#include <nfd/nfd.h>
+#include <nfd.h>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
 #include "AtomStyle.h"
@@ -23,7 +24,8 @@
 #include "Explorer/Isosurfaces/Isosurfaces.h"
 
 #include "Explorer/Application/Application.h"
-#include "Utilities/Resources.h"
+#include "Resources/Resources.h"
+#include "GraphicsEngine/Resources/Resources.h"
 
 namespace SCESS {
     using namespace GEng;
@@ -44,14 +46,9 @@ namespace SCESS {
     }
 
     void CalculationLayer::OnInit() {
-        mDiffuseProg = ShaderProgram::CreateFromFile(
-            Resources::GetResourcePath(R"(Shaders/ColourDiffuse.glsl)").string());
-
-        mMoleculeDiffuseProg = ShaderProgram::CreateFromFile(
-            Resources::GetResourcePath(R"(Shaders/MoleculeColourDiffuse.glsl)").string());
-
-        mSolidColourProg = ShaderProgram::CreateFromFile(
-            Resources::GetResourcePath(R"(Shaders/SolidColour.glsl)").string());
+        mDiffuseProg = ShaderProgram::Create(GEng::Res::ShaderSources::GetColourDiffuseGLSL());
+        mMoleculeDiffuseProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetMoleculeColourDiffuseGLSL());
+        mSolidColourProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetSolidColourGLSL());
 
         mPosTrisurfVAO = VertexArray::Create();
         mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));

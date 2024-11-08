@@ -3,7 +3,7 @@
 #include "IntegralsF12.h"
 #include <libint2.hpp>
 
-namespace SCESS::Integrals::F12 {
+namespace SCESS::Integrals {
     using namespace libint2;
     using LIAtom = libint2::Atom;
 
@@ -91,11 +91,15 @@ namespace SCESS::Integrals::F12 {
         return f12Tensor;
     }
 
-    TEITensor TwoElectronSlaterF12Tensor(const Molecule &mol, double gamma) {
+    TEITensor F12::TwoElectronSlaterF12Tensor(const Molecule &mol, double gamma) {
         return EvaluateTwoElectronF12Tensor(mol, Operator::stg, gamma);
     }
 
-    TEITensor TwoElectronSlaterF12RepulsionTensor(const Molecule &mol, double gamma) {
+    TEITensor F12::TwoElectronSlaterF12RepulsionTensor(const Molecule &mol, double gamma) {
         return EvaluateTwoElectronF12Tensor(mol, Operator::yukawa, gamma);
+    }
+
+    TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol) {
+        return EvaluateTwoElectronF12Tensor(mol, Operator::coulomb, 0.0);
     }
 }

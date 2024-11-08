@@ -147,7 +147,46 @@ namespace SCESS::Tests {
         std::cin.get();
     }
 
-    void TestIntegrals() {
+    void TestRepulsionIntegrals() {
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        Molecule waterMolecule = GenerateWaterMolecule();
+        waterMolecule.MakeOrbitals(BASIS_SET_NAME);
+
+        TEITensor eriSCESS = Integrals::TwoElectronRepulsionTensorMultithread(waterMolecule);
+        TEITensor eriLibInt = Integrals::TwoElectronRepulsionTensorLibInt(waterMolecule);
+
+        std::cout << "SCESS (ij | 1/r12 | kl) integral tensor:\n";
+        Utilities::PrintTensor(eriSCESS);
+
+        std::cout << "LibInt (ij | 1/r12 | kl) integral tensor:\n";
+        Utilities::PrintTensor(eriLibInt);
+
+        if (eriSCESS.size() == eriLibInt.size()) {
+            auto compareDouble = [](double value1, double value2, uint8_t precision)-> bool {
+                return std::abs(value1 - value2) < std::pow(10, -precision);
+            };
+
+            constexpr uint8_t PRECISION = 4;
+            bool equal = true;
+            for (size_t i = 0; i < eriSCESS.size(); i++)
+                if (compareDouble(eriSCESS.data()[i], eriLibInt.data()[i], PRECISION)) {
+                    equal = false;
+                    break;
+                }
+
+            if (equal)
+                std::cout << "Integral tensors are the same to " << PRECISION <<
+                        " decimal places. Integrals calculated correctly.\n";
+            else
+                std::cout << "Integral tensors are not the same. There must be an error in the calculation code.\n";
+        } else {
+            std::cout << "ERI Tensors are not the same size. Integral comparison failed\n";
+        }
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestF12Integrals() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         Molecule hydrogenMolecule = GenerateHydrogenMolecule();
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
@@ -155,10 +194,10 @@ namespace SCESS::Tests {
         TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(hydrogenMolecule, 0.5);
         TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(hydrogenMolecule, 0.5);
 
-        std::cout << "(ij | r12 * exp(-gamma * r12) | kl) integral tensor:\n";
+        std::cout << "(ij | exp(-gamma * r12) | kl) integral tensor:\n";
         Utilities::PrintTensor(f12Ints);
 
-        std::cout << "(ij | r12 * exp(-gamma * r12) * 1/r12 | kl) integral tensor:\n";
+        std::cout << "(ij | exp(-gamma * r12) * 1/r12 | kl) integral tensor:\n";
         Utilities::PrintTensor(f12RepulsionInts);
 
         std::cout << "Press any key to continue..\n";

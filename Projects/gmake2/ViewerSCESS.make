@@ -19,10 +19,10 @@ endif
 # #############################################
 
 RESCOMP = windres
-PCH = src/pch.h
+PCH = ../../src/pch.h
 PCH_PLACEHOLDER = $(OBJDIR)/$(notdir $(PCH))
 GCH = $(PCH_PLACEHOLDER).gch
-INCLUDES += -I../../src -I/usr/include -I/usr/local/include -I../../../GraphicsEngine/src -I../../../../Libraries/json-develop/include -I../../../../Libraries/eigen-3.4.90 -I../../../../Libraries/glm -I../../../../Libraries -I../../../../Libraries/ImGui -I../../../../Libraries/nativefiledialog/src/include -I/opt/etsf/include
+INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/nfd/src/include -I../../Libraries/LibXC/lib/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -41,9 +41,9 @@ OBJDIR = ../../bin-obj/linux/Debug-x64/Debug/ViewerSCESS
 DEFINES += -DOS_LINUX -DCONFIG_DEBUG -D_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g -std=c++20
-LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so -lGraphicsEngine -lglfw3 -lImGui -lGLEW.a -lGL -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread -lnfd -lgtk-3 -lz -lgdk-3 -lglib-2.0
+LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so -lGraphicsEngine -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
 LDDEPS += ../../bin/linux/Debug-x64/libQuantumSCESS.so
-ALL_LDFLAGS += $(LDFLAGS) -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L../../../../Libraries/ImGui/bin/linux/Release-x64 -L../../../../Libraries/nativefiledialog/build/lib/Release/x64 -L/opt/etsf/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
 
 else ifeq ($(config),release)
 TARGETDIR = ../../bin/linux/Release-x64
@@ -52,9 +52,9 @@ OBJDIR = ../../bin-obj/linux/Release-x64/Release/ViewerSCESS
 DEFINES += -DOS_LINUX -DCONFIG_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2 -std=c++20
-LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so -lGraphicsEngine -lglfw3 -lImGui -lGLEW.a -lGL -lm -lXrandr -lXi -lX11 -lXxf86vm -lpthread -lnfd -lgtk-3 -lz -lgdk-3 -lglib-2.0
+LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so -lGraphicsEngine -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
 LDDEPS += ../../bin/linux/Release-x64/libQuantumSCESS.so
-ALL_LDFLAGS += $(LDFLAGS) -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L../../../../Libraries/ImGui/bin/linux/Release-x64 -L../../../../Libraries/nativefiledialog/build/lib/Release/x64 -L/opt/etsf/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
 
 endif
 
@@ -69,15 +69,19 @@ GENERATED :=
 OBJECTS :=
 
 GENERATED += $(OBJDIR)/Application.o
+GENERATED += $(OBJDIR)/AssetFolder.o
 GENERATED += $(OBJDIR)/AtomStyle.o
 GENERATED += $(OBJDIR)/CalculationLayer.o
+GENERATED += $(OBJDIR)/Fonts.o
 GENERATED += $(OBJDIR)/IsosurfaceConstants.o
 GENERATED += $(OBJDIR)/Isosurfaces.o
 GENERATED += $(OBJDIR)/ShaderSources.o
 GENERATED += $(OBJDIR)/Utilities.o
 OBJECTS += $(OBJDIR)/Application.o
+OBJECTS += $(OBJDIR)/AssetFolder.o
 OBJECTS += $(OBJDIR)/AtomStyle.o
 OBJECTS += $(OBJDIR)/CalculationLayer.o
+OBJECTS += $(OBJDIR)/Fonts.o
 OBJECTS += $(OBJDIR)/IsosurfaceConstants.o
 OBJECTS += $(OBJDIR)/Isosurfaces.o
 OBJECTS += $(OBJDIR)/ShaderSources.o
@@ -154,13 +158,19 @@ $(OBJDIR)/AtomStyle.o: ../../src/Explorer/GUI/AtomStyle.cpp
 $(OBJDIR)/CalculationLayer.o: ../../src/Explorer/GUI/CalculationLayer.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/ShaderSources.o: ../../src/Explorer/GUI/ShaderSources.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/IsosurfaceConstants.o: ../../src/Explorer/Isosurfaces/IsosurfaceConstants.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Isosurfaces.o: ../../src/Explorer/Isosurfaces/Isosurfaces.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Fonts.o: ../../src/Resources/Fonts.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Utilities.o: ../../src/Utilities/Utilities.cpp

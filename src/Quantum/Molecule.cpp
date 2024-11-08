@@ -7,7 +7,7 @@
 #include "Quantum/Basis/BasisUtils.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "PeriodicTable.h"
-#include "Utilities/Resources.h"
+#include "Resources/Resources.h"
 
 #include "GraphicsEngine/Utilities/StringOperations.h"
 
@@ -42,7 +42,7 @@ namespace SCESS {
 
     void Molecule::MakeOrbitals(const std::string &basisSetName) {
         std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(
-            Resources::GetResourcePath("Basis/" + basisSetName + ".json").string());
+            Res::AssetsFolder::Get().GetResourcePath("Basis/" + basisSetName + ".json").string());
         if (!basisSetOpt.has_value()) {
             throw std::runtime_error("Basis set could not be loaded succesfully");
         }

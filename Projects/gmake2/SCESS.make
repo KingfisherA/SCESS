@@ -19,10 +19,10 @@ endif
 # #############################################
 
 RESCOMP = windres
-PCH = src/pch.h
+PCH = ../../src/pch.h
 PCH_PLACEHOLDER = $(OBJDIR)/$(notdir $(PCH))
 GCH = $(PCH_PLACEHOLDER).gch
-INCLUDES += -I../../src -I/usr/include -I/usr/local/include -I/opt/etsf/include -I../../../../Libraries/eigen-3.4.90 -I../../../GraphicsEngine/src
+INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/LibXC/lib/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -41,9 +41,9 @@ OBJDIR = ../../bin-obj/linux/Debug-x64/Debug/SCESS
 DEFINES += -DOS_LINUX -DCONFIG_DEBUG -D_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g -std=c++20
-LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so
+LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so -lxc.a -lGraphicsEngine
 LDDEPS += ../../bin/linux/Debug-x64/libQuantumSCESS.so
-ALL_LDFLAGS += $(LDFLAGS) -L/opt/etsf/lib -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/LibXC/lib -L../../Libraries/GraphicsEngine-1.0.0 -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
 
 else ifeq ($(config),release)
 TARGETDIR = ../../bin/linux/Release-x64
@@ -52,9 +52,9 @@ OBJDIR = ../../bin-obj/linux/Release-x64/Release/SCESS
 DEFINES += -DOS_LINUX -DCONFIG_RELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2 -std=c++20
-LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so
+LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so -lxc.a -lGraphicsEngine
 LDDEPS += ../../bin/linux/Release-x64/libQuantumSCESS.so
-ALL_LDFLAGS += $(LDFLAGS) -L/opt/etsf/lib -L../../../GraphicsEngine/bin/linux/Release-x64/GraphicsEngine -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
+ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/LibXC/lib -L../../Libraries/GraphicsEngine-1.0.0 -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
 
 endif
 
@@ -70,10 +70,8 @@ OBJECTS :=
 
 GENERATED += $(OBJDIR)/Application.o
 GENERATED += $(OBJDIR)/Tests.o
-GENERATED += $(OBJDIR)/Utilities.o
 OBJECTS += $(OBJDIR)/Application.o
 OBJECTS += $(OBJDIR)/Tests.o
-OBJECTS += $(OBJDIR)/Utilities.o
 
 # Rules
 # #############################################
@@ -141,9 +139,6 @@ $(OBJDIR)/Application.o: ../../src/SCESS/Application.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Tests.o: ../../src/SCESS/Tests.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Utilities.o: ../../src/Utilities/Utilities.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

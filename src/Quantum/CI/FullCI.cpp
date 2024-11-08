@@ -7,6 +7,7 @@
 
 #include <cppitertools/combinations.hpp>
 #include <boost/range/irange.hpp>
+#include <boost/math/special_functions/binomial.hpp>
 
 namespace SCESS {
     CIDeterminant CIDeterminant::MakeReference(uint32_t nAlphaOcc, uint32_t nBetaOcc) {
@@ -22,6 +23,15 @@ namespace SCESS {
         return reference;
     }
 
+    static uint32_t CountSetBits(uint64_t bitStr, uint32_t nBits) {
+        uint32_t nBitsSet = 0;
+        for (uint32_t i = 0; i < nBits; i++)
+            if ((0x1 << i) & bitStr)
+                nBitsSet++;
+
+        return nBitsSet;
+    }
+
     void CIDeterminant::CalculateDifferences(CIDeterminant I,
                                              CIDeterminant J,
                                              size_t numOfAlphaOrbitals,
@@ -30,25 +40,52 @@ namespace SCESS {
                                              std::vector<uint32_t> &uniqueJ,
                                              std::vector<uint32_t> &commonIJ,
                                              int &sign) {
-        uint32_t flips = 0;
-        auto CalcDifferences = [&flips, &commonIJ, &uniqueI, &uniqueJ](const CIDeterminant::OrbitalBitStr I,
-                                                                       const CIDeterminant::OrbitalBitStr J,
-                                                                       size_t numOfOrbs,
-                                                                       uint8_t (*func)(uint8_t)) {
-            OrbitalBitStr uniqueOrbs = I ^ J;
+        uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+                              CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
+        uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+                                 CountSetBits(I.GetBetaOrbitals() ^ J.GetBetaOrbitals(), numOfBetaOrbitals);
 
-            for (uint32_t i = 0; i < numOfOrbs; ++i) {
-                if ((0x1 << i) & uniqueOrbs) {
-                    if ((0x1 << i) & I) {
-                        uniqueI.push_back(func(i));
-                    } else {
-                        uniqueJ.push_back(func(i));
+        uint32_t shift = nElectrons - excitationLvl;
+
+        uint32_t flips = 0;
+
+        auto CalcDifferences = [&flips, &shift, &commonIJ, &uniqueI, &uniqueJ](OrbitalBitStr I,
+                                                                               OrbitalBitStr J,
+                                                                               size_t numOfOrbs,
+                                                                               uint8_t (*func)(uint8_t)) {
+
+            uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
+
+            for (uint32_t i = 0; i < numOfOrbs; i++) {
+                //Occupied in J
+                if ((0x1 << i) & J) iel2++;
+
+                //Occupied in I
+                if ((0x1 << i) & I) {
+                    iel1++;
+                    //Occupied in J
+                    if ((0x1 << i) & J) {
+                        commonIJ.push_back(func(i));
                     }
-                    flips++;
-                } else if ((0x1 << i) & I)
-                    commonIJ.push_back(func(i));
+                    //Not occupied in J
+                    else {
+                        iexcit1++;
+                        flips += (shift - iel1 + iexcit1);
+                        uniqueI.push_back(func(i));
+                    }
+                }
+                //Not occupied in I
+                else {
+                    //Occupied in J
+                    if ((0x1 << i) & J) {
+                        iexcit2++;
+                        uniqueJ.push_back(func(i));
+                        flips += (shift - iel2 + iexcit2);
+                    }
+                }
             }
         };
+
 
         CalcDifferences(I.GetAlphaOrbitals(), J.GetAlphaOrbitals(), numOfAlphaOrbitals,
                         [](uint8_t i)-> uint8_t { return i * 2; });
@@ -56,7 +93,7 @@ namespace SCESS {
                         [](uint8_t i)-> uint8_t { return i * 2 + 1; });
 
         sign = 1;
-        if (flips % 2 == 0)
+        if (flips % 2 == 1)
             sign = -1;
     }
 
@@ -235,7 +272,8 @@ namespace SCESS {
 
     std::vector<CIDeterminant> ConfigurationInteraction::GenerateAllDeterminants(
         uint32_t nSpinOrbs, uint32_t nElectrons) {
-        auto nDeterminants = static_cast<size_t>(Integrals::Binomial(nSpinOrbs, nElectrons));
+        auto nDeterminants = static_cast<size_t>(
+            boost::math::binomial_coefficient<double>(nSpinOrbs, nElectrons));
         std::vector<CIDeterminant> determinants;
         determinants.reserve(nDeterminants);
 
@@ -275,12 +313,12 @@ namespace SCESS {
             std::cout << "[Alpha, ";
 
             for (uint32_t i = 0; i < numOfOrbitals; i++)
-                std::cout << (uint32_t)((det.GetAlphaOrbitals() >> i) & 0x1) << ", ";
+                std::cout << (uint32_t) ((det.GetAlphaOrbitals() >> i) & 0x1) << ", ";
 
             std::cout << "Beta, ";
 
             for (uint32_t i = 0; i < numOfOrbitals; i++)
-                std::cout << (uint32_t)((det.GetBetaOrbitals() >> i) & 0x1) << ", ";
+                std::cout << (uint32_t) ((det.GetBetaOrbitals() >> i) & 0x1) << ", ";
 
 
             std::cout << "] \n";
