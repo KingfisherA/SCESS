@@ -2,12 +2,9 @@
 //Code modified from https://github.com/ifilot/pyqint?tab=readme-ov-file
 
 #include<pch.h>
-#include<boost/math/special_functions/factorials.hpp>
-#include<boost/math/special_functions/binomial.hpp>
 #include<libint2.hpp>
 
 #include"Integrals.h"
-#include "Quantum/Integrals/BoysFunc.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Molecule.h"
 
@@ -19,7 +16,6 @@ namespace SCESS {
     void Integrals::CloseLibInt() {
         libint2::finalize();
     }
-
 
 
 #pragma region Transforms
@@ -134,22 +130,6 @@ namespace SCESS {
 
 #pragma region Helper Functions
 
-    double Integrals::PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
-        using boost::math::binomial_coefficient;
-        double result = 0.0;
-
-        for (int t = 0; t < s + 1; t++) {
-            if ((s - ia <= t) && (t <= ib)) {
-                result += binomial_coefficient<double>(ia, s - t) *
-                        binomial_coefficient<double>(ib, t) *
-                        std::pow(xpa, ia - s + t) *
-                        std::pow(xpb, ib - t);
-            }
-        }
-
-        return result;
-    }
-
     ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule) {
         Eigen::MatrixXd S =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
@@ -158,6 +138,7 @@ namespace SCESS {
         Eigen::MatrixXd V =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
+        AArray ax, ay, az;
         for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
             for (size_t j = i; j < molecule.GetNoOrbitals(); j++) {
                 const ContractedGaussian &c1 = molecule.GetOrbital(i);
@@ -171,7 +152,7 @@ namespace SCESS {
 
                 double Vn = 0.0;
                 for (const Atom &a: molecule.GetAtoms()) {
-                    Vn += EvaluateNuclear(c1, c2, a.GetPos(), a.GetCharge());
+                    Vn += EvaluateNuclear(c1, c2, a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = Vn;
             }
@@ -267,75 +248,79 @@ namespace SCESS {
 
 #pragma region Nuclear
 
-    double Integrals::AFactor(const int i, const int r, const int u, const int ang1, const int ang2,
-                              const double posA_P, double posB_P, double posNuc_P, double gamma) {
-        double numerator = powMinus1(i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * powMinus1(u) *
-                           boost::math::factorial<double>(i) * std::pow(posNuc_P, i - 2 * r - 2 * u) * std::pow(
-                               0.25 / gamma, r + u);
-        double denominator = boost::math::factorial<double>(r) *
-                             boost::math::factorial<double>(u) *
-                             boost::math::factorial<double>(i - 2 * r - 2 * u);
-        return numerator / denominator;
-    }
+    void Integrals::A_Array(AArray &aArray, int ang1, int ang2, double posA_P, double posB_P, double posNuc_P,
+                            double gamma) {
+        auto AFactor = [](int i, int r, int u, int ang1, int ang2,
+                          double posA_P, double posB_P, double posNuc_P, double gamma)-> double {
+            double numerator = powMinus1(i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * powMinus1(u) *
+                               Factorial(i) * pow(posNuc_P, i - 2 * r - 2 * u) * std::pow(
+                                   0.25 / gamma, r + u);
+            double denominator = Factorial(r) *
+                                 Factorial(u) *
+                                 Factorial(i - 2 * r - 2 * u);
+            return numerator / denominator;
+        };
 
-    //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
-    std::vector<double> Integrals::GenerateACoeffs(int ang1,
-                                                   int ang2, double posA_P, double posB_P, double posNuc_P,
-                                                   double gamma) {
-        int iRange = ang1 + ang2 + 1;
-        std::vector<double> coeff(iRange, 0);
-
-        for (size_t i = 0; i < iRange; i++) {
-            for (size_t r = 0; r <= i / 2; r++) {
+        for (size_t i = 0; i < aArray.size(); i++)
+            for (size_t r = 0; r <= i / 2; r++)
                 for (size_t u = 0; u <= (i - 2 * r) / 2; u++) {
                     int index = i - 2 * r - u;
-                    coeff[index] += AFactor(i, r, u, ang1, ang2, posA_P, posB_P, posNuc_P, gamma);
+                    aArray[index] += AFactor(i, r, u, ang1, ang2, posA_P, posB_P, posNuc_P, gamma);
                 }
-            }
-        }
-
-        return coeff;
     }
 
-    double Integrals::NuclearGaussianParam(double exp1, double exp2, const Eigen::Vector3d &pos1,
-                                           const Eigen::Vector3d &pos2,
-                                           const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
-                                           const Eigen::Vector3d &nuclearPos) {
+    double Integrals::NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2,
+                                      const Eigen::Vector3d &nuclearPos,
+                                      AArray &ax, AArray &ay, AArray &az) {
+        using std::numbers::pi;
+
+        const auto &exp1 = gto1.mExponent;
+        const auto &exp2 = gto2.mExponent;
+        const auto &pos1 = gto1.mPosition;
+        const auto &pos2 = gto2.mPosition;
+        const auto &ang1 = gto1.mAngular;
+        const auto &ang2 = gto2.mAngular;
+
         double gamma = exp1 + exp2;
         Eigen::Vector3d p = GaussianCenter(exp1, exp2, pos1, pos2);
 
-        double r2 = (pos1 - pos2).squaredNorm();
+        double r2 = (gto1.mPosition - gto2.mPosition).squaredNorm();
         double rnuc2 = (nuclearPos - p).squaredNorm();
 
-        std::vector<double> Ax = GenerateACoeffs(ang1[0], ang2[0], p[0] - pos1[0], p[0] - pos2[0], p[0] - nuclearPos[0],
-                                                 gamma);
-        std::vector<double> Ay = GenerateACoeffs(ang1[1], ang2[1], p[1] - pos1[1], p[1] - pos2[1], p[1] - nuclearPos[1],
-                                                 gamma);
-        std::vector<double> Az = GenerateACoeffs(ang1[2], ang2[2], p[2] - pos1[2], p[2] - pos2[2], p[2] - nuclearPos[2],
-                                                 gamma);
+        ax.clear();
+        ay.clear();
+        az.clear();
+        int lMax = ang1[0] + ang2[0] + 1;
+        int mMax = ang1[1] + ang2[1] + 1;
+        int nMax = ang1[2] + ang2[2] + 1;
+        ax.reserve(std::max(100, lMax));
+        ay.reserve(std::max(100, mMax));
+        az.reserve(std::max(100, nMax));
+        ax.resize(lMax, 0.0);
+        ay.resize(mMax, 0.0);
+        az.resize(nMax, 0.0);
+
+        A_Array(ax, ang1[0], ang2[0], p[0] - pos1[0], p[0] - pos2[0], p[0] - nuclearPos[0],
+                gamma);
+        A_Array(ay, ang1[1], ang2[1], p[1] - pos1[1], p[1] - pos2[1], p[1] - nuclearPos[1],
+                gamma);
+        A_Array(az, ang1[2], ang2[2], p[2] - pos1[2], p[2] - pos2[2], p[2] - nuclearPos[2],
+                gamma);
 
         double result = 0.0;
 
-        for (size_t i = 0; i <= ang1[0] + ang2[0]; i++) {
-            for (size_t j = 0; j <= ang1[1] + ang2[1]; j++) {
+        for (size_t i = 0; i <= ang1[0] + ang2[0]; i++)
+            for (size_t j = 0; j <= ang1[1] + ang2[1]; j++)
                 for (size_t k = 0; k <= ang1[2] + ang2[2]; k++) {
-                    result += Ax[i] * Ay[j] * Az[k] * BoysFunc::CalculateBoys(i + j + k, rnuc2 * gamma);
+                    result += ax[i] * ay[j] * az[k] * BoysFunc(i + j + k, rnuc2 * gamma);
                 }
-            }
-        }
 
-        return -2.0 * std::numbers::pi / gamma * std::exp(-exp1 * exp2 * r2 / gamma) * result;
-    }
-
-
-    double Integrals::NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2,
-                                      const Eigen::Vector3d &nuclearPos) {
-        return NuclearGaussianParam(gto1.mExponent, gto2.mExponent,
-                                    gto1.mPosition, gto2.mPosition, gto1.mAngular, gto2.mAngular, nuclearPos);
+        return -2.0 * pi / gamma * exp(-gto1.mExponent * gto2.mExponent * r2 / gamma) * result;
     }
 
     double Integrals::EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                      const Eigen::Vector3d &nuclearPos, const int charge) {
+                                      const Eigen::Vector3d &nuclearPos, const int charge,
+                                      AArray &ax, AArray &ay, AArray &az) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
@@ -343,7 +328,7 @@ namespace SCESS {
                 const Gaussian &g1 = c1.Get(i);
                 const Gaussian &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * Integrals::NuclearGaussian(g1, g2, nuclearPos);
+                        g2.mCoeff * Integrals::NuclearGaussian(g1, g2, nuclearPos, ax, ay, az);
             }
         }
 
@@ -353,16 +338,16 @@ namespace SCESS {
     Eigen::MatrixXd Integrals::CalculateNuclearMatrix(const Molecule &molecule) {
         Eigen::MatrixXd V = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
-        for (size_t i = 0; i < V.rows(); i++) {
+        AArray ax, ay, az;
+        for (size_t i = 0; i < V.rows(); i++)
             for (size_t j = i; j < V.rows(); j++) {
                 double result = 0.0;
                 for (const Atom &a: molecule.GetAtoms()) {
                     result += EvaluateNuclear(molecule.GetOrbital(i), molecule.GetOrbital(j),
-                                              a.GetPos(), a.GetCharge());
+                                              a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = result;
             }
-        }
 
         return V;
     }
@@ -487,6 +472,10 @@ namespace SCESS {
                                (Eigen::Index) molecule.GetNoOrbitals(),
                                (Eigen::Index) molecule.GetNoOrbitals());
 
+        std::vector<double> bx;
+        std::vector<double> by;
+        std::vector<double> bz;
+
         for (Eigen::Index i = 0; i < molecule.GetNoOrbitals(); i++) {
             for (Eigen::Index j = 0; j < molecule.GetNoOrbitals(); j++) {
                 for (Eigen::Index k = 0; k < molecule.GetNoOrbitals(); k++) {
@@ -495,7 +484,8 @@ namespace SCESS {
                             molecule.GetOrbital(i),
                             molecule.GetOrbital(j),
                             molecule.GetOrbital(k),
-                            molecule.GetOrbital(l));
+                            molecule.GetOrbital(l),
+                            bx, by, bz);
                     }
                 }
             }
@@ -537,12 +527,17 @@ namespace SCESS {
             for (size_t i = 0; i < startingIdx; i++)
                 ++it;
 
+            std::vector<double> bx;
+            std::vector<double> by;
+            std::vector<double> bz;
+
             for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
                 const Eigen::Vector4i &indices = it->second[0];
                 integralResult[it->first] = TwoElectronRepulsion(molecule.GetOrbital(indices.x()),
-                                                                molecule.GetOrbital(indices.y()),
-                                                                molecule.GetOrbital(indices.z()),
-                                                                molecule.GetOrbital(indices.w()));
+                                                                 molecule.GetOrbital(indices.y()),
+                                                                 molecule.GetOrbital(indices.z()),
+                                                                 molecule.GetOrbital(indices.w()),
+                                                                 bx, by, bz);
                 ++it;
             }
         };
@@ -587,7 +582,8 @@ namespace SCESS {
     }
 
     double Integrals::TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                          const ContractedGaussian &c3, const ContractedGaussian &c4) {
+                                           const ContractedGaussian &c3, const ContractedGaussian &c4,
+                                           BArray &bx, BArray &by, BArray &bz) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++)
@@ -600,32 +596,33 @@ namespace SCESS {
                                 g4 = c4.Get(l);
 
                         result += g1.mNorm * g2.mNorm * g3.mNorm * g4.mNorm *
-                                g1.mCoeff * g2.mCoeff * g3.mCoeff * g4.mCoeff * TwoElectronRepulsion(g1, g2, g3, g4);
+                                g1.mCoeff * g2.mCoeff * g3.mCoeff * g4.mCoeff * TwoElectronRepulsion(
+                                    g1, g2, g3, g4, bx, by, bz);
                     }
 
         return result;
     }
 
     double Integrals::TwoElectronRepulsion(const Gaussian &gto1, const Gaussian &gto2,
-                                           const Gaussian &gto3, const Gaussian &gto4) {
+                                           const Gaussian &gto3, const Gaussian &gto4,
+                                           BArray &bx, BArray &by, BArray &bz) {
         constexpr double pi = std::numbers::pi_v<double>;
 
         const Eigen::Vector3d &a = gto1.mPosition;
-        const int& la = gto1.mAngular[0], ma = gto1.mAngular[1], na = gto1.mAngular[2];
-        const double& alphaa = gto1.mExponent;
+        const int &la = gto1.mAngular[0], ma = gto1.mAngular[1], na = gto1.mAngular[2];
+        const double &alphaa = gto1.mExponent;
 
         const Eigen::Vector3d &b = gto2.mPosition;
-        const int& lb = gto2.mAngular[0], mb = gto2.mAngular[1], nb = gto2.mAngular[2];
-        const double& alphab = gto2.mExponent;
+        const int &lb = gto2.mAngular[0], mb = gto2.mAngular[1], nb = gto2.mAngular[2];
+        const double &alphab = gto2.mExponent;
 
         const Eigen::Vector3d &c = gto3.mPosition;
-        const int& lc = gto3.mAngular[0], mc = gto3.mAngular[1], nc = gto3.mAngular[2];
-        const double& alphac = gto3.mExponent;
+        const int &lc = gto3.mAngular[0], mc = gto3.mAngular[1], nc = gto3.mAngular[2];
+        const double &alphac = gto3.mExponent;
 
         const Eigen::Vector3d &d = gto4.mPosition;
-        const int& ld = gto4.mAngular[0], md = gto4.mAngular[1], nd = gto4.mAngular[2];
-        const double& alphad = gto4.mExponent;
-
+        const int &ld = gto4.mAngular[0], md = gto4.mAngular[1], nd = gto4.mAngular[2];
+        const double &alphad = gto4.mExponent;
 
         double rab2 = (a - b).squaredNorm();
         double rcd2 = (c - d).squaredNorm();
@@ -639,52 +636,65 @@ namespace SCESS {
         double gamma2 = alphac + alphad;
         double delta = 0.25 * (1.0 / gamma1 + 1.0 / gamma2);
 
-        std::vector<double> bx = B_Array(la, lb, lc, ld, p[0], a[0], b[0], q[0], c[0], d[0], gamma1, gamma2, delta);
-        std::vector<double> by = B_Array(ma, mb, mc, md, p[1], a[1], b[1], q[1], c[1], d[1], gamma1, gamma2, delta);
-        std::vector<double> bz = B_Array(na, nb, nc, nd, p[2], a[2], b[2], q[2], c[2], d[2], gamma1, gamma2, delta);
+        bx.clear();
+        by.clear();
+        bz.clear();
+        int lMax = la + lb + lc + ld + 1;
+        int mMax = ma + mb + mc + md + 1;
+        int nMax = na + nb + nc + nd + 1;
+        bx.reserve(std::max(100, lMax));
+        by.reserve(std::max(100, mMax));
+        bz.reserve(std::max(100, nMax));
+        bx.resize(lMax, 0.0);
+        by.resize(mMax, 0.0);
+        bz.resize(nMax, 0.0);
+
+        B_Array(bx, la, lb, lc, ld, p[0], a[0], b[0], q[0], c[0], d[0], gamma1, gamma2, delta);
+        B_Array(by, ma, mb, mc, md, p[1], a[1], b[1], q[1], c[1], d[1], gamma1, gamma2, delta);
+        B_Array(bz, na, nb, nc, nd, p[2], a[2], b[2], q[2], c[2], d[2], gamma1, gamma2, delta);
+
+        // std::vector<double> bx = B_Array(la, lb, lc, ld, p[0], a[0], b[0], q[0], c[0], d[0], gamma1, gamma2, delta);
+        // std::vector<double> by = B_Array(ma, mb, mc, md, p[1], a[1], b[1], q[1], c[1], d[1], gamma1, gamma2, delta);
+        // std::vector<double> bz = B_Array(na, nb, nc, nd, p[2], a[2], b[2], q[2], c[2], d[2], gamma1, gamma2, delta);
 
         double sum = 0.0;
         for (int i = 0; i <= (la + lb + lc + ld); i++)
             for (int j = 0; j <= (ma + mb + mc + md); j++)
                 for (int k = 0; k <= (na + nb + nc + nd); k++) {
-                    //BoysFunc::CalculateBoys(i + j + k, 0.25 * rpq2 / delta)
-                    sum += bx[i] * by[j] * bz[k] * BoysFunc::CalculateBoys(i + j + k, 0.25 * rpq2 / delta);
+                    // Boys(i + j + k, 0.25 * rpq2 / delta)
+                    sum += bx[i] * by[j] * bz[k] * BoysFunc(i + j + k, 0.25 * rpq2 / delta);
                 }
-
 
         return 2.0 * pow(pi, 2.5) / (gamma1 * gamma2 * sqrt(gamma1 + gamma2)) *
                exp(-alphaa * alphab * rab2 / gamma1) *
                exp(-alphac * alphad * rcd2 / gamma2) * sum;
     }
 
-    std::vector<double> Integrals::B_Array(const int l1, const int l2, const int l3, const int l4,
-                                           const double p, const double a, const double b, const double q,
-                                           const double c, const double d,
-                                           const double g1, const double g2, const double delta) {
-        int imax = l1 + l2 + l3 + l4 + 1;
-        std::vector<double> arrB(imax, 0);
-
-        auto factRatio2 = [](const int a, const int b)-> double {
-            return boost::math::factorial<double>(a) / boost::math::factorial<double>(b) /
-                   boost::math::factorial<double>(a - 2 * b);
+    void Integrals::B_Array(BArray &bArray, int l1, int l2, int l3, int l4,
+                            double p, double a, double b, double q,
+                            double c, double d,
+                            double g1, double g2, double delta) {
+        auto factRatio2 = [](int a, int b)-> int {
+            return Factorial(a) / Factorial(b) /
+                   Factorial(a - 2 * b);
         };
 
         auto B0 = [&factRatio2](int i, int r, double g)-> double {
             return factRatio2(i, r) * pow(4 * g, r - i);
         };
 
-        auto fB = [&B0](const int i, const int l1, const int l2, const double p, const double a, const double b,
-                        const int r, const double g)-> double {
+        auto fB = [&B0](int i, int l1, int l2, double p, double a, double b,
+                        int r, double g)-> double {
             return PolynomialCoeff(i, l1, l2, p - a, p - b) * B0(i, r, g);
         };
 
-        auto BArrayTerm = [&fB, &factRatio2](const int i1, const int i2, const int r1, const int r2, const int u,
-                                             const int l1,
-                                             const int l2, const int l3, const int l4,
-                                             const double px, const double ax, const double bx, const double qx,
-                                             const double cx,
-                                             const double dx, const double gamma1,
-                                             const double gamma2, const double delta)-> double {
+        auto BArrayTerm = [&fB, &factRatio2](int i1, int i2, int r1, int r2, int u,
+                                             int l1,
+                                             int l2, int l3, int l4,
+                                             double px, double ax, double bx, double qx,
+                                             double cx,
+                                             double dx, double gamma1,
+                                             double gamma2, double delta)-> double {
             return fB(i1, l1, l2, px, ax, bx, r1, gamma1) *
                    powMinus1(i2) * fB(i2, l3, l4, qx, cx, dx, r2, gamma2) *
                    powMinus1(u) * factRatio2(i1 + i2 - 2 * (r1 + r2), u) *
@@ -699,11 +709,9 @@ namespace SCESS {
                     for (int r2 = 0; r2 < i2 / 2 + 1; r2++)
                         for (int u = 0; u < (i1 + i2) / 2 - r1 - r2 + 1; u++) {
                             int i = i1 + i2 - 2 * (r1 + r2) - u;
-                            arrB[i] += BArrayTerm(i1, i2, r1, r2, u, l1, l2, l3, l4,
-                                                  p, a, b, q, c, d, g1, g2, delta);
+                            bArray[i] += BArrayTerm(i1, i2, r1, r2, u, l1, l2, l3, l4,
+                                                    p, a, b, q, c, d, g1, g2, delta);
                         }
-
-        return arrB;
     }
 
 

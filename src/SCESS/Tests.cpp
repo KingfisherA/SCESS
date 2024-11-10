@@ -153,7 +153,7 @@ namespace SCESS::Tests {
         waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         TEITensor eriSCESS = Integrals::TwoElectronRepulsionTensorMultithread(waterMolecule);
-        TEITensor eriLibInt = Integrals::TwoElectronRepulsionTensorLibInt(waterMolecule);
+        TEITensor eriLibInt = Integrals::TwoElectronRepulsionTensorLibInt(waterMolecule, "sto-3g");
 
         std::cout << "SCESS (ij | 1/r12 | kl) integral tensor:\n";
         Utilities::PrintTensor(eriSCESS);
@@ -191,8 +191,8 @@ namespace SCESS::Tests {
         Molecule hydrogenMolecule = GenerateHydrogenMolecule();
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
-        TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(hydrogenMolecule, 0.5);
-        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(hydrogenMolecule, 0.5);
+        TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(hydrogenMolecule, 0.5, BASIS_SET_NAME);
+        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(hydrogenMolecule, 0.5, BASIS_SET_NAME);
 
         std::cout << "(ij | exp(-gamma * r12) | kl) integral tensor:\n";
         Utilities::PrintTensor(f12Ints);

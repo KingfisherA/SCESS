@@ -44,7 +44,7 @@ namespace SCESS {
         std::optional<nlohmann::json> basisSetOpt = BasisUtils::LoadBasisSetJSON(
             Res::AssetsFolder::Get().GetResourcePath("Basis/" + basisSetName + ".json").string());
         if (!basisSetOpt.has_value()) {
-            throw std::runtime_error("Basis set could not be loaded succesfully");
+            throw std::runtime_error("Basis set could not be loaded successfully");
         }
         nlohmann::json &basisSet = *basisSetOpt;
         mOrbitals.clear();

@@ -1,6 +1,5 @@
 ﻿add_executable("ViewerSCESS"
     "src/Resources/AssetFolder.cpp"
-    "src/Resources/Fonts.cpp"
     "src/Resources/Resources.h"
     "src/Resources/ShaderSources.cpp"
     "src/Utilities/Assets.h"

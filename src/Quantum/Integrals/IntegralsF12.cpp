@@ -1,13 +1,18 @@
 #include <pch.h>
 #include "Integrals.h"
 #include "IntegralsF12.h"
+
+
+#define DATADIR
 #include <libint2.hpp>
+#undef DATADIR
 
 namespace SCESS::Integrals {
     using namespace libint2;
     using LIAtom = libint2::Atom;
 
-    static TEITensor EvaluateTwoElectronF12Tensor(const Molecule &mol, Operator op, double gamma) {
+    static TEITensor EvaluateTwoElectronF12Tensor(const Molecule &mol, Operator op, double gamma,
+                                                  std::string_view basisSetName) {
         std::vector<LIAtom> atoms(mol.GetNoAtoms());
 
         for (uint32_t i = 0; i < mol.GetNoAtoms(); i++) {
@@ -19,7 +24,7 @@ namespace SCESS::Integrals {
         }
 
         //Use sto-3g basis set in this example
-        BasisSet basisSet("sto-3g", atoms);
+        BasisSet basisSet(basisSetName.data(), atoms);
 
         TEITensor f12Tensor(
             (Eigen::Index) basisSet.size(),
@@ -91,15 +96,15 @@ namespace SCESS::Integrals {
         return f12Tensor;
     }
 
-    TEITensor F12::TwoElectronSlaterF12Tensor(const Molecule &mol, double gamma) {
-        return EvaluateTwoElectronF12Tensor(mol, Operator::stg, gamma);
+    TEITensor F12::TwoElectronSlaterF12Tensor(const Molecule &mol, double gamma, std::string_view basisSet) {
+        return EvaluateTwoElectronF12Tensor(mol, Operator::stg, gamma, basisSet);
     }
 
-    TEITensor F12::TwoElectronSlaterF12RepulsionTensor(const Molecule &mol, double gamma) {
-        return EvaluateTwoElectronF12Tensor(mol, Operator::yukawa, gamma);
+    TEITensor F12::TwoElectronSlaterF12RepulsionTensor(const Molecule &mol, double gamma, std::string_view basisSet) {
+        return EvaluateTwoElectronF12Tensor(mol, Operator::yukawa, gamma, basisSet);
     }
 
-    TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol) {
-        return EvaluateTwoElectronF12Tensor(mol, Operator::coulomb, 0.0);
+    TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol, std::string_view basisSet) {
+        return EvaluateTwoElectronF12Tensor(mol, Operator::coulomb, 0.0, basisSet);
     }
 }

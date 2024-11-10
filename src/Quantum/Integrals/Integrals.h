@@ -94,11 +94,12 @@ namespace SCESS {
                 return 1;
             return -1;
         }
-        double PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb);
+
         inline Eigen::Vector3d GaussianCenter(double exponent1, double exponent2,
                                               const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
             return (exponent1 * pos1 + exponent2 * pos2) / (exponent1 + exponent2);
         }
+
         template<std::integral intT>
         inline intT TEIYoshimineIdx(intT i, intT j, intT k, intT l) {
             if (i < j) {
@@ -116,6 +117,43 @@ namespace SCESS {
             }
 
             return ij * (ij + 1) / 2 + kl;
+        }
+
+        //Evaluate the Boys function
+        inline double BoysFunc(double m, double x) {
+            //0.00000001
+            x = std::max(std::abs(x), 1E-8);
+            double val = boost::math::tgamma_lower(m + 0.5, x);
+            return 0.5 * std::pow(x, -m - 0.5) * val;
+        }
+
+        template<std::integral intT>
+        double Factorial(intT n) {
+            double result = 1.0;
+
+            for (size_t i = 0; i < n; i++)
+                result *= static_cast<double>(i + 1);
+
+            return result;
+        }
+
+        template<std::integral intT>
+        double BinomialCoefficient(intT n, intT k) {
+            return Factorial(n) / (Factorial(n - k) * Factorial(k));
+        }
+
+        inline double PolynomialCoeff(int s, int ia, int ib, double xpa, double xpb) {
+            double result = 0.0;
+
+            for (int t = 0; t < s + 1; t++)
+                if ((s - ia <= t) && (t <= ib)) {
+                    result += BinomialCoefficient(ia, s - t) *
+                            BinomialCoefficient(ib, t) *
+                            pow(xpa, ia - s + t) *
+                            pow(xpb, ib - t);
+                }
+
+            return result;
         }
 
         /**
@@ -137,22 +175,22 @@ namespace SCESS {
         double EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2);
         Eigen::MatrixXd CalculateOverlapMatrix(const Molecule &molecule);
         Eigen::MatrixXd CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2);
+
+        using AArray = std::vector<double>;
         //Nuclear attraction integrals
         //A-matrix style integration
         //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
-        double AFactor(const int i, const int r, const int u,
-                       const int ang1, const int ang2, const double posA_P, double posB_P, double posNuc_P,
-                       double gamma);
-        std::vector<double> GenerateACoeffs(int ang1, int ang2,
-                                            double posA_P, double posB_P, double posNuc_P, double gamma);
-        double NuclearGaussianParam(double exp1, double exp2, const Eigen::Vector3d &pos1,
-                                    const Eigen::Vector3d &pos2,
-                                    const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
-                                    const Eigen::Vector3d &nuclearPos);
-        double NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2, const Eigen::Vector3d &nuclearPos);
+        void A_Array(AArray &aArray, int ang1, int ang2,
+                     double posA_P, double posB_P, double posNuc_P, double gamma);
+        // double NuclearGaussianParam(double exp1, double exp2, const Eigen::Vector3d &pos1,
+        //                             const Eigen::Vector3d &pos2,
+        //                             const Eigen::Vector3i &ang1, const Eigen::Vector3i &ang2,
+        //                             const Eigen::Vector3d &nuclearPos);
+        double NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2, const Eigen::Vector3d &nuclearPos,
+                               AArray &ax, AArray &ay, AArray &az);
         double EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                const Eigen::Vector3d &nuclearPos,
-                               const int charge);
+                               int charge, AArray &ax, AArray &ay, AArray &az);
         Eigen::MatrixXd CalculateNuclearMatrix(const Molecule &molecule);
 
         //Kinetic energy integrals
@@ -160,33 +198,27 @@ namespace SCESS {
         double EvaluateKinetic(const ContractedGaussian &c1, const ContractedGaussian &c2);
         Eigen::MatrixXd CalculateKineticMatrix(const Molecule &molecule);
 
+        using BArray = std::vector<double>;
         /**
          * Evaluate the two-electron repulsion integral (tei) tensor for a molecule in chemist's notation
          * @param molecule The molecule to evaluate the tei for
          * @return The tei in chemist's notation
          */
         TEITensor TwoElectronRepulsionTensor(const Molecule &molecule);
-        TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol);
+        TEITensor TwoElectronRepulsionTensorLibInt(const Molecule &mol, std::string_view basisSet);
         TEITensor TwoElectronRepulsionTensorMultithread(const Molecule &molecule);
         //Calculates <ij | 1/r12 | kl> (I1) for a contgacted
         double TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                    const ContractedGaussian &c3, const ContractedGaussian &c4);
+                                    const ContractedGaussian &c3, const ContractedGaussian &c4,
+                                    BArray &bx, BArray &by, BArray &bz);
         //Calculates <ij | 1/r12 | kl> (I1)
         double TwoElectronRepulsion(const Gaussian &gto1, const Gaussian &gto2,
-                                    const Gaussian &gto3, const Gaussian &gto4);
+                                    const Gaussian &gto3, const Gaussian &gto4,
+                                    BArray &bx, BArray &by, BArray &bz);
         //https://csclub.uwaterloo.ca/~pbarfuss/jpsj.21.2313.pdf
-        std::vector<double> B_Array(const int l1, const int l2, const int l3, const int l4,
-                                    const double p, const double a, const double b, const double q,
-                                    const double c, const double d,
-                                    const double g1, const double g2, const double delta);
-        //   double B_term(const int i1, const int i2, const int r1, const int r2, const int u, const int l1,
-        //                      const int l2, const int l3, const int l4,
-        //                      const double px, const double ax, const double bx, const double qx, const double cx,
-        //                      const double dx, const double gamma1,
-        //                      const double gamma2, const double delta);
-        //   double fB(const int i, const int l1, const int l2, const double p,
-        //                  const double a, const double b, const int r, const double g);
-        //   double B0(int i, int r, double g);
-        //   double fact_ratio2(const int a, const int b);
+        void B_Array(BArray &bArray, int l1, int l2, int l3, int l4,
+                     double p, double a, double b, double q,
+                     double c, double d,
+                     double g1, double g2, double delta);
     };
 }
