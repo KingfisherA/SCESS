@@ -154,13 +154,15 @@ project "ViewerSCESS"
 	{
 	  "./src/",
 	  "./Libraries/GraphicsEngine-1.0.0/include/",
+	  "./Libraries/GraphicsEngine-1.0.0/include/ImGui",
 	  "./Libraries/glm",
 	  "./Libraries/cppitertools/",
 	  "./Libraries/JSON/include/",
 	  "./Libraries/Eigen/",
 	  "./Libraries/LibInt2/include",
 	  "./Libraries/nfd/src/include/",
-  	  "./Libraries/LibXC/lib/include"
+  	  "./Libraries/LibXC/lib/include",
+  	  "./Libraries/ImPlot"
 	}
 	
 	pchheader("./src/pch.h")
@@ -170,9 +172,10 @@ project "ViewerSCESS"
 	{
 	    "./Libraries/GraphicsEngine-1.0.0/",
 	    "./Libraries/nfd/build/lib/Release/x64",
-	    "./Libraries/LibXC/lib"
+	    "./Libraries/LibXC/lib",
+	    "./Libraries/ImPlot/bin/linux/Release-x64"
 	}
-	links { "QuantumSCESS", "GraphicsEngine", "xc.a", "nfd.a", "gtk-3", "gdk-3", "glib-2.0" }
+	links { "QuantumSCESS", "GraphicsEngine", "ImPlot.a", "xc.a", "nfd.a", "gtk-3", "gdk-3", "glib-2.0" }
 		
 	filter {  "configurations:Debug" }
 		--libdirs { "../../C++/GraphicsEngine/bin/linux/Debug-x64/GraphicsEngine" }

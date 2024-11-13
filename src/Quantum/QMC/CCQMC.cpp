@@ -15,11 +15,12 @@ namespace SCESS {
     using namespace Eigen;
     using namespace boost::random;
 
-    double QuantumMonteCarlo::CCQMC(const RHFWavefunction &rhfWfn, double Vnn) {
+    double QuantumMonteCarlo::CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
+                                    boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts
         uint32_t Na = 200;
-        constexpr size_t NUM_REPORT_CYCLES = 500000;
+        constexpr size_t NUM_REPORT_CYCLES = 1000;
 
         std::cout << "--- Coupled Cluster Quantum Monte Carlo ---\n";
 
@@ -195,7 +196,7 @@ namespace SCESS {
 
 
         double shift = 0.0;
-        double tau = 0.1;
+        double tau = 0.01;
 
         // Excitors; These are operators which take the reference determinant onto another
         // determinant such as |Di> = ai^\dag |D0> where ai is the excitor
@@ -347,7 +348,6 @@ namespace SCESS {
                         nSpawn++;
 
                     nSpawn *= static_cast<int64_t>(Dj.GetSign() * Di.GetSign());
-                    //-Hij
                     if (-Hij > 0.0) {
                         excitorSpawn[DjIdx] += nSpawn;
                     } else {
@@ -364,8 +364,7 @@ namespace SCESS {
                         nKill++;
 
                     nKill *= static_cast<int64_t>(Di.GetSign());
-                    //(Hii-S)
-                    if ((Hii-shift) < 0) {
+                    if ((Hii - shift) < 0) {
                         excitorSpawn[DiIdx] += nKill;
                     } else {
                         excitorSpawn[DiIdx] -= nKill;
@@ -394,6 +393,9 @@ namespace SCESS {
             for (uint32_t I = 1; I < excitorWalkers.size(); I++) {
                 EProj += H_FCI(0, I) * double(excitorWalkers[I]) / double(excitorWalkers[0]);
             }
+
+            if (projEnergyGraph)
+                projEnergyGraph->push_back(glm::vec2{(float) reportCycle, (float) EProj});
 
             if (reportCycle >= 50) {
                 EProjAverage += EProj;

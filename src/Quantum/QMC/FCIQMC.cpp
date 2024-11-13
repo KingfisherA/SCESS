@@ -10,10 +10,11 @@
 
 namespace SCESS {
     double QuantumMonteCarlo::SimpleFCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
-                                           std::stringstream *console) {
+                                           std::stringstream *console,
+                                           boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         using namespace Eigen;
 
-        std::cout << "--- Full CI Quantum Monte Carlo ---\n";
+        if (console) (*console) << "--- Full CI Quantum Monte Carlo ---\n";
 
         //Evaluate the Full CI  Hamiltonian matrix
         uint32_t nElectrons = std::distance(rhfWavefunction.Occupation.begin(),
@@ -47,12 +48,12 @@ namespace SCESS {
 
         VectorXd WaveFunc0 = Wavefunctions.col(0);
 
-        std::cout << " --- FCI Energy: " << Energies(0) << " hartrees---\n\n\n\n";
+        if (console) (*console) << " --- FCI Energy: " << Energies(0) << " hartrees---\n\n\n\n";
 
         //Implementation of the QMC algorithm
 
         constexpr size_t NUM_CYCLES = 1000,
-                NUM_REPORT_CYCLES = 5000;
+                NUM_REPORT_CYCLES = 1000;
         constexpr double EPSILON = 0.01;
 
         using namespace boost::random;
@@ -151,15 +152,19 @@ namespace SCESS {
                     projEnergy += H_FCI(0, I) * double(walkerPopulations[I]) / double(walkerPopulations[0]);
                 }
 
+            if (projEnergyGraph)
+                projEnergyGraph->push_back(glm::vec2{(float) reportCycle, (float) projEnergy});
+
             if (reportCycle + 1 > NUM_REPORT_CYCLES - 100) {
                 runningTotalProjEnergy += projEnergy;
                 averageEnergy = runningTotalProjEnergy / double(reportCycle + 1 - (NUM_REPORT_CYCLES - 100));
             }
 
 
-            std::cout << "  Cycle(" << reportCycle + 1 << "); E(Projected) = " << projEnergy << ", E(average) =" <<
-                    averageEnergy
-                    << '\n';
+            if (console)
+                (*console) << "  Cycle(" << reportCycle + 1 << "); E(Projected) = " << projEnergy << ", E(average) =" <<
+                        averageEnergy
+                        << '\n';
 
             nParticles = std::accumulate(walkerPopulations.begin(), walkerPopulations.end(), 0,
                                          [](int &&acc, const Particle &p)-> int {
@@ -170,14 +175,14 @@ namespace SCESS {
             if (reportCycle + 1 > 2 && nParticlesLast != 0)
                 shift = shift - (1.0 / (tau * 1000.0)) * log((double) nParticles / (double) nParticlesLast);
 
-            std::cout << "      Shift: " << shift << '\n';
-            std::cout << "      Number of particles: " << nParticles << '\n';
+            if (console) (*console) << "      Shift: " << shift << '\n';
+            if (console) (*console) << "      Number of particles: " << nParticles << '\n';
 
             nParticlesLast = nParticles;
         }
 
-        std::cout << "E(Projected) = " << averageEnergy << " hartrees\n";
-        std::cout << "E(FCI) = " << Energies(0) << " hartrees\n";
+        if (console) (*console) << "E(Projected) = " << averageEnergy << " hartrees\n";
+        if (console) (*console) << "E(FCI) = " << Energies(0) << " hartrees\n";
 
         return averageEnergy;
     }

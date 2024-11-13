@@ -10,6 +10,8 @@
 #include "Quantum/DFT/DensityFunctional.h"
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 
+#include <boost/circular_buffer.hpp>
+
 
 namespace GEng {
     class Camera3D;
@@ -27,19 +29,21 @@ namespace SCESS {
     struct CCSDWavefunction;
     class TriSurf;
 
-    enum class SCFMethod:int {
+    enum class SCFMethod : int {
         None = -1,
         RHF = 0,
         UHF = 1,
         KS_DFT = 2
     };
 
-    enum class CorrelationMethod:int {
+    enum class CorrelationMethod : int {
         None = -1,
         MP2 = 0,
         CCSD = 1,
         CCSD_T = 2,
-        FCI = 3
+        FCI = 3,
+        FCIQMC = 4,
+        CCQMC = 5
     };
 
     enum class DFTGridRes : int {
@@ -92,6 +96,7 @@ namespace SCESS {
         void DrawQuantumCalcPanel();
         void DrawMolSelectPanel();
         void DrawConsolePanel();
+        void DrawQMCGraph();
 
         std::vector<std::string> mBasisSets;
         int mSelectedBasisSet = 0;
@@ -139,6 +144,9 @@ namespace SCESS {
         uRef<CIWavefunction> mFCIWfn;
 
         std::string mCalcBasisSet;
+
+        boost::circular_buffer<glm::vec2> mQMCGraphData;
+        double mQMCEnergy = 0.0;
 
         std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
         std::vector<std::string> mMOLabels;

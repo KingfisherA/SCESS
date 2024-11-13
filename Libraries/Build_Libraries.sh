@@ -12,6 +12,10 @@ find "./LibXC/build/src" -name \*.h -exec cp {} "./LibXC/lib/include" \;
 
 (cd ./nfd/build/gmake_linux && make config=release_x64)
 
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -S./ImPlot -B./ImPlot/cmake-build-release
+cmake --build ./ImPlot/cmake-build-release --target all -j 10  
+
+
 mkdir -p -- ../bin/linux/Debug-x64/
 mkdir -p  -- ../bin/linux/Release-x64/
 

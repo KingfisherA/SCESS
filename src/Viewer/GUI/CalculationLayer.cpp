@@ -5,6 +5,7 @@
 #include <nfd.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include<implot.h>
 
 #include "AtomDraw.h"
 #include "GraphicsEngine/Scene/Camera3D.h"
@@ -13,19 +14,21 @@
 #include "GraphicsEngine/Maths/Geometry.h"
 #include "Viewer/GUI/ImSpinner.h"
 
-#include  "Quantum/Basis/BasisUtils.h"
-#include  "Quantum/Molecule.h"
-#include  "Quantum/Basis/Gaussian.h"
-#include  "Quantum/HF/HartreeFock.h"
-#include  "Quantum/DFT/DensityFunctional.h"
-#include  "Quantum/CC/CoupledCluster.h"
-#include  "Quantum/CI/ConfigurationInteraction.h"
+#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Molecule.h"
+#include "Quantum/Basis/Gaussian.h"
+#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/DFT/DensityFunctional.h"
+#include "Quantum/CC/CoupledCluster.h"
+#include "Quantum/CI/ConfigurationInteraction.h"
 
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 
 #include "Viewer/Application/Application.h"
 #include "Resources/Resources.h"
 #include "GraphicsEngine/Resources/Resources.h"
+#include "Quantum/QMC/QMC.h"
+
 
 namespace SCESS {
     using namespace GEng;
@@ -45,10 +48,12 @@ namespace SCESS {
         }
     }
 
-    CalculationLayer::CalculationLayer(): Layer("Graph Layer") {
+    CalculationLayer::CalculationLayer(): Layer("Graph Layer"), mQMCGraphData(1000) {
     }
 
     void CalculationLayer::OnInit() {
+        ImPlot::CreateContext();
+
         mDiffuseProg = ShaderProgram::Create(GEng::Res::ShaderSources::GetColourDiffuseGLSL());
         mMoleculeDiffuseProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetMoleculeColourDiffuseGLSL());
         mSolidColourProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetSolidColourGLSL());
@@ -85,6 +90,7 @@ namespace SCESS {
     }
 
     void CalculationLayer::OnDestroy() {
+        ImPlot::DestroyContext();
     }
 
     void CalculationLayer::OnUpdate(const sRef<SCESS::Framebuffer> &screenBuffer, const Camera3D &cam,
@@ -276,6 +282,8 @@ namespace SCESS {
         mConsoleOutput.clear();
         mConsoleOutput.str("");
 
+        mQMCGraphData.clear();
+
         mCalculationThread.Start([this]() {
             if (mCalcCorrelationMethod != CorrelationMethod::None) {
                 mSCFMethod = mCalcSCFMethod = SCFMethod::RHF;
@@ -309,11 +317,23 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::FCI: {
-                        uRef<CIWavefunction> ciResult = SCESS::ConfigurationInteraction::FCI(
+                        uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
                             *mRHFWfn, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
                         if (ciResult != nullptr) {
                             mFCIWfn = std::move(ciResult);
                         }
+                        break;
+                    }
+
+                    case CorrelationMethod::FCIQMC: {
+                        mQMCEnergy = QuantumMonteCarlo::SimpleFCIQMC(*mRHFWfn, mMolecule->CalculateNuclearRepulsion(),
+                                                                     &mConsoleOutput, &mQMCGraphData);
+                        break;
+                    }
+
+                    case CorrelationMethod::CCQMC: {
+                        mQMCEnergy = QuantumMonteCarlo::CCQMC(*mRHFWfn, mMolecule->CalculateNuclearRepulsion(),
+                                                              &mQMCGraphData);
                         break;
                     }
 
@@ -511,6 +531,20 @@ namespace SCESS {
                 if (ImGui::RadioButton("Full CI", reinterpret_cast<int *>(&mCorrelationMethod), 3)) {
                     mCorrelationMethod = CorrelationMethod::FCI;
                     mSCFMethod = SCFMethod::RHF;
+                }
+                ImGui::Unindent(100.0);
+
+                ImGui::SeparatorText("Quantum Monte Carlo");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("FCIQMC", reinterpret_cast<int *>(&mCorrelationMethod), 4)) {
+                    mCorrelationMethod = CorrelationMethod::FCIQMC;
+                    mSCFMethod = SCFMethod::RHF;
+                    mQMCGraphData.clear();
+                }
+                if (ImGui::RadioButton("CCQMC", reinterpret_cast<int *>(&mCorrelationMethod), 5)) {
+                    mCorrelationMethod = CorrelationMethod::CCQMC;
+                    mSCFMethod = SCFMethod::RHF;
+                    mQMCGraphData.clear();
                 }
                 ImGui::Unindent(200.0);
 
@@ -873,16 +907,61 @@ namespace SCESS {
         ImGui::End();
     }
 
+    void CalculationLayer::DrawQMCGraph() {
+        if (ImGui::Begin("Quantum Monte Carlo")
+            &&
+            (mCorrelationMethod == CorrelationMethod::CCQMC || mCorrelationMethod == CorrelationMethod::FCIQMC)) {
+            ImGui::Text("%s", [this]() {
+                switch (mCorrelationMethod) {
+                    default:
+                        return "";
+                    case CorrelationMethod::CCQMC:
+                        return "Coupled cluster quantum monte carlo";
+                    case CorrelationMethod::FCIQMC:
+                        return "Full CI quantum monte carlo";
+                }
+            }());
+            if (mCalculationThread.HasFinished()) {
+                ImGui::Text("Final QMC electronic energy: %.8f", mQMCEnergy);
+                ImGui::Text("Final QMC correlation energy: %.8f", mQMCEnergy - mRHFWfn->Energy);
+            }
+
+            if (ImPlot::BeginPlot("Projected Energy", ImVec2(-1, -1))) {
+                ImPlot::SetupAxes("Cycle No.", "E(Proj) / hartrees");
+                ImPlot::SetupAxisLimits(ImAxis_X1, mQMCGraphData.back().x, mQMCGraphData.back().x + 250,
+                                        ImGuiCond_Once);
+                ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.0f);
+                ImPlot::PlotLine<float>("E(Proj)",
+                                        reinterpret_cast<float *>(mQMCGraphData.array_one().first),
+                                        reinterpret_cast<float *>(mQMCGraphData.array_one().first) + 1,
+                                        static_cast<int>(mQMCGraphData.array_one().second),
+                                        0, 0, sizeof(glm::vec2));
+                ImPlot::PlotLine<float>("E(Proj)",
+                                        reinterpret_cast<float *>(mQMCGraphData.array_two().first),
+                                        reinterpret_cast<float *>(mQMCGraphData.array_two().first) + 1,
+                                        static_cast<int>(mQMCGraphData.array_two().second),
+                                        0, 0, sizeof(glm::vec2));
+                ImPlot::PopStyleColor();
+                ImPlot::PopStyleVar();
+
+                ImPlot::EndPlot();
+            }
+        }
+        ImGui::End();
+    }
+
     void CalculationLayer::OnImGuiRender() {
         DrawMolSelectPanel();
 
-        DrawProgressScreen();
+        //DrawProgressScreen();
         if (mCalculationThread.IsRunning())
             ImGui::OpenPopup(PROG_SCREEN_NAME);
 
         DrawQuantumCalcPanel();
         DrawResultsPanel();
         DrawConsolePanel();
+        DrawQMCGraph();
     }
 
     void CalculationLayer::OnEvent(Event &e) {
