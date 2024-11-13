@@ -2,6 +2,7 @@
 
 #include<string_view>
 #include<unordered_map>
+#include<glm/fwd.hpp>
 #include<glm/vec3.hpp>
 
 namespace SCESS {
@@ -20,4 +21,6 @@ namespace SCESS {
             return {{0.1, 0.1, 0.1}, 1.0f};
         }
     };
+
+    glm::mat3 CalculateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm);
 }

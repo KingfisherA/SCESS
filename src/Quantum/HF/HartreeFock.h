@@ -124,7 +124,7 @@ namespace SCESS {
             const Eigen::VectorXi &Occupation,
             const ConfigIntegrals &integrals,
             const double Energy) : Fock(Fock), Hcore(Hcore),
-                                   Density(Density), Coeffs(Coeffs), Energies(Energies), Occupation(Occupation),
+                                   Density(Density), C(Coeffs), Energies(Energies), Occupation(Occupation),
                                    HFWavefunction(Energy, integrals) {
         }
 
@@ -132,7 +132,7 @@ namespace SCESS {
         Eigen::MatrixXd Fock;
         Eigen::MatrixXd Hcore;
         Eigen::MatrixXd Density;
-        Eigen::MatrixXd Coeffs;
+        Eigen::MatrixXd C;
         Eigen::VectorXd Energies;
         Eigen::VectorXi Occupation;
     };
@@ -155,8 +155,8 @@ namespace SCESS {
             const Eigen::VectorXi &OccupationBeta,
             const ConfigIntegrals &integrals,
             const double Energy) : FockAlpha(FockAlpha), FockBeta(FockBeta), Hcore(Hcore),
-                                   DensityAlpha(DensityAlpha), DensityBeta(DensityBeta), CoeffsAlpha(CoeffsAlpha),
-                                   CoeffsBeta(CoeffsBeta), EnergiesAlpha(EnergiesAlpha), EnergiesBeta(EnergiesBeta),
+                                   DensityAlpha(DensityAlpha), DensityBeta(DensityBeta), CAlpha(CoeffsAlpha),
+                                   CBeta(CoeffsBeta), EnergiesAlpha(EnergiesAlpha), EnergiesBeta(EnergiesBeta),
                                    OccupationAlpha(OccupationAlpha), OccupationBeta(OccupationBeta),
                                    HFWavefunction(Energy, integrals) {
         }
@@ -165,7 +165,7 @@ namespace SCESS {
         Eigen::MatrixXd FockAlpha, FockBeta;
         Eigen::MatrixXd Hcore;
         Eigen::MatrixXd DensityAlpha, DensityBeta;
-        Eigen::MatrixXd CoeffsAlpha, CoeffsBeta;
+        Eigen::MatrixXd CAlpha, CBeta;
         Eigen::VectorXd EnergiesAlpha, EnergiesBeta;
         Eigen::VectorXi OccupationAlpha, OccupationBeta;
     };

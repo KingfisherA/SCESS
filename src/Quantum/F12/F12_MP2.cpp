@@ -12,26 +12,26 @@ namespace SCESS {
     using namespace Eigen;
 
     double F12::F12_MP2(const Molecule &mol, const RHFWavefunction &rhfWfn) {
-        const ConfigIntegrals hfBasisInts = rhfWfn.Integrals;
-
-        TEITensor hfERIInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(hfBasisInts.tei, rhfWfn.Coeffs));
-
-        //CABS should contain angular momentum functions at least 3*l{occ}
-
-        double gamma = 0.5;
-
-        TEITensor f12Ints = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(Integrals::F12::TwoElectronSlaterF12Tensor(mol, gamma, "sto-3g"),
-                                                  rhfWfn.Coeffs));
-        TEITensor f12SquaredInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(
-                Integrals::F12::TwoElectronSlaterF12Tensor(mol, gamma * 2.0, "sto-3g"),
-                rhfWfn.Coeffs));
-        TEITensor f12RepulsionInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(
-                Integrals::F12::TwoElectronSlaterF12RepulsionTensor(mol, gamma, "sto-3g"),
-                rhfWfn.Coeffs));
+        // const ConfigIntegrals hfBasisInts = rhfWfn.Integrals;
+        //
+        // TEITensor hfERIInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
+        //     Integrals::Transforms::ToMolecularTEI(hfBasisInts.tei, rhfWfn.Coeffs));
+        //
+        // //CABS should contain angular momentum functions at least 3*l{occ}
+        //
+        // double gamma = 0.5;
+        //
+        // TEITensor f12Ints = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
+        //     Integrals::Transforms::ToMolecularTEI(Integrals::F12::TwoElectronSlaterF12Tensor(mol, gamma, "sto-3g"),
+        //                                           rhfWfn.Coeffs));
+        // TEITensor f12SquaredInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
+        //     Integrals::Transforms::ToMolecularTEI(
+        //         Integrals::F12::TwoElectronSlaterF12Tensor(mol, gamma * 2.0, "sto-3g"),
+        //         rhfWfn.Coeffs));
+        // TEITensor f12RepulsionInts = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
+        //     Integrals::Transforms::ToMolecularTEI(
+        //         Integrals::F12::TwoElectronSlaterF12RepulsionTensor(mol, gamma, "sto-3g"),
+        //         rhfWfn.Coeffs));
 
         return 0.0;
     }

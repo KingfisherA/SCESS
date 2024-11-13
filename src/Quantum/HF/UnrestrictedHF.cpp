@@ -35,7 +35,7 @@ namespace SCESS {
         const MatrixXd &S = integrals.S;
         const MatrixXd &T = integrals.T;
         const MatrixXd &V = integrals.V;
-        const TEITensor &tei = integrals.tei; //Two-electron tensor
+        const TEITensor &tei = integrals.eri; //Two-electron tensor
 
         if (console)
             *console << "Integral evaluation completed in " <<

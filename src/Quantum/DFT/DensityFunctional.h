@@ -22,7 +22,7 @@ namespace SCESS {
         //Total electronic energy
         double ElectronicE = 0.0;
 
-        Eigen::VectorXd OrbitalEnergies;
+        Eigen::VectorXd Energies;
         Eigen::VectorXi Occupation;
         std::optional<ConfigIntegrals> Integrals;
     };

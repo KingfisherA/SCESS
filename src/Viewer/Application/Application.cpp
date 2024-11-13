@@ -19,7 +19,7 @@
 #include "xc.h"
 #include "Quantum/Basis/BasisUtils.h"
 #include "Quantum/CC/CoupledCluster.h"
-#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/Resources.h"
 
 #pragma region Entry Point
@@ -35,17 +35,19 @@ int main(int argc, char **argv) {
     xc_version(&vmajor, &vminor, &vmicro);
     printf("    Using LibXC Version: %i.%i.%i\n", vmajor, vminor, vmicro);
 
-    SCESS::Application app;
+    using namespace SCESS;
+
+    Application app;
 
     //Initilise libint2
-    SCESS::Integrals::InitLibInt();
+    Integrals::LibInt::InitLibInt();
 
-    if (!SCESS::Res::AssetsFolder::Get().Init() || !app.Init()) {
+    if (!Res::AssetsFolder::Get().Init() || !app.Init()) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
 
         //Close connection to libint2
-        SCESS::Integrals::CloseLibInt();
+        Integrals::LibInt::CloseLibInt();
 
         std::cin.get();
         return 1;
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
     app.Run();
 
     //Close connection to libint2
-    SCESS::Integrals::CloseLibInt();
+    Integrals::LibInt::CloseLibInt();
 
     return 0;
 }

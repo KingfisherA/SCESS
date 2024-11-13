@@ -4,6 +4,9 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_int.hpp>
+#include<boost/math/special_functions/sign.hpp>
+
+#include "Quantum/Integrals/IntegralTransforms.h"
 
 // Linked coupled-cluster; <Di |e^{-T} H e^{T}| D0>
 // Unlinked coupled-cluster; <Di | H e^{T}| D0>
@@ -15,13 +18,13 @@ namespace SCESS {
     double QuantumMonteCarlo::CCQMC(const RHFWavefunction &rhfWfn, double Vnn) {
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts
-        uint32_t Na = 500;
+        uint32_t Na = 200;
         constexpr size_t NUM_REPORT_CYCLES = 500000;
 
         std::cout << "--- Coupled Cluster Quantum Monte Carlo ---\n";
 
         TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(rhfWfn.Integrals.tei, rhfWfn.Coeffs));
+            Integrals::Transforms::ToMolecularTEI(rhfWfn.Integrals.eri, rhfWfn.C));
 
         MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWfn);
 
@@ -114,7 +117,8 @@ namespace SCESS {
         };
 
         auto RandomSingleExcite = [&nAnnihilationBits, &nCreationBits,&nOccupied,
-                    &nSpatialOrbitals, &nElectrons, &randomNumber,&randGenerator, &CountNumElecs](CIDeterminant I) {
+                    &nSpatialOrbitals, &nElectrons, &randomNumber,&randGenerator, &CountNumElecs](
+            CIDeterminant I, double &pExcit) {
             //Randomly select whether to excite the alpha or beta electron
 
             //Number of occupied spaces
@@ -133,6 +137,7 @@ namespace SCESS {
             } else {
                 sourceBitStr = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
                 destBitStr = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
+                //pExcit *= 0.5;
             }
 
             //Number of occupied spaces
@@ -178,6 +183,8 @@ namespace SCESS {
                 }
             }
 
+            pExcit *= (1.0 / numSrc) * (1.0 / numDest);
+
             return I;
         };
 
@@ -201,20 +208,26 @@ namespace SCESS {
 
         auto UpdateCumulativePop = [&cumulativeWalkers, &excitorWalkers, &nExcips]() {
             cumulativeWalkers[0] = excitorWalkers[0];
-            for (size_t i = 1; i < cumulativeWalkers.size(); i++)
+            nExcips = abs(excitorWalkers[0]);
+            for (size_t i = 1; i < cumulativeWalkers.size(); i++) {
                 cumulativeWalkers[i] = excitorWalkers[i] + cumulativeWalkers[i - 1];
-
-            nExcips = cumulativeWalkers.back();
+                nExcips += abs(excitorWalkers[i]);
+            }
         };
+
+        int64_t D0_Population = excitorWalkers[0];
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             EProjCycle = 0.0;
+
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
                 for (auto &val: excitorSpawn)
                     val = 0;
                 UpdateCumulativePop();
 
+
                 double EProjCluster = 0.0;
+                Na = nExcips;
 
                 for (size_t cluster = 0; cluster < Na; cluster++) {
                 CLUSTER_LOOP_BEGIN:
@@ -228,20 +241,24 @@ namespace SCESS {
                     //Maximum excitation is l+2 where l is truncation of the exciation operator
                     //or the number of electrons
                     //uint32_t maxExcitation = std::min(nElectrons, truncationLevel);
-                    uniform_int_distribution<uint32_t> clusterSizeDist(1, nElectrons);
+                    uniform_int_distribution<uint32_t> clusterSizeDist(0, nElectrons);
                     //A random cluster is chosen of size s
                     uint32_t s = 0;
 
                     //Reject this cluster with probability 1.0 - 1/2^(s+1)
                     do {
                         s = clusterSizeDist(randGenerator);
-                    } while (randomNumber() > cumulativeClusterProb[s - 1]);
+                    } while (randomNumber() > cumulativeClusterProb[s]);
 
+                    double pSize = 1.0 / pow(2.0, s + 1); //1.0 - cumulativeClusterProb[s - 1];
+
+                    //Probability of selecting given excitors
+                    double pClust = 1.0;
                     //Need to be able to select the same thing twice
                     std::unordered_set<uint32_t> selectedExcitorIndices;
-                    if (s > 1) {
+                    if (s > 0) {
                         //uniform_int_distribution<uint32_t> excitorPopDist(0, totalPopulation);
-                        uniform_int_distribution<uint32_t> excitorIdxDist(0, excitors.size() - 1);
+                        uniform_int_distribution<uint32_t> excitorIdxDist(1, excitors.size() - 1);
                         selectedExcitorIndices.reserve(s);
                         while (selectedExcitorIndices.size() != s) {
                             uint32_t newIndx = excitorIdxDist(randGenerator);
@@ -253,22 +270,13 @@ namespace SCESS {
                             }
                             selectedExcitorIndices.insert(newIndx);
                         }
+                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / excitors.size(), s);
                     } else
                         selectedExcitorIndices.insert(0);
 
-                    if (nExcips == 0) {
-                        excitorWalkers[0] = 100;
-                        break;
-                    }
-
-                    double pSelect = boost::math::factorial<double>(s) * pow(1.0 / excitors.size(), s);
-
                     //Collapse the excitors together taking care of sign
                     Excitor collapsedExcitor;
-                    // uint32_t numAnniAlpha = 0,
-                    //         numCreationAlpha = 0,
-                    //         numAnnihBeta = 0,
-                    //         numCreationBeta = 0;
+                    collapsedExcitor.GetSign() = 1.0;
                     double excitorAmplitude = 1.0;
 
                     for (uint32_t idx: selectedExcitorIndices) {
@@ -276,21 +284,22 @@ namespace SCESS {
                         collapsedExcitor.GetBetaOrbitals() |= excitors[idx].GetBetaOrbitals();
                         collapsedExcitor.GetSign() *= excitors[idx].GetSign();
 
-                        excitorAmplitude *= ((double) excitorWalkers[idx] / (double) excitorWalkers[0]);
+                        excitorAmplitude *= ((double) excitorWalkers[idx] / (double) D0_Population);
                     }
-                    excitorAmplitude *= collapsedExcitor.GetSign();
-
-                    // CountOperations(collapsedExcitor, numAnniAlpha,
-                    //                 numCreationAlpha,
-                    //                 numAnnihBeta, numCreationBeta);
-                    // //We cannot excite or annihilate more than the number of electrons we have
-                    // if ((numAnniAlpha + numAnnihBeta) / 2 > nElectrons) goto CLUSTER_LOOP_BEGIN;
 
                     //Generate determinant by applying new excitor to the HF determinant
                     CIDeterminant Di;
                     Di.GetAlphaOrbitals() = collapsedExcitor.GetAlphaOrbitals() ^ D0.GetAlphaOrbitals();
                     Di.GetBetaOrbitals() = collapsedExcitor.GetBetaOrbitals() ^ D0.GetBetaOrbitals();
                     Di.GetSign() = collapsedExcitor.GetSign();
+                    // Di.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
+
+                    uint32_t numAlphaElecs = CountNumElecs(Di.GetAlphaOrbitals());
+                    uint32_t numBetaElecs = CountNumElecs(Di.GetBetaOrbitals());
+
+                    //We have formed a cluster
+                    if (numAlphaElecs + numBetaElecs > nElectrons)
+                        goto CLUSTER_LOOP_BEGIN;
 
                     uint32_t DiIdx = FindExcitorIdx(Di ^ D0);
                     if (DiIdx == excitors.size()) goto CLUSTER_LOOP_BEGIN;
@@ -299,90 +308,110 @@ namespace SCESS {
                     //Now randomly produce a determinant that is 1 or 2 excitations away from Dj
                     CIDeterminant Dj;
                     //Probability of generating j given we have i
-                    double pGen = 0.25 / nSpatialOrbitals;
+                    double pExcit = 0.5;
                     if (randomNumber() < 0.5) {
                         //Perform a single excitation/de-excitation
-                        Dj = RandomSingleExcite(Di);
+                        Dj = RandomSingleExcite(Di, pExcit);
                     } else {
                         //Perform a double excitation/de-excitation
-                        Dj = RandomSingleExcite(Di);
-                        Dj = RandomSingleExcite(Dj);
-                        pGen = pGen * pGen;
+                        Dj = RandomSingleExcite(Di, pExcit);
+                        Dj = RandomSingleExcite(Dj, pExcit);
+                        //pExcit *= 2;
                     }
                     DjIdx = FindExcitorIdx(Dj ^ D0);
+                    Dj.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
                     //Update the projected energy
-                    double H0i = H_FCI(0, DiIdx);
-                    EProjCluster += excitorAmplitude * H0i / pSelect;
+                    if (DiIdx != 0) {
+                        double H0i = H_FCI(0, DiIdx);
+                        //static_cast<double>(Di.GetSign()) *
+                        EProjCluster +=
+                                excitorAmplitude * H0i / (pClust);
+                    }
+
+                    //Cannot spawn onto itself
+                    if (DiIdx == DjIdx) goto CLUSTER_LOOP_BEGIN;
 
                     // -- Spawning --
                     // A random single or double excitation of |Di> is performed to generate |Dj>
                     // We now spawn a particle onto |Dj> with probability proportional to Hij which corresponds to
                     // <Di | H | Dj>. The sign of the particle is equal to Hij
                     double Hij = H_FCI(DiIdx, DjIdx);
-                    double Hjj = H_FCI(DjIdx, DjIdx);
-
-                    //Cannot spawn onto itself
-                    if (DiIdx == DjIdx) goto CLUSTER_LOOP_BEGIN;
+                    double Hii = H_FCI(DiIdx, DiIdx);
 
                     //Probability of spawning onto j from i
-                    double pSpawn = tau * abs(excitorAmplitude) * abs(Hij) / (Na * pSelect * pGen);
-                    auto nSpawn = int64_t(pSpawn);
+                    double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
+                    auto nSpawn = static_cast<int64_t>(pSpawn);
                     pSpawn = pSpawn - (double) nSpawn;
-                    //nSpawn = 0;
                     if (pSpawn > randomNumber())
                         nSpawn++;
 
-                    if (excitorAmplitude > 0.0) {
-                        excitorSpawn[DjIdx] -= nSpawn;
-                    } else {
+                    nSpawn *= static_cast<int64_t>(Dj.GetSign() * Di.GetSign());
+                    //-Hij
+                    if (-Hij > 0.0) {
                         excitorSpawn[DjIdx] += nSpawn;
+                    } else {
+                        excitorSpawn[DjIdx] -= nSpawn;
                     }
-
 
                     // -- Death --
                     // A new particle is spawned back onto |Di> with the sign of |Hii-S| with sign opposite
                     // to the parent
-                    double pCloneDeath = tau * abs(excitorAmplitude) * abs(Hjj - shift) / (Na * pSelect);
-                    auto nKill = static_cast<int64_t>(pSpawn);
+                    double pCloneDeath = tau * abs(excitorAmplitude * (Hii - shift)) / (Na * pClust * pSize);
+                    auto nKill = static_cast<int64_t>(pCloneDeath);
                     pCloneDeath = pCloneDeath - (double) nKill;
-                    //nKill = 0;
                     if (pCloneDeath > randomNumber())
                         nKill++;
 
-                    if (excitorAmplitude < 0.0) {
-                        excitorSpawn[DjIdx] += nKill;
+                    nKill *= static_cast<int64_t>(Di.GetSign());
+                    //(Hii-S)
+                    if ((Hii-shift) < 0) {
+                        excitorSpawn[DiIdx] += nKill;
                     } else {
-                        excitorSpawn[DjIdx] -= nKill;
+                        excitorSpawn[DiIdx] -= nKill;
                     }
                 }
 
-                EProjCluster /= (double) Na;
+                EProjCluster /= (double) (Na);
                 EProjCycle += EProjCluster;
                 // -- Annihilation --
                 // Pairs of particles with opposite signs on the same excitor are removed
                 for (uint32_t I = 0; I < excitorWalkers.size(); I++)
                     excitorWalkers[I] += excitorSpawn[I];
+
+                D0_Population += excitorSpawn[0];
+                if (D0_Population == 0) {
+                    D0_Population = 100;
+                    excitorWalkers[0] = 100;
+                }
             }
 
-            //double EProj = rhfWfn.Energy;
-            double EProj = (EProjCycle / NUM_CYCLES)*0.1;// + Vnn;
+            //rhfWfn.Energy +
+            //double EProj = (EProjCycle / NUM_CYCLES) + rhfWfn.Energy;
 
-            // for (uint32_t i = 1; i < excitorWalkers.size(); i++)
-            //     EProj += H_FCI(0, i) * abs((double) excitorWalkers[i] / (double) excitorWalkers[0]);
+            double EProj = rhfWfn.Energy;
+
+            for (uint32_t I = 1; I < excitorWalkers.size(); I++) {
+                EProj += H_FCI(0, I) * double(excitorWalkers[I]) / double(excitorWalkers[0]);
+            }
 
             if (reportCycle >= 50) {
                 EProjAverage += EProj;
             }
 
-            if (reportCycle >= 50 && nExcipsLast != 0 && nExcips != 0)
+            if (reportCycle >= 10)
+                shift = rhfWfn.Energy;
+
+            if (reportCycle >= 20 && nExcipsLast != 0 && nExcips != 0)
                 shift = shift - (1.0 / (tau * 100.0)) * log(abs((double) nExcips / (double) nExcipsLast));
 
             std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<
                     " Shift = " << shift <<
                     " Population = " <<
                     nExcips
-                    << " E(Proj) Average = " << EProjAverage / double(reportCycle + 1 - 5000) << '\n';
+                    << " E(Proj) Average = " << EProjAverage / double(reportCycle - 50) << '\n';
+
+            std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Pop Dj = " << excitorWalkers.back() << '\n';
 
             nExcipsLast = nExcips;
         }
@@ -396,21 +425,8 @@ namespace SCESS {
         std::vector<Excitor> excitors =
                 ConfigurationInteraction::GenerateAllDeterminants(nSpinOrbs, nElectrons);
 
-
-        using OrbitalBitStr = CIDeterminant::OrbitalBitStr;
-
-        std::vector<uint32_t> uniqueI;
-        std::vector<uint32_t> uniqueJ;
-        std::vector<uint32_t> commonIJ;
-        int sign = 1;
-
         for (Excitor &ex: excitors) {
-            CIDeterminant::CalculateDifferences(reference, ex,
-                                                nSpinOrbs / 2,
-                                                nSpinOrbs / 2, uniqueI, uniqueJ, commonIJ,
-                                                sign);
-            ex.GetSign() = sign;
-
+            ex.CalculateSign(reference, nSpinOrbs / 2, nSpinOrbs / 2);
             ex.GetAlphaOrbitals() ^= reference.GetAlphaOrbitals();
             ex.GetBetaOrbitals() ^= reference.GetBetaOrbitals();
         }

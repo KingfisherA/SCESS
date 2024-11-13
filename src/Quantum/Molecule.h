@@ -8,6 +8,7 @@
 #include<unordered_map>
 #include<unordered_set>
 #include<Eigen/Core>
+#include<libint2.hpp>
 
 namespace SCESS {
     struct BondPair {
@@ -134,6 +135,8 @@ namespace SCESS {
         std::vector<Atom> &GetAtoms() {
             return mAtoms;
         }
+
+        std::vector<libint2::Atom> GetAtomsLibInt() const;
 
         /// <summary>
         ///

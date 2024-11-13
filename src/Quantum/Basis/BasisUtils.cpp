@@ -9,9 +9,9 @@
 //
 //
 namespace SCESS::BasisUtils {
-    std::vector<std::string> ListBasisSets() {
+    std::unordered_set<std::string> ListBasisSets() {
         namespace fs = boost::filesystem;
-        std::vector<std::string> basisSets;
+        std::unordered_set<std::string> basisSets;
         fs::path basisSetPath = Res::AssetsFolder::Get().GetResourcePath("Basis");
 
         fs::recursive_directory_iterator itr(basisSetPath);
@@ -19,8 +19,8 @@ namespace SCESS::BasisUtils {
         fs::recursive_directory_iterator end;
 
         while (itr != end) {
-            if (fs::is_regular_file(itr->path())) {
-                basisSets.emplace_back(itr->path().stem().string());
+            if (fs::is_regular_file(itr->path()) && itr->path().extension().string() == ".json") {
+                basisSets.insert(itr->path().stem().string());
             }
 
             boost::system::error_code ec;
@@ -31,7 +31,7 @@ namespace SCESS::BasisUtils {
     }
 
     std::optional<nlohmann::json> LoadBasisSetJSON(
-    std::string_view jsonFilePath) {
+        std::string_view jsonFilePath) {
         if (!std::filesystem::exists(jsonFilePath)) {
             return std::nullopt;
         }

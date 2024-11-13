@@ -1,6 +1,6 @@
 #include<pch.h>
 
-#include  "Quantum/HF/HartreeFock.h"
+#include "Quantum/HF/HartreeFock.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Molecule.h"
@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <Eigen/Core>
 
+#include "Quantum/Integrals/IntegralTransforms.h"
 #include "Utilities/Utilities.h"
 
 
@@ -38,7 +39,7 @@ namespace SCESS {
         const MatrixXd &S = integrals.S;
         const MatrixXd &T = integrals.T;
         const MatrixXd &V = integrals.V;
-        const TEITensor &tei = integrals.tei; //Two-electron tensor
+        const TEITensor &eri = integrals.eri; //Two-electron repulsion integral tensor
 
         if (console)
             *console << "Integral evaluation completed in " <<
@@ -84,7 +85,7 @@ namespace SCESS {
         Eigen::Index scfIter = 1;
         for (; scfIter < scfMaxIterations + 1; scfIter++) {
             //Generate the Fock matrix
-            Fock = Hcore + ConstructGRHF(Density, tei);
+            Fock = Hcore + ConstructGRHF(Density, eri);
             Fock = (Fock + Fock.transpose()) * 0.5;
 
             //Build the DIIS error vector (FDS-SDF)
@@ -175,7 +176,7 @@ namespace SCESS {
 
         VectorXi Occupation = VectorXi::Zero(Hcore.rows());
 
-        for (int64_t i = ((int64_t)molecule.GetNoElectrons() / 2) - 1; i >= 0; --i) {
+        for (int64_t i = ((int64_t) molecule.GetNoElectrons() / 2) - 1; i >= 0; --i) {
             Occupation(i) = 2;
         }
 
@@ -248,7 +249,7 @@ namespace SCESS {
 
     double HartreeFock::MP2ClosedShell(const RHFWavefunction &result, std::stringstream *console) {
         //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
-        const TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(result.Integrals.tei, result.Coeffs);
+        const TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(result.Integrals.eri, result.C);
         return MP2ClosedShell(result, moTEI, console);
     }
 

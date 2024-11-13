@@ -5,6 +5,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include  "Quantum/CC/CoupledCluster.h"
+#include "Quantum/Integrals/IntegralTransforms.h"
 
 namespace SCESS {
     using namespace Eigen;
@@ -21,7 +22,7 @@ namespace SCESS {
 
         //Transform the two electron repulsion integrals into the MO basis set
         //for MP2 calculation. Integrals are in chemist's notation
-        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.tei, rhfResult.Coeffs);
+        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.eri, rhfResult.C);
         double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
 
         if (console) {

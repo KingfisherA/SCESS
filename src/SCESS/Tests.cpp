@@ -10,6 +10,7 @@
 #include "Quantum/QMC/QMC.h"
 #include "Utilities/Utilities.h"
 #include "Quantum/Integrals/IntegralsF12.h"
+#include "Quantum/Integrals/IntegralsLibInt.h"
 
 namespace SCESS::Tests {
     void TestDFT() {
@@ -118,7 +119,7 @@ namespace SCESS::Tests {
 
         double energy = QuantumMonteCarlo::CCQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion());
 
-
+        std::cout << "Final CCQMC energy: " << energy << " hartrees\n";
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
@@ -152,8 +153,10 @@ namespace SCESS::Tests {
         Molecule waterMolecule = GenerateWaterMolecule();
         waterMolecule.MakeOrbitals(BASIS_SET_NAME);
 
+        libint2::BasisSet basisSet(BASIS_SET_NAME, waterMolecule.GetAtomsLibInt());
+
         TEITensor eriSCESS = Integrals::TwoElectronRepulsionTensorMultithread(waterMolecule);
-        TEITensor eriLibInt = Integrals::TwoElectronRepulsionTensorLibInt(waterMolecule, "sto-3g");
+        TEITensor eriLibInt = Integrals::LibInt::TwoElectronRepulsionTensor(basisSet);
 
         std::cout << "SCESS (ij | 1/r12 | kl) integral tensor:\n";
         Utilities::PrintTensor(eriSCESS);
@@ -191,8 +194,11 @@ namespace SCESS::Tests {
         Molecule hydrogenMolecule = GenerateHydrogenMolecule();
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
-        TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(hydrogenMolecule, 0.5, BASIS_SET_NAME);
-        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(hydrogenMolecule, 0.5, BASIS_SET_NAME);
+        libint2::BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
+
+        double gamma = 0.5;
+        TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(basisSet, gamma);
+        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(basisSet, gamma);
 
         std::cout << "(ij | exp(-gamma * r12) | kl) integral tensor:\n";
         Utilities::PrintTensor(f12Ints);

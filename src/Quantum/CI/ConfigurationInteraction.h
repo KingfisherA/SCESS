@@ -71,17 +71,25 @@ namespace SCESS {
             std::vector<uint32_t> &uniqueI,
             std::vector<uint32_t> &uniqueJ,
             std::vector<uint32_t> &commonIJ,
-            int &sign);
+            int8_t &sign);
 
-        [[nodiscard]] int &GetSign() { return mSign; }
-        [[nodiscard]] const int &GetSign() const { return mSign; }
+        static int8_t CalculateSign(CIDeterminant I, CIDeterminant J, size_t numOfAlphaOrbitals,
+                                 size_t numOfBetaOrbitals);
+
+        void CalculateSign(CIDeterminant I, size_t numOfAlphaOrbitals,
+                           size_t numOfBetaOrbitals) {
+            mSign = CalculateSign(I, *this, numOfAlphaOrbitals, numOfBetaOrbitals);
+        }
+
+        [[nodiscard]] int8_t &GetSign() { return mSign; }
+        [[nodiscard]] const int8_t &GetSign() const { return mSign; }
 
     private:
         //Store the hatree products of orbitals in bitstrings
         //i.e. 1111100 would be the ground-state hartree fock determinant of water in sto-3g
         //Because of this we can only store a maximum of 64 orbitals in each bit string
         OrbitalBitStr mAlphaOrbs = 0, mBetaOrbs = 0;
-        int mSign = 1;
+        int8_t mSign = 1;
     };
 
     struct CIWavefunction {

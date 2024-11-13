@@ -6,6 +6,8 @@
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
 
+#include "Quantum/Integrals/IntegralTransforms.h"
+
 namespace SCESS {
     double QuantumMonteCarlo::SimpleFCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
                                            std::stringstream *console) {
@@ -26,7 +28,7 @@ namespace SCESS {
                                         (Eigen::Index) determinants.size()); {
             MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWavefunction);
             TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                Integrals::Transforms::ToMolecularTEI(rhfWavefunction.Integrals.tei, rhfWavefunction.Coeffs));
+                Integrals::Transforms::ToMolecularTEI(rhfWavefunction.Integrals.eri, rhfWavefunction.C));
 
             for (uint32_t i = 0; i < H_FCI.rows(); i++)
                 for (uint32_t j = i; j < H_FCI.cols(); j++)

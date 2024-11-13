@@ -11,6 +11,8 @@
 #include <boost/math/constants/constants.hpp>
 #include <GL/glew.h>
 
+#include "Quantum/Integrals/IntegralTransforms.h"
+
 
 namespace SCESS {
     using namespace Eigen;
@@ -36,7 +38,7 @@ namespace SCESS {
 
         //Transform the two electron repulsion integrals into the MO basis set
         //for MP2 calculation. Integrals are in chemist's notation
-        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.tei, rhfResult.Coeffs);
+        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.eri, rhfResult.C);
         //Evaluate MP2 energy
         double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
 
@@ -119,7 +121,7 @@ namespace SCESS {
 
     CoupledCluster::FockTensor CoupledCluster::TransformFockToMO(const RHFWavefunction &rhfResult) {
         //Transform the Fock matrix into the MO basis set
-        MatrixXd FockMat = rhfResult.Coeffs.transpose() * rhfResult.Fock * rhfResult.Coeffs;
+        MatrixXd FockMat = rhfResult.C.transpose() * rhfResult.Fock * rhfResult.C;
 
         //Assuming canonical HF orbitals only the diagonals are needed
         //Hence, we copy over only the diagonal elements.

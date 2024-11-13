@@ -89,6 +89,20 @@ namespace SCESS {
         PeriodicTable::CloseQuery();
     }
 
+    std::vector<libint2::Atom> Molecule::GetAtomsLibInt() const {
+        std::vector<libint2::Atom> atoms(mAtoms.size());
+
+        for (uint32_t i = 0; i < mAtoms.size(); i++) {
+            const SCESS::Atom &atm = mAtoms[i];
+            atoms[i] = {
+                atm.GetCharge(),
+                atm.GetPos().x(), atm.GetPos().y(), atm.GetPos().z()
+            };
+        }
+
+        return atoms;
+    }
+
     void Molecule::ConstructBonding(double tolerance2) {
         std::map<double, std::vector<BondPair> > distanceMap;
 
@@ -132,19 +146,25 @@ namespace SCESS {
     }
 
     Molecule GenerateWaterMolecule() {
-        constexpr double waterBondLength = 0.957 * ANGSTROM_2_BOHR;
-        constexpr double waterBondAngle = 104.5 * std::numbers::pi / 180.0;
-        SCESS::Atom H1("H", Eigen::Vector3d{
-                           waterBondLength * std::sin(waterBondAngle * 0.5),
-                           -waterBondLength * std::cos(waterBondAngle * 0.5), 0.0
-                       });
-        SCESS::Atom H2("H", Eigen::Vector3d{
-                           -waterBondLength * std::sin(waterBondAngle * 0.5),
-                           -waterBondLength * std::cos(waterBondAngle * 0.5), 0.0
-                       });
-        SCESS::Atom O("O", Eigen::Vector3d{0.0, 0.0, 0.0});
+        // constexpr double waterBondLength = 0.957 * ANGSTROM_2_BOHR;
+        // constexpr double waterBondAngle = 104.5 * std::numbers::pi / 180.0;
+        // SCESS::Atom H1("H", Eigen::Vector3d{
+        //                    waterBondLength * std::sin(waterBondAngle * 0.5),
+        //                    -waterBondLength * std::cos(waterBondAngle * 0.5), 0.0
+        //                });
+        // SCESS::Atom H2("H", Eigen::Vector3d{
+        //                    -waterBondLength * std::sin(waterBondAngle * 0.5),
+        //                    -waterBondLength * std::cos(waterBondAngle * 0.5), 0.0
+        //                });
+        // SCESS::Atom O("O", Eigen::Vector3d{0.0, 0.0, 0.0});
+        //
 
-        SCESS::Molecule water({H1, O, H2});
+        Atom H1("H", Eigen::Vector3d(0.7569520, -0.586349, 0.0) * ANGSTROM_2_BOHR);
+        Atom H2("H", Eigen::Vector3d(-0.7569520, -0.586349, 0.0) * ANGSTROM_2_BOHR);
+        Atom O("O", Eigen::Vector3d(0.0, 0.0, 0.0));
+
+        Molecule water({H1, O, H2});
+
 
         water.ConstructBonding();
 

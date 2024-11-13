@@ -9,6 +9,8 @@
 #include <boost/range/irange.hpp>
 #include <boost/math/special_functions/binomial.hpp>
 
+#include "Quantum/Integrals/IntegralTransforms.h"
+
 namespace SCESS {
     CIDeterminant CIDeterminant::MakeReference(uint32_t nAlphaOcc, uint32_t nBetaOcc) {
         CIDeterminant reference;
@@ -39,7 +41,7 @@ namespace SCESS {
                                              std::vector<uint32_t> &uniqueI,
                                              std::vector<uint32_t> &uniqueJ,
                                              std::vector<uint32_t> &commonIJ,
-                                             int &sign) {
+                                             int8_t &sign) {
         uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                               CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
         uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
@@ -53,7 +55,6 @@ namespace SCESS {
                                                                                OrbitalBitStr J,
                                                                                size_t numOfOrbs,
                                                                                uint8_t (*func)(uint8_t)) {
-
             uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
 
             for (uint32_t i = 0; i < numOfOrbs; i++) {
@@ -97,9 +98,60 @@ namespace SCESS {
             sign = -1;
     }
 
+    int8_t CIDeterminant::CalculateSign(CIDeterminant I, CIDeterminant J, size_t numOfAlphaOrbitals,
+                                     size_t numOfBetaOrbitals) {
+        uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+                              CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
+        uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+                                 CountSetBits(I.GetBetaOrbitals() ^ J.GetBetaOrbitals(), numOfBetaOrbitals);
+
+        uint32_t shift = nElectrons - excitationLvl;
+
+        uint32_t flips = 0;
+
+        auto CalcSign = [&flips, &shift](OrbitalBitStr I,
+                                         OrbitalBitStr J,
+                                         size_t numOfOrbs) {
+
+            uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
+
+            for (uint32_t i = 0; i < numOfOrbs; i++) {
+                //Occupied in J
+                if ((0x1 << i) & J) iel2++;
+
+                //Occupied in I
+                if ((0x1 << i) & I) {
+                    iel1++;
+                    //Not occupied in J
+                    if (!((0x1 << i) & J)) {
+                        iexcit1++;
+                        flips += (shift - iel1 + iexcit1);
+                    }
+                }
+                //Not occupied in I
+                else {
+                    //Occupied in J
+                    if ((0x1 << i) & J) {
+                        iexcit2++;
+                        flips += (shift - iel2 + iexcit2);
+                    }
+                }
+            }
+        };
+
+        CalcSign(I.GetAlphaOrbitals(), J.GetAlphaOrbitals(), numOfAlphaOrbitals);
+        CalcSign(I.GetBetaOrbitals(), J.GetBetaOrbitals(), numOfBetaOrbitals);
+
+        int8_t sign = 1;
+        if (flips % 2 == 1)
+            sign = -1;
+
+        return sign;
+    }
+
     uRef<CIWavefunction> ConfigurationInteraction::FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
                                                        std::stringstream *console) {
-        const Eigen::MatrixXd &C = rhfWavefunction.Coeffs;
+        const Eigen::MatrixXd &C = rhfWavefunction.C;
         const ConfigIntegrals &ints = rhfWavefunction.Integrals;
 
         if (console)
@@ -110,7 +162,7 @@ namespace SCESS {
         // integrate out spin functions
         TEITensor moSpinTEI =
                 Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                    Integrals::Transforms::ToMolecularTEI(ints.tei, C));
+                    Integrals::Transforms::ToMolecularTEI(ints.eri, C));
 
         if (console)
             *console << "   Transformation of integrals completed!\n";
@@ -175,7 +227,7 @@ namespace SCESS {
     }
 
     Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(const RHFWavefunction &rhfWfn) {
-        const Eigen::MatrixXd &C = rhfWfn.Coeffs;
+        const Eigen::MatrixXd &C = rhfWfn.C;
         // Transform the one-electron Hamiltonian matrix into the MO basis set
         // and integrate out spin functions
         Eigen::MatrixXd HSpin = Eigen::MatrixXd::Zero(C.rows() * 2, C.cols() * 2);
@@ -213,7 +265,7 @@ namespace SCESS {
         uniqueJ.reserve(numOfAlphaOrbitals);
         commonIJ.reserve(numOfAlphaOrbitals);
 
-        int sign = 0;
+        int8_t sign = 1;
         CIDeterminant::CalculateDifferences(detI, detJ, numOfAlphaOrbitals, numOfBetaOrbitals,
                                             uniqueI, uniqueJ, commonIJ, sign);
 

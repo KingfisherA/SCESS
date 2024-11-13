@@ -33,7 +33,7 @@ namespace SCESS {
         const MatrixXd &S = mints.S;
         const MatrixXd &V = mints.V;
         const MatrixXd &T = mints.T;
-        const TEITensor &tei = mints.tei;
+        const TEITensor &tei = mints.eri;
 
         auto nElectrons = static_cast<uint32_t>(mol.GetNoElectrons());
 

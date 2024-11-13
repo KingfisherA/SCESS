@@ -6,8 +6,8 @@
 #include"GraphicsEngine/Utilities/Threading.h"
 
 #include "Quantum/Molecule.h"
-#include  "Quantum/CI/ConfigurationInteraction.h"
-#include  "Quantum/DFT/DensityFunctional.h"
+#include "Quantum/CI/ConfigurationInteraction.h"
+#include "Quantum/DFT/DensityFunctional.h"
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 
 
@@ -28,17 +28,25 @@ namespace SCESS {
     class TriSurf;
 
     enum class SCFMethod:int {
+        None = -1,
         RHF = 0,
         UHF = 1,
-        DFT = 2
+        KS_DFT = 2
     };
 
     enum class CorrelationMethod:int {
-        None = 0,
-        MP2 = 1,
-        CCSD = 2,
-        CCSD_T = 3,
-        FCI = 4
+        None = -1,
+        MP2 = 0,
+        CCSD = 1,
+        CCSD_T = 2,
+        FCI = 3
+    };
+
+    enum class DFTGridRes : int {
+        Low = 0,
+        Medium,
+        High,
+        Ultrafine
     };
 
     inline const char *CorrelationMethodToStr(CorrelationMethod method) {
@@ -59,8 +67,7 @@ namespace SCESS {
 
     class CalculationLayer : public GEng::Layer {
     public:
-        CalculationLayer() : Layer("Graph Layer") {
-        }
+        CalculationLayer();
 
         //virtual ~CalculationLayer();
 
@@ -72,13 +79,11 @@ namespace SCESS {
         virtual void OnEvent(GEng::Event &e) override;
 
     private:
-        void UploadTriSurface(GEng::VertexArray &vArray, const TriSurf &tri);
+        static void UploadTriSurface(GEng::VertexArray &vArray, const TriSurf &tri);
         void RenderMOIsosurface();
         void SelectMolecule();
         void UploadMolecule();
         bool SelectMoleculeFromFile();
-
-        glm::mat3 GenerateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm);
 
         void ExecuteCalculation();
         void DrawProgressScreen();
@@ -114,8 +119,12 @@ namespace SCESS {
         bool mOrbitalsOrdered = false;
         GEng::Thread mCalculationThread;
 
-        SCFMethod mSCFMethod = SCFMethod::RHF;
-        CorrelationMethod mCorrelationMethod = CorrelationMethod::None;
+        SCFMethod mSCFMethod = SCFMethod::RHF,
+                mCalcSCFMethod = SCFMethod::None;
+        CorrelationMethod mCorrelationMethod = CorrelationMethod::None,
+                mCalcCorrelationMethod = CorrelationMethod::None;
+
+        DFTGridRes mDFTGridRes = DFTGridRes::Medium;
 
         uRef<RHFWavefunction> mRHFWfn;
         uRef<UHFWavefunction> mUHFWfn;
@@ -129,7 +138,7 @@ namespace SCESS {
 
         uRef<CIWavefunction> mFCIWfn;
 
-        std::string mCalcBasiSet;
+        std::string mCalcBasisSet;
 
         std::unordered_map<uint32_t, uint32_t> mSelectedIndexToOrb;
         std::vector<std::string> mMOLabels;

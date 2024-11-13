@@ -3,128 +3,20 @@
 
 #include<pch.h>
 #include<libint2.hpp>
+#include<memory_resource>
 
-#include"Integrals.h"
+#include "Integrals.h"
+#include "IntegralTransforms.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Molecule.h"
 
 namespace SCESS {
-    void Integrals::InitLibInt() {
-        libint2::initialize(true);
-    }
-
-    void Integrals::CloseLibInt() {
-        libint2::finalize();
-    }
-
+    using namespace Integrals::Utils;
 
 #pragma region Transforms
     //
     //
-    TEITensor Integrals::Transforms::ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C) {
-        //Note that the tei tensors are in chemists’ notation
 
-        TEITensor transformed1(tei.dimensions());
-        transformed1.setZero();
-        TEITensor transformed2(tei.dimensions());
-        transformed2.setZero();
-        TEITensor transformed3(tei.dimensions());
-        transformed3.setZero();
-        TEITensor transformed4(tei.dimensions());
-        transformed4.setZero();
-
-        Eigen::Index dim = tei.dimension(0);
-
-        for (Eigen::Index s = 0; s < dim; ++s) {
-            for (Eigen::Index mu = 0; mu < dim; ++mu)
-                for (Eigen::Index nu = 0; nu < dim; ++nu)
-                    for (Eigen::Index kap = 0; kap < dim; ++kap)
-                        for (Eigen::Index lam = 0; lam < dim; ++lam)
-                            //From <mu nu | kap lam> to <mu nu | kap s>
-                            //Einsum("mnkl,ls->mnks")
-                            transformed1(mu, nu, kap, s) += C(lam, s) * tei(mu, nu, kap, lam);
-
-            for (Eigen::Index r = 0; r < dim; ++r) {
-                for (Eigen::Index mu = 0; mu < dim; ++mu)
-                    for (Eigen::Index nu = 0; nu < dim; ++nu)
-                        for (Eigen::Index kap = 0; kap < dim; ++kap)
-                            //From <mu nu | kap s> to <mu nu | r s>
-                            //Einsum("mnks,kr->mnrs")
-                            transformed2(mu, nu, r, s) += C(kap, r) * transformed1(mu, nu, kap, s);
-
-                for (Eigen::Index q = 0; q < dim; ++q) {
-                    for (Eigen::Index mu = 0; mu < dim; ++mu)
-                        for (Eigen::Index nu = 0; nu < dim; ++nu)
-                            //From <mu nu | r s> to <mu q | r s>
-                            //Einsum("mnrs,nq->mqrs")
-                            transformed3(mu, q, r, s) += C(nu, q) * transformed2(mu, nu, r, s);
-
-                    for (Eigen::Index p = 0; p < dim; ++p) {
-                        for (Eigen::Index mu = 0; mu < dim; ++mu)
-                            //From <mu q | r s> to <p q | r s>
-                            //Einsum("mqrs,mp->pqrs")
-                            transformed4(p, q, r, s) += C(mu, p) * transformed3(mu, q, r, s);
-                    }
-                }
-            }
-        }
-
-        return transformed4;
-    }
-
-    TEITensor Integrals::Transforms::AntisymmetriseTEI(const TEITensor &tei) {
-        TEITensor transformed(tei.dimensions());
-
-        for (Eigen::Index p = 0; p < transformed.dimension(0); ++p)
-            for (Eigen::Index q = 0; q < transformed.dimension(1); ++q)
-                for (Eigen::Index r = 0; r < transformed.dimension(2); ++r)
-                    for (Eigen::Index s = 0; s < transformed.dimension(3); ++s)
-                        transformed(p, q, r, s) = tei(p, r, q, s) - tei(p, s, q, r);
-
-        return transformed;
-    }
-
-    TEITensor Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
-        Eigen::DSizes<Eigen::Index, 4> dimensions = moTEI.dimensions();
-
-        //Make the tensor twice as big to hold the spin-integrated integrals
-        //Each integral in the moTEI actually represents two electrons
-        for (Eigen::Index &dim: dimensions)
-            dim *= 2;
-
-        TEITensor transformed(dimensions);
-
-        for (Eigen::Index p = 0; p < transformed.dimension(0); ++p)
-            for (Eigen::Index q = 0; q < transformed.dimension(1); ++q)
-                for (Eigen::Index r = 0; r < transformed.dimension(2); ++r)
-                    for (Eigen::Index s = 0; s < transformed.dimension(3); ++s) {
-                        //Only allow the integral to exist if the alpha is integrated with an alpha
-                        //or beta with a beta (spin function orthogonality)
-                        Eigen::Index coloumbMask = (p % 2 == r % 2) * (q % 2 == s % 2);
-                        //One if the spin functions commute. Zero otherwise
-                        Eigen::Index exchangeMask = (p % 2 == s % 2) * (q % 2 == r % 2);
-
-                        //Convert from chemist's to physicists' notation and apply spin integration
-                        transformed(p, q, r, s) =
-                                moTEI(p / 2, r / 2, q / 2, s / 2) * static_cast<double>(coloumbMask)
-                                - moTEI(p / 2, s / 2, q / 2, r / 2) * static_cast<double>(exchangeMask);
-                    }
-
-        return transformed;
-    }
-
-    TEITensor Integrals::Transforms::ConvertChemistsToPhysicists(const TEITensor &tei) {
-        TEITensor transformed(tei.dimensions());
-        Eigen::Index dim = tei.dimension(0);
-
-        for (Eigen::Index mu = 0; mu < dim; ++mu)
-            for (Eigen::Index nu = 0; nu < dim; ++nu)
-                for (Eigen::Index kap = 0; kap < dim; ++kap)
-                    for (Eigen::Index lam = 0; lam < dim; ++lam)
-                        transformed(mu, nu, kap, lam) = tei(mu, kap, nu, lam);
-
-        return transformed;
-    }
 
 #pragma endregion
 
@@ -181,31 +73,28 @@ namespace SCESS {
         return result;
     }
 
-    double Integrals::OverlapGaussianParam(
-        double exponent1, double exponent2,
-        const Eigen::Vector3i &angular1, const Eigen::Vector3i &angular2,
-        const Eigen::Vector3d &pos1, const Eigen::Vector3d &pos2) {
+    double Integrals::OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2) {
+        const auto &exp1 = gto1.mExponent;
+        const auto &exp2 = gto2.mExponent;
+        const auto &ang1 = gto1.mAngular;
+        const auto &ang2 = gto2.mAngular;
+        const auto &pos1 = gto1.mPosition;
+        const auto &pos2 = gto2.mPosition;
+
         double rab2 = (pos1 - pos2).squaredNorm();
         // Sum of the two gaussian exponents
-        double gamma = exponent1 + exponent2;
-        Eigen::Vector3d centre = GaussianCenter(exponent1, exponent2, pos1, pos2);
+        double gamma = exp1 + exp2;
+        Eigen::Vector3d centre = GaussianCenter(exp1, exp2, pos1, pos2);
 
-        double Eab = std::exp(-exponent1 * exponent2 * rab2 / gamma) * std::pow(std::numbers::pi / gamma, 1.5);
-        double wx = Overlap1D(gamma, angular1[0], centre[0] - pos1[0],
-                              angular2[0], centre[0] - pos2[0]);
-        double wy = Overlap1D(gamma, angular1[1], centre[1] - pos1[1],
-                              angular2[1], centre[1] - pos2[1]);
-        double wz = Overlap1D(gamma, angular1[2], centre[2] - pos1[2],
-                              angular2[2], centre[2] - pos2[2]);
+        double Eab = std::exp(-exp1 * exp2 * rab2 / gamma) * std::pow(std::numbers::pi / gamma, 1.5);
+        double wx = Overlap1D(gamma, ang1[0], centre[0] - pos1[0],
+                              ang2[0], centre[0] - pos2[0]);
+        double wy = Overlap1D(gamma, ang1[1], centre[1] - pos1[1],
+                              ang2[1], centre[1] - pos2[1]);
+        double wz = Overlap1D(gamma, ang1[2], centre[2] - pos1[2],
+                              ang2[2], centre[2] - pos2[2]);
 
         return Eab * wx * wy * wz;
-    }
-
-    double Integrals::OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2) {
-        return OverlapGaussianParam(
-            gto1.mExponent, gto2.mExponent,
-            gto1.mAngular, gto2.mAngular,
-            gto1.mPosition, gto2.mPosition);
     }
 
     double Integrals::EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2) {
@@ -356,80 +245,29 @@ namespace SCESS {
 #pragma region Kinetic
 
     double Integrals::KineticGaussian(const Gaussian &gto1, const Gaussian &gto2) {
-        //double result = 0.0;
-        //Eigen::Vector3i newAngular1;
-        //Eigen::Vector3i newAngular2;
-
-        ////Loop for x, y and z
-        //for (unsigned char i = 0; i < 3; i++)
-        //{
-        //    newAngular1 = gto1.mAngular;
-        //    newAngular2 = gto2.mAngular;
-
-        //    newAngular1[i] += -1;
-        //    newAngular2[i] += -1;
-
-        //    result += 0.5 * gto1.mAngular[i] * gto2.mAngular[i] * OverlapGaussianParam(
-        //        gto1.mExponent, gto2.mExponent,
-        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
-
-        //    newAngular1 = gto1.mAngular;
-        //    newAngular2 = gto2.mAngular;
-        //    newAngular1[i] += 1;
-        //    newAngular2[i] += 1;
-
-        //    result += 2 * gto1.mExponent * gto2.mExponent * OverlapGaussianParam(
-        //        gto1.mExponent, gto2.mExponent,
-        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
-
-        //    newAngular1 = gto1.mAngular;
-        //    newAngular2 = gto2.mAngular;
-        //    newAngular1[i] += 1;
-        //    newAngular2[i] += -1;
-
-        //    result -= gto1.mExponent * gto2.mAngular[i] * OverlapGaussianParam(
-        //        gto1.mExponent, gto2.mExponent,
-        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
-
-        //    newAngular1 = gto1.mAngular;
-        //    newAngular2 = gto2.mAngular;
-        //    newAngular1[i] += -1;
-        //    newAngular2[i] += 1;
-
-        //    result -= gto2.mExponent * gto1.mAngular[i] * OverlapGaussianParam(
-        //        gto1.mExponent, gto2.mExponent,
-        //        newAngular1, newAngular2, gto1.mPosition, gto2.mPosition);
-        //}
-
-        //return result;
-
         double term0 = gto2.mExponent *
                        (2.0 * (gto2.mAngular[0] + gto2.mAngular[1] + gto2.mAngular[2]) + 3.0) *
                        OverlapGaussian(gto1, gto2);
 
+        auto OverlapAngMom = [&gto1, &gto2](Eigen::Vector3i l) {
+            return OverlapGaussian(gto1,
+                                   {
+                                       gto2.mExponent, gto2.mCoeff, gto2.mPosition,
+                                       gto2.mAngular + l
+                                   });
+        };
+
         double term1 = -2.0 * std::pow(gto2.mExponent, 2.0) * (
-                           OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                gto2.mAngular + Eigen::Vector3i(2, 0, 0), gto1.mPosition,
-                                                gto2.mPosition) +
-                           OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                gto2.mAngular + Eigen::Vector3i(0, 2, 0), gto1.mPosition,
-                                                gto2.mPosition) +
-                           OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                gto2.mAngular + Eigen::Vector3i(0, 0, 2), gto1.mPosition,
-                                                gto2.mPosition)
-                       );
+                           OverlapAngMom({2, 0, 0}) +
+                           OverlapAngMom({0, 2, 0}) +
+                           OverlapAngMom({0, 0, 2}));
+
         double term2 = -0.5 * (gto2.mAngular[0] * (gto2.mAngular[0] - 1) *
-                               OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                    gto2.mAngular - Eigen::Vector3i(2, 0, 0), gto1.mPosition,
-                                                    gto2.mPosition) +
+                               OverlapAngMom({-2, 0, 0}) +
                                gto2.mAngular[1] * (gto2.mAngular[1] - 1) *
-                               OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                    gto2.mAngular - Eigen::Vector3i(0, 2, 0), gto1.mPosition,
-                                                    gto2.mPosition) +
+                               OverlapAngMom({0, -2, 0}) +
                                gto2.mAngular[2] * (gto2.mAngular[2] - 1) *
-                               OverlapGaussianParam(gto1.mExponent, gto2.mExponent, gto1.mAngular,
-                                                    gto2.mAngular - Eigen::Vector3i(0, 0, 2), gto1.mPosition,
-                                                    gto2.mPosition));
+                               OverlapAngMom({0, 0, -2}));
 
         return term0 + term1 + term2;
     }
@@ -495,7 +333,11 @@ namespace SCESS {
     }
 
     TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const Molecule &molecule) {
-        std::unordered_map<size_t, std::vector<Eigen::Vector4i> > yoshIdxMap;
+        using IdxList = Eigen::Vector4<uint8_t>;
+        using YoshIdxMapT = std::unordered_map<size_t, std::vector<IdxList>>;
+
+        YoshIdxMapT yoshIdxMap;
+        yoshIdxMap.reserve(molecule.GetNoOrbitals() * molecule.GetNoOrbitals());
 
         for (int i = 0; i < molecule.GetNoOrbitals(); i++)
             for (int j = 0; j < molecule.GetNoOrbitals(); j++)
@@ -504,22 +346,23 @@ namespace SCESS {
                         size_t yoshIdx = TEIYoshimineIdx(i, j, k, l);
 
                         auto itPair = yoshIdxMap.find(yoshIdx);
-                        std::vector<Eigen::Vector4i> *indxArray = nullptr;
+                        std::vector<IdxList> *indxArray = nullptr;
                         if (itPair == yoshIdxMap.end()) {
-                            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<Eigen::Vector4i>{}).first->second;
-                            indxArray->reserve(4);
+                            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<IdxList>{}).first->second;
+                            indxArray->reserve(8);
                         } else {
                             indxArray = &itPair->second;
                         }
 
-                        indxArray->emplace_back((int) i, (int) j, (int) k, (int) l);
+                        indxArray->emplace_back((uint8_t) i, (uint8_t) j, (uint8_t) k, (uint8_t) l);
                     }
 
-        constexpr size_t NUM_THREADS = 3;
+        constexpr size_t NUM_THREADS = 8;
         std::thread threads[NUM_THREADS];
         std::unordered_map<size_t, double> integralResultMaps[NUM_THREADS + 1];
 
-        auto threadWorker = [](const std::unordered_map<size_t, std::vector<Eigen::Vector4i> > &yoshIdxMap,
+
+        auto threadWorker = [](const YoshIdxMapT &yoshIdxMap,
                                const Molecule &molecule, std::unordered_map<size_t, double> &integralResult,
                                size_t startingIdx,
                                size_t chunkSize) {
@@ -532,7 +375,7 @@ namespace SCESS {
             std::vector<double> bz;
 
             for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
-                const Eigen::Vector4i &indices = it->second[0];
+                const auto &indices = it->second[0];
                 integralResult[it->first] = TwoElectronRepulsion(molecule.GetOrbital(indices.x()),
                                                                  molecule.GetOrbital(indices.y()),
                                                                  molecule.GetOrbital(indices.z()),
@@ -543,6 +386,8 @@ namespace SCESS {
         };
 
         size_t chunkSize = yoshIdxMap.size() / (NUM_THREADS + 1);
+        for (uint32_t i = 0; i < NUM_THREADS; i++)
+            integralResultMaps[i].reserve(chunkSize + 1);
 
         if (chunkSize >= 20) {
             for (uint32_t i = 0; i < NUM_THREADS; i++)
@@ -573,7 +418,7 @@ namespace SCESS {
                 return 0.0;
             }();
 
-            for (const Eigen::Vector4i &idxVec: indices)
+            for (const auto &idxVec: indices)
                 teiTensor(idxVec[0], idxVec[1], idxVec[2], idxVec[3]) = integralResult;
         }
 
@@ -674,9 +519,9 @@ namespace SCESS {
                             double p, double a, double b, double q,
                             double c, double d,
                             double g1, double g2, double delta) {
-        auto factRatio2 = [](int a, int b)-> int {
-            return Factorial(a) / Factorial(b) /
-                   Factorial(a - 2 * b);
+        auto factRatio2 = [](int a, int b)-> double {
+            return Factorial(a) / (Factorial(b) *
+                                   Factorial(a - 2 * b));
         };
 
         auto B0 = [&factRatio2](int i, int r, double g)-> double {
