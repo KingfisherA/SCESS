@@ -15,20 +15,20 @@ project "ImPlot"
 	cppdialect "C++20"
 	systemversion "latest"
 	
-	targetdir("bin/" .. outputdir)
-	objdir("bin-obj/" .. outputdir)
-	debugdir("bin/" .. outputdir)
+	targetdir("../ImPlot/bin/" .. outputdir)
+	objdir("../ImPlot/bin-obj/" .. outputdir)
+	debugdir("../ImPlot/bin/" .. outputdir)
 
 	files
 	{
-	  "./**.cpp",
-	  "./**.hpp",
+	  "../ImPlot/**.cpp",
+	  "../ImPlot/**.hpp",
 	  "./**.h"
 	}
 	
 	includedirs
 	{
-	  "./",
+	  "../ImPlot/",
 	  "../GraphicsEngine-1.0.0/include/ImGui"
 	}
 	
