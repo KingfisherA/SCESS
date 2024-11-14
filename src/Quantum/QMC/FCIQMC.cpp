@@ -135,9 +135,9 @@ namespace SCESS {
                         throw std::runtime_error("Cannot create anti-particles");
 
                     if (currentWalker > 0)
-                        currentWalker -= nKill;
+                        spawnPopulations[I] -= nKill;
                     else
-                        currentWalker += nKill;
+                        spawnPopulations[I] += nKill;
                 }
 
                 //Annihilation stage
