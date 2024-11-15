@@ -52,8 +52,8 @@ namespace SCESS {
 
         //Implementation of the QMC algorithm
 
-        constexpr size_t NUM_CYCLES = 1000,
-                NUM_REPORT_CYCLES = 1000;
+        constexpr size_t NUM_CYCLES = 1000;
+        constexpr size_t NUM_REPORT_CYCLES = 2000;
         constexpr double EPSILON = 0.01;
 
         using namespace boost::random;

@@ -129,11 +129,10 @@ namespace SCESS {
                 glm::vec3 dirVec = pos1 - pos2;
                 glm::vec3 midpoint = dirVec * 0.5f + pos2;
 
-                glm::mat3 rotationMat = CalculateBondRotMatrix(glm::normalize(dirVec), {0.0f, 0.0f, 1.0f});
-
                 glm::mat4 transformMat =
                         glm::translate(midpoint) *
-                        glm::mat4(rotationMat) * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length()));
+                        glm::mat4(CalculateBondRotMatrix(glm::normalize(dirVec), {0.0f, 0.0f, 1.0f}))
+                        * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length()));
 
                 mSolidColourProg->UploadMatF("uTransformMatrix", transformMat);
 
@@ -296,7 +295,7 @@ namespace SCESS {
 
                 switch (mCalcCorrelationMethod) {
                     case CorrelationMethod::MP2:
-                        mMP2Energy = SCESS::HartreeFock::MP2ClosedShell(*mRHFWfn, &mConsoleOutput);
+                        mMP2Energy = HartreeFock::MP2ClosedShell(*mRHFWfn, &mConsoleOutput);
                         break;
                     case CorrelationMethod::CCSD: {
                         uRef<CCSDWavefunction> ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFWfn, &mConsoleOutput);

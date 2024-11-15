@@ -153,15 +153,18 @@ namespace SCESS {
             CIDeterminant I, double &pExcit) {
             //Randomly select whether to excite the alpha or beta electron
 
-            //Number of occupied spaces
-            // uint32_t numAlpha = CountNumElecs(I.GetAlphaOrbitals());
-            // //Number of free spaces
-            // uint32_t numBeta = CountNumElecs(I.GetBetaOrbitals());
+            Excitor::OrbitalBitStr *sourceBitStr = nullptr;
+            Excitor::OrbitalBitStr *destBitStr = nullptr;
 
-            Excitor::OrbitalBitStr *sourceBitStr = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
-            Excitor::OrbitalBitStr *destBitStr = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
+            if (randomNumber() > 0.5) {
+                sourceBitStr = &I.GetAlphaOrbitals();
+                destBitStr = &I.GetAlphaOrbitals();
+            } else {
+                sourceBitStr = &I.GetBetaOrbitals();
+                destBitStr = &I.GetBetaOrbitals();
+            }
 
-            pExcit *= 0.25;
+            pExcit *= 0.5;
 
             //Number of occupied spaces
             uint32_t numSrc = CountNumElecs(*sourceBitStr);
@@ -200,17 +203,30 @@ namespace SCESS {
             //Number of free spaces
             uint32_t numBeta = CountNumElecs(I.GetBetaOrbitals());
 
-            Excitor::OrbitalBitStr *sourceBitStr1 = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
-            Excitor::OrbitalBitStr *sourceBitStr2 = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
-            Excitor::OrbitalBitStr *destBitStr1 = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
-            Excitor::OrbitalBitStr *destBitStr2 = randomNumber() > 0.5 ? &I.GetAlphaOrbitals() : &I.GetBetaOrbitals();
+            Excitor::OrbitalBitStr *sourceBitStr1 = nullptr;
+            Excitor::OrbitalBitStr *destBitStr1 = nullptr;
 
-            //pExcit *= 0.0625;
+            if (randomNumber() < 0.5) {
+                sourceBitStr1 = &I.GetAlphaOrbitals();
+                destBitStr1 = &I.GetAlphaOrbitals();
+            } else {
+                sourceBitStr1 = &I.GetBetaOrbitals();
+                destBitStr1 = &I.GetBetaOrbitals();
+            }
 
-            sourceBitStr1 = &I.GetAlphaOrbitals();
-            sourceBitStr2 = &I.GetBetaOrbitals();
-            destBitStr1 = &I.GetAlphaOrbitals();
-            destBitStr2 = &I.GetBetaOrbitals();
+            Excitor::OrbitalBitStr *sourceBitStr2 = nullptr;
+            Excitor::OrbitalBitStr *destBitStr2 = nullptr;
+
+            if (randomNumber() < 0.5) {
+                sourceBitStr2 = &I.GetAlphaOrbitals();
+                destBitStr2 = &I.GetAlphaOrbitals();
+            } else {
+                sourceBitStr2 = &I.GetBetaOrbitals();
+                destBitStr2 = &I.GetBetaOrbitals();
+            }
+
+            //0.5*0.5
+            pExcit *= 0.25;
 
             //Number of occupied spaces
             uint32_t numSrc1 = CountNumElecs(*sourceBitStr1);
@@ -365,7 +381,7 @@ namespace SCESS {
                     CIDeterminant Dj;
                     //Probability of generating j given we have i
                     //Half chance of selecting a single excitation and half chance of selecting a double
-                    double pExcit = 0.5;
+                    double pExcit = 1.0; //0.5;
                     if (randomNumber() < 0.5) {
                         //Perform a single excitation/de-excitation
                         Dj = RandomSingleExcite(Di, pExcit);
@@ -394,13 +410,14 @@ namespace SCESS {
 
                         double Hij = H_FCI(DiIdx, DjIdx);
 
-                        double pSpawn = 1.2 * tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //
+                        //1.2 *
+                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //
                         auto nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
                             nSpawn++;
 
-                        //nSpawn *= static_cast<int64_t>(Di.GetSign()); //* Di.GetSign());
+                        nSpawn *= static_cast<int64_t>(Dj.GetSign() * Di.GetSign());
                         if (-Hij > 0.0) {
                             excitorSpawn[DjIdx] += nSpawn;
                         } else {
@@ -413,7 +430,7 @@ namespace SCESS {
                     // -- Death --
                     // A new particle is spawned back onto |Di> with the sign of |Hii-S| with sign opposite
                     // to the parent
-                    double pCloneDeath = tau * abs(excitorAmplitude) * (Hii - rhfWfn.Energy - shift) / (Na * pClust);
+                    double pCloneDeath = tau * abs(excitorAmplitude) * (Hii - shift) / (Na * pClust);
                     //*pSize
                     auto nKill = static_cast<int64_t>(pCloneDeath);
                     pCloneDeath = pCloneDeath - (double) nKill;
@@ -462,8 +479,11 @@ namespace SCESS {
             }
 
 
-            if (reportCycle >= 100 && nExcipsLast != 0 && nExcips != 0)
-                shift = shift - (1000.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
+            if (reportCycle == 50)
+                shift = rhfWfn.Energy;
+
+            if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
+                shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
 
             std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<
                     " Shift = " << shift <<
