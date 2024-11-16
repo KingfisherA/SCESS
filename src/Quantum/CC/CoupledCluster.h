@@ -3,8 +3,12 @@
 #include<unsupported/Eigen/CXX11/Tensor>
 #include <GraphicsEngine/Utilities/Memory.h>
 
-#include  "Quantum/Integrals/Integrals.h"
-#include  "Quantum/HF/HartreeFock.h"
+#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/HF/HartreeFock.h"
+
+namespace GEng {
+    class Thread;
+}
 
 namespace SCESS {
     struct RHFWavefunction;
@@ -13,8 +17,9 @@ namespace SCESS {
 namespace SCESS {
     struct CCSDWavefunction {
     public:
-        CCSDWavefunction(double mp2, double ccsdCorr, const Eigen::Tensor<double, 2> &t1, const Eigen::Tensor<double, 4> &t2,
-                   const TEITensor &tei)
+        CCSDWavefunction(double mp2, double ccsdCorr, const Eigen::Tensor<double, 2> &t1,
+                         const Eigen::Tensor<double, 4> &t2,
+                         const TEITensor &tei)
             : mp2CorrelationEnergy(mp2), ccsdCorrelationEnergy(ccsdCorr), t1Amps(t1), t2Amps(t2), moTEI(tei) {
         }
 
@@ -50,21 +55,28 @@ namespace SCESS {
         /**
         * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant
-         * @param rhfResult The RHF determinant
-         */
-        static uRef<CCSDWavefunction> CCSD(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        * @param rhfResult The RHF determinant
+        */
+        static uRef<CCSDWavefunction> CCSD(const RHFWavefunction &rhfResult, const GEng::Thread *thread = nullptr,
+                                           std::stringstream *console = nullptr);
 
         /**
         * An implementation to solve the coupled cluster equations
         * to single and double excitations for a closed shell molecule starting from a RHF determinant with DIIS acceleration.
-         * @param rhfResult The RHF determinant
-         */
-        static uRef<CCSDWavefunction> CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        * @param rhfResult The RHF determinant
+        */
+        static uRef<CCSDWavefunction> CCSD_DIIS(const RHFWavefunction &rhfResult,
+                                                const GEng::Thread *thread = nullptr,
+                                                std::stringstream *console = nullptr);
 
-        static uRef<CCSD_TWavefunction> CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console = nullptr);
+        static uRef<CCSD_TWavefunction> CCSD_T(const RHFWavefunction &rhfResult,
+                                               const GEng::Thread *thread = nullptr,
+                                               std::stringstream *console = nullptr);
 
-        static double CalculateTriplesCorrection(const CCSDWavefunction &ccsd, const FockTensor &F, const Eigen::Index nOcc,
-                                                 const Eigen::Index nVirt);
+        static double CalculateTriplesCorrection(const CCSDWavefunction &ccsd, const FockTensor &F,
+                                                 const Eigen::Index nOcc,
+                                                 const Eigen::Index nVirt,
+                                                 const GEng::Thread* thread = nullptr);
 
         static FockTensor TransformFockToMO(const RHFWavefunction &rhfResult);
         static void CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
@@ -91,7 +103,7 @@ namespace SCESS {
                                  const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2);
         static void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                                 const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
-                                const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2);
+                                const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2, const GEng::Thread* thread = nullptr);
 
         static double CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
                                           const TEITensor &moTEI,

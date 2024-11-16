@@ -9,6 +9,11 @@
 #include"Quantum/Integrals/Integrals.h"
 
 #include  "Quantum/HF/HartreeFock.h"
+#include "Viewer/Application/Application.h"
+
+namespace GEng {
+    class Thread;
+}
 
 namespace SCESS {
     struct RHFWavefunction;
@@ -74,7 +79,7 @@ namespace SCESS {
             int8_t &sign);
 
         static int8_t CalculateSign(CIDeterminant I, CIDeterminant J, size_t numOfAlphaOrbitals,
-                                 size_t numOfBetaOrbitals);
+                                    size_t numOfBetaOrbitals);
 
         void CalculateSign(CIDeterminant I, size_t numOfAlphaOrbitals,
                            size_t numOfBetaOrbitals) {
@@ -107,6 +112,7 @@ namespace SCESS {
          * @return
          */
         static uRef<CIWavefunction> FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
+                                        const GEng::Thread *thread = nullptr,
                                         std::stringstream *console = nullptr);
 
 

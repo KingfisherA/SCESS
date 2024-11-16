@@ -6,6 +6,10 @@
 #include  "Quantum/Integrals/Integrals.h"
 #include  "Quantum/Integrals/Grid/MolecularGrid.h"
 
+namespace GEng {
+    class Thread;
+}
+
 namespace SCESS {
     class Molecule;
 
@@ -30,7 +34,9 @@ namespace SCESS {
     class DensityFunctional {
     public:
         static uRef<KSWavefunction> KohnShamDFT(const Molecule &mol, MolecularGrid::Resolution gridRes,
-            std::stringstream* console = nullptr, std::string_view basisSetName = "");
+                                                const GEng::Thread *thread = nullptr,
+                                                std::stringstream *console = nullptr,
+                                                std::string_view basisSetName = "");
 
         static Eigen::MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
                                                       const Eigen::MatrixXd &Density);

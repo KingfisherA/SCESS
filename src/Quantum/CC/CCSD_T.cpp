@@ -1,20 +1,22 @@
-#include "pch.h"
+#include <pch.h>
 
-#include<optional>
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-#include  "Quantum/CC/CoupledCluster.h"
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "Quantum/CC/CoupledCluster.h"
 
 namespace SCESS {
     using namespace Eigen;
 
-    uRef<CCSD_TWavefunction> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, std::stringstream *console) {
+    uRef<CCSD_TWavefunction> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, const GEng::Thread *thread,
+                                                    std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
         //Perform CCSD with DIIS acceleration and get t1 and t2 amplitudes
-        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, console);
+        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, thread, console);
 
         if (ccsd == nullptr) {
             if (console)
@@ -37,8 +39,12 @@ namespace SCESS {
         //Get the Fock matrix in canonical MO basis set
         FockTensor F = TransformFockToMO(rhfResult);
 
+        if (thread)
+            if (thread->ShouldStop())
+                return nullptr;
+
         //Calculate the triples perturbation correction energy
-        double triplesCorrection = CoupledCluster::CalculateTriplesCorrection(*ccsd, F, nOcc, nVirt);
+        double triplesCorrection = CalculateTriplesCorrection(*ccsd, F, nOcc, nVirt, thread);
 
         if (console) {
             *console << "E(T) = " << triplesCorrection << "\n";
@@ -52,7 +58,8 @@ namespace SCESS {
     //Computes the triple correction energy with the spin integrated out
     double CoupledCluster::CalculateTriplesCorrection(const CCSDWavefunction &ccsd,
                                                       const FockTensor &F, const Eigen::Index nOcc,
-                                                      const Eigen::Index nVirt) {
+                                                      const Eigen::Index nVirt,
+                                                      const GEng::Thread *thread) {
         using IdxP = Eigen::IndexPair<int>;
         const TEITensor &moTEI = ccsd.moTEI;
 
@@ -171,7 +178,17 @@ namespace SCESS {
         //Evaluate the triples perturbed correction energy
         double tCorrectionEnergy = 0.0; {
             Tensor<double, 6> Wijkabc = MakeWijkabc();
+
+            if(thread)
+                if(thread->ShouldStop())
+                    return 0.0;
+
             Tensor<double, 6> sumTensor = (Wijkabc + MakeVijkabc()) / MakeDijkabc();
+
+            if(thread)
+                if(thread->ShouldStop())
+                    return 0.0;
+
             Tensor<double, 0> correctionETensor = Wijkabc.contract(sumTensor, array<IdxP, 6>{
                                                                        IdxP{0, 0},
                                                                        IdxP{1, 1},

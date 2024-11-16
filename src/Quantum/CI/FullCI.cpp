@@ -1,15 +1,17 @@
 #include <iostream>
 
-#include "ConfigurationInteraction.h"
-#include  "Quantum/HF/HartreeFock.h"
-#include  "Quantum/Integrals/Integrals.h"
-#include "Utilities/Utilities.h"
-
 #include <cppitertools/combinations.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/math/special_functions/binomial.hpp>
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "ConfigurationInteraction.h"
+#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/Integrals/Integrals.h"
+#include "Utilities/Utilities.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
+
 
 namespace SCESS {
     CIDeterminant CIDeterminant::MakeReference(uint32_t nAlphaOcc, uint32_t nBetaOcc) {
@@ -99,7 +101,7 @@ namespace SCESS {
     }
 
     int8_t CIDeterminant::CalculateSign(CIDeterminant I, CIDeterminant J, size_t numOfAlphaOrbitals,
-                                     size_t numOfBetaOrbitals) {
+                                        size_t numOfBetaOrbitals) {
         uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                               CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
         uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
@@ -112,7 +114,6 @@ namespace SCESS {
         auto CalcSign = [&flips, &shift](OrbitalBitStr I,
                                          OrbitalBitStr J,
                                          size_t numOfOrbs) {
-
             uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
 
             for (uint32_t i = 0; i < numOfOrbs; i++) {
@@ -150,6 +151,7 @@ namespace SCESS {
     }
 
     uRef<CIWavefunction> ConfigurationInteraction::FCI(const RHFWavefunction &rhfWavefunction, double Vnn,
+                                                       const GEng::Thread *thread,
                                                        std::stringstream *console) {
         const Eigen::MatrixXd &C = rhfWavefunction.C;
         const ConfigIntegrals &ints = rhfWavefunction.Integrals;
@@ -197,6 +199,10 @@ namespace SCESS {
         Eigen::MatrixXd H_FCI = Eigen::MatrixXd::Zero((Eigen::Index) determinants.size(),
                                                       (Eigen::Index) determinants.size());
 
+        if (thread)
+            if (thread->ShouldStop())
+                return nullptr;
+
         for (uint32_t i = 0; i < H_FCI.rows(); i++)
             for (uint32_t j = i; j < H_FCI.cols(); j++) {
                 H_FCI(i, j) = H_FCI(j, i) =
@@ -207,6 +213,11 @@ namespace SCESS {
 
         if (console)
             *console << "   Diagonalising FCI matrix...\n";
+
+        if (thread)
+            if (thread->ShouldStop())
+                return nullptr;
+
         //Diagonalise the Full CI matrix
         Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(H_FCI);
         Eigen::VectorXd Energies = eigensolver.eigenvalues().real();

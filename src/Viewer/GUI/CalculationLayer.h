@@ -53,14 +53,40 @@ namespace SCESS {
         Ultrafine
     };
 
+    inline const char *SCFMethosToStr(SCFMethod method) {
+        switch (method) {
+            default:
+            case SCFMethod::None: return "";
+            case SCFMethod::RHF: return "RHF";
+            case SCFMethod::UHF: return "UHF";
+            case SCFMethod::KS_DFT: return "KS DFT";
+        }
+    }
+
     inline const char *CorrelationMethodToStr(CorrelationMethod method) {
         switch (method) {
+            default:
             case CorrelationMethod::None: return "";
             case CorrelationMethod::MP2: return "MP2";
             case CorrelationMethod::CCSD: return "CCSD";
             case CorrelationMethod::CCSD_T: return "CCSD(T)";
             case CorrelationMethod::FCI: return "FCI";
-            default: return "";
+            case CorrelationMethod::CCQMC: return "CCQMC";
+            case CorrelationMethod::FCIQMC: return "FCIQMC";
+        }
+    }
+
+    inline MolecularGrid::Resolution DFTGridResToRes(DFTGridRes res) {
+        switch (res) {
+            case DFTGridRes::Low:
+                return MolecularGrid::LOW_RES;
+            default:
+            case DFTGridRes::Medium:
+                return MolecularGrid::MEDIUM_RES;
+            case DFTGridRes::High:
+                return MolecularGrid::HIGH_RES;
+            case DFTGridRes::Ultrafine:
+                return MolecularGrid::ULTRAFINE_RES;
         }
     }
 
@@ -72,8 +98,6 @@ namespace SCESS {
     class CalculationLayer : public GEng::Layer {
     public:
         CalculationLayer();
-
-        //virtual ~CalculationLayer();
 
         virtual void OnInit() override;
         virtual void OnDestroy() override;
@@ -89,8 +113,18 @@ namespace SCESS {
         void UploadMolecule();
         bool SelectMoleculeFromFile();
 
+        inline bool HaveSCFResult() {
+            return mRHFWfn != nullptr || mUHFWfn != nullptr || mKSWfn != nullptr;
+        }
+
+        inline bool HaveCorrelationResult() {
+            return mCCSDWfn != nullptr || mCCSD_TWfn != nullptr || mFCIWfn != nullptr || mMP2Energy.has_value() ||
+                   mQMCEnergy != 0.0;
+        }
+
         void ExecuteCalculation();
-        void DrawProgressScreen();
+        void StopCalculation();
+        //void DrawProgressScreen();
         void OrderOrbitals();
         void DrawResultsPanel();
         void DrawQuantumCalcPanel();

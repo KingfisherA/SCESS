@@ -2,6 +2,9 @@
 #include<iostream>
 
 #include  "Quantum/DFT/DensityFunctional.h"
+
+#include <GraphicsEngine/Utilities/Threading.h>
+
 #include  "Quantum/Integrals/Integrals.h"
 #include  "Quantum/Integrals/Grid/MolecularGrid.h"
 
@@ -15,6 +18,7 @@ namespace SCESS {
     using namespace Eigen;
 
     uRef<KSWavefunction> DensityFunctional::KohnShamDFT(const Molecule &mol, MolecularGrid::Resolution gridRes,
+                                                        const GEng::Thread *thread,
                                                         std::stringstream *console, std::string_view basisSetName) {
         if (console) {
             *console << "--- Kohn-Sham Density Functional Theory ---\n";
@@ -25,7 +29,11 @@ namespace SCESS {
         }
 
         constexpr double ALPHA = 0.9;
-        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol);
+        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol, thread);
+
+        if(thread)
+            if(thread->ShouldStop())
+                return nullptr;
 
         if (console)
             *console << "Molecular Integrals Evaluated!\n";
@@ -81,10 +89,16 @@ namespace SCESS {
         constexpr double E_CONVERGENCE = 1e-5;
         constexpr uint32_t MAX_ITERATIONS = 500;
 
-        if(console)
-            *console<<"--- Starting SCF cycles ---\n";
+        if (console)
+            *console << "--- Starting SCF cycles ---\n";
 
         for (uint32_t iter = 0; iter < MAX_ITERATIONS; ++iter) {
+
+            //Poll to check whether we should cancel the calculation
+            if(thread)
+                if(thread->ShouldStop())
+                    return nullptr;
+
             F = H + 2.0 * J + ExchangeCorr;
             MatrixXd Fprime = U.transpose() * F * U;
 

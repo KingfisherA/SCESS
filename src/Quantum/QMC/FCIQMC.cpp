@@ -1,17 +1,21 @@
-#include  "Quantum/QMC/QMC.h"
-#include  "Quantum/CI/ConfigurationInteraction.h"
+#include "Quantum/QMC/QMC.h"
+#include "Quantum/CI/ConfigurationInteraction.h"
 #include "Utilities/Utilities.h"
+
+#include "GraphicsEngine/Utilities/Threading.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
+#include <GraphicsEngine/Utilities/Threading.h>
 
 #include "Quantum/Integrals/IntegralTransforms.h"
 
 namespace SCESS {
-    double QuantumMonteCarlo::SimpleFCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
-                                           std::stringstream *console,
-                                           boost::circular_buffer<glm::vec2> *projEnergyGraph) {
+    double QuantumMonteCarlo::FCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
+                                     const GEng::Thread *thread,
+                                     std::stringstream *console,
+                                     boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         using namespace Eigen;
 
         if (console) (*console) << "--- Full CI Quantum Monte Carlo ---\n";
@@ -81,6 +85,11 @@ namespace SCESS {
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
+
+                if(thread)
+                    if(thread->ShouldStop())
+                        return 0.0;
+
                 for (Particle &p: spawnPopulations)
                     p = 0;
 

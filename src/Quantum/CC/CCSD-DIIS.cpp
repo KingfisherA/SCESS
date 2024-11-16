@@ -1,17 +1,17 @@
-#include "pch.h"
-
-#include<optional>
+#include <pch.h>
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-#include  "Quantum/CC/CoupledCluster.h"
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "Quantum/CC/CoupledCluster.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
 namespace SCESS {
     using namespace Eigen;
 
-    uRef<CCSDWavefunction> CoupledCluster::CCSD_DIIS(const RHFWavefunction &rhfResult, std::stringstream *console) {
-
+    uRef<CCSDWavefunction> CoupledCluster::CCSD_DIIS(const RHFWavefunction &rhfResult, const GEng::Thread *thread,
+                                                     std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
         //Maximum coupled cluster iterations
@@ -23,7 +23,7 @@ namespace SCESS {
         //Transform the two electron repulsion integrals into the MO basis set
         //for MP2 calculation. Integrals are in chemist's notation
         TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.eri, rhfResult.C);
-        double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
+        double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, thread, console);
 
         if (console) {
             *console << std::setprecision(12);
@@ -72,11 +72,19 @@ namespace SCESS {
         size_t ccIteration = 0;
 
         for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
+            if(thread)
+                if(thread->ShouldStop())
+                    return nullptr;
+
             t1AmpsArray.push_back(t1Amps);
             t2AmpsArray.push_back(t2Amps);
 
             //Solve the CC equations
-            CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps);
+            CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps, thread);
+
+            if(thread)
+                if(thread->ShouldStop())
+                    return nullptr;
 
             //Store the amplitudes to be used in DIIS calculation
             if (!t1AmpsArray.empty() && !t2AmpsArray.empty()) {

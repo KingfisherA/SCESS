@@ -36,13 +36,19 @@ namespace SCESS::Tests {
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule, nullptr, nullptr, 1e-05, 100, &ss,
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           nullptr,
+                                                           nullptr,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
                                                            BASIS_SET_NAME);
         std::cout << ss.str();
         ss.clear();
         ss.str("");
 
-        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD(*rhfResult, &ss);
+        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD(*rhfResult, nullptr, &ss);
 
         std::cout << ss.str() << '\n';
 
@@ -64,9 +70,15 @@ namespace SCESS::Tests {
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule, nullptr, nullptr, 1e-08, 100, &ss,
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           nullptr,
+                                                           nullptr,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
                                                            BASIS_SET_NAME);
-        HartreeFock::MP2ClosedShell(*rhfResult, &ss);
+        HartreeFock::MP2ClosedShell(*rhfResult, nullptr, &ss);
 
         std::cout << ss.str();
         ss.clear();
@@ -74,7 +86,9 @@ namespace SCESS::Tests {
 
 
         uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
-            *rhfResult, hydrogenMolecule.CalculateNuclearRepulsion(),
+            *rhfResult,
+            hydrogenMolecule.CalculateNuclearRepulsion(),
+            nullptr,
             &ss);
         std::cout << ss.str();
         ss.clear();
@@ -92,12 +106,21 @@ namespace SCESS::Tests {
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule, nullptr, nullptr, 1e-08, 100, &ss,
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           nullptr,
+                                                           nullptr,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
                                                            BASIS_SET_NAME);
 
         std::cout << ss.str() << '\n';
 
-        double energy = QuantumMonteCarlo::SimpleFCIQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion(), &ss);
+        double energy = QuantumMonteCarlo::FCIQMC(*rhfResult,
+                                                  hydrogenMolecule.CalculateNuclearRepulsion(),
+                                                  nullptr,
+                                                  &ss);
 
 
         std::cout << "Press any key to continue..\n";
@@ -112,7 +135,13 @@ namespace SCESS::Tests {
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule, nullptr, nullptr, 1e-08, 100, &ss,
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           nullptr,
+                                                           nullptr,
+                                                           1e-08,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
                                                            BASIS_SET_NAME);
 
         std::cout << ss.str() << '\n';
@@ -133,14 +162,20 @@ namespace SCESS::Tests {
         heliumMolecule.MakeOrbitals(BASIS_SET_NAME);
 
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfWfn = HartreeFock::RHF(heliumMolecule, nullptr, nullptr, 1e-08, 100, &ss,
+        uRef<RHFWavefunction> rhfWfn = HartreeFock::RHF(heliumMolecule,
+                                                        nullptr,
+                                                        nullptr,
+                                                        1e-08,
+                                                        100,
+                                                        nullptr,
+                                                        &ss,
                                                         BASIS_SET_NAME);
 
         std::cout << ss.str() << '\n';
         ss.str("");
         ss.clear();
 
-        auto ciWfn = ConfigurationInteraction::FCI(*rhfWfn, 0.0, &ss);
+        auto ciWfn = ConfigurationInteraction::FCI(*rhfWfn, 0.0, nullptr, &ss);
 
         std::cout << ss.str() << '\n';
 

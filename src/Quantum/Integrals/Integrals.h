@@ -5,6 +5,10 @@
 
 #include "Quantum/Molecule.h"
 
+namespace GEng {
+    class Thread;
+}
+
 namespace SCESS {
     class Gaussian;
     class ContractedGaussian;
@@ -41,7 +45,6 @@ namespace SCESS {
         //Two-electron tensor
         TEITensor eri;
     };
-
 
     namespace Integrals {
 
@@ -128,7 +131,7 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the integrals on
          * @return Configuration integrals
          */
-        ConfigIntegrals CalculateConfiguration(const Molecule &molecule);
+        ConfigIntegrals CalculateConfiguration(const Molecule &molecule, const GEng::Thread* thread = nullptr);
 
         //Overlap Integrals
         double Overlap1D(double gamma,
@@ -162,8 +165,8 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the tei for
          * @return The tei in chemist's notation
          */
-        TEITensor TwoElectronRepulsionTensor(const Molecule &molecule);
-        TEITensor TwoElectronRepulsionTensorMultithread(const Molecule &molecule);
+        TEITensor TwoElectronRepulsionTensor(const Molecule &molecule, const GEng::Thread* thread =nullptr);
+        TEITensor TwoElectronRepulsionTensorMultithread(const Molecule &molecule, const GEng::Thread* parentThread =nullptr);
         //Calculates <ij | 1/r12 | kl> (I1) for a contgacted
         double TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                     const ContractedGaussian &c3, const ContractedGaussian &c4,

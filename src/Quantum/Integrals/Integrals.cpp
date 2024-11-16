@@ -5,6 +5,8 @@
 #include<libint2.hpp>
 #include<memory_resource>
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
 #include "Integrals.h"
 #include "IntegralTransforms.h"
 #include "Quantum/Basis/Gaussian.h"
@@ -13,16 +15,9 @@
 namespace SCESS {
     using namespace Integrals::Utils;
 
-#pragma region Transforms
-    //
-    //
-
-
-#pragma endregion
-
 #pragma region Helper Functions
 
-    ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule) {
+    ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule, const GEng::Thread *thread) {
         Eigen::MatrixXd S =
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
         Eigen::MatrixXd T =
@@ -31,8 +26,12 @@ namespace SCESS {
                 Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
 
         AArray ax, ay, az;
-        for (size_t i = 0; i < molecule.GetNoOrbitals(); i++)
-            for (size_t j = i; j < molecule.GetNoOrbitals(); j++) {
+        for (Eigen::Index i = 0; i < molecule.GetNoOrbitals(); i++) {
+            if (thread)
+                if (thread->ShouldStop())
+                    return {};
+
+            for (Eigen::Index j = i; j < molecule.GetNoOrbitals(); j++) {
                 const ContractedGaussian &c1 = molecule.GetOrbital(i);
                 const ContractedGaussian &c2 = molecule.GetOrbital(j);
 
@@ -48,9 +47,10 @@ namespace SCESS {
                 }
                 V(i, j) = V(j, i) = Vn;
             }
+        }
 
 
-        TEITensor tei = TwoElectronRepulsionTensorMultithread(molecule);
+        TEITensor tei = TwoElectronRepulsionTensorMultithread(molecule, thread);
 
         return ConfigIntegrals{S, T, V, tei};
     }
@@ -304,7 +304,7 @@ namespace SCESS {
 
 #pragma region Two Electron Integrals
 
-    TEITensor Integrals::TwoElectronRepulsionTensor(const Molecule &molecule) {
+    TEITensor Integrals::TwoElectronRepulsionTensor(const Molecule &molecule, const GEng::Thread *thread) {
         TEITensor returnTensor((Eigen::Index) molecule.GetNoOrbitals(),
                                (Eigen::Index) molecule.GetNoOrbitals(),
                                (Eigen::Index) molecule.GetNoOrbitals(),
@@ -317,6 +317,10 @@ namespace SCESS {
         for (Eigen::Index i = 0; i < molecule.GetNoOrbitals(); i++) {
             for (Eigen::Index j = 0; j < molecule.GetNoOrbitals(); j++) {
                 for (Eigen::Index k = 0; k < molecule.GetNoOrbitals(); k++) {
+                    if (thread)
+                        if (thread->ShouldStop())
+                            return {};
+
                     for (Eigen::Index l = 0; l < molecule.GetNoOrbitals(); l++) {
                         returnTensor(i, j, k, l) = TwoElectronRepulsion(
                             molecule.GetOrbital(i),
@@ -332,11 +336,12 @@ namespace SCESS {
         return returnTensor;
     }
 
-    TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const Molecule &molecule) {
-        using IdxList = Eigen::Vector4<uint8_t>;
-        using YoshIdxMapT = std::unordered_map<size_t, std::vector<IdxList>>;
+    TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const Molecule &molecule,
+                                                               const GEng::Thread *parentThread) {
+        using IdxTuple = Eigen::Vector4<uint8_t>;
+        using YoshMap_T = std::unordered_map<size_t, std::vector<IdxTuple> >;
 
-        YoshIdxMapT yoshIdxMap;
+        YoshMap_T yoshIdxMap;
         yoshIdxMap.reserve(molecule.GetNoOrbitals() * molecule.GetNoOrbitals());
 
         for (int i = 0; i < molecule.GetNoOrbitals(); i++)
@@ -346,9 +351,9 @@ namespace SCESS {
                         size_t yoshIdx = TEIYoshimineIdx(i, j, k, l);
 
                         auto itPair = yoshIdxMap.find(yoshIdx);
-                        std::vector<IdxList> *indxArray = nullptr;
+                        std::vector<IdxTuple> *indxArray = nullptr;
                         if (itPair == yoshIdxMap.end()) {
-                            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<IdxList>{}).first->second;
+                            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<IdxTuple>{}).first->second;
                             indxArray->reserve(8);
                         } else {
                             indxArray = &itPair->second;
@@ -357,13 +362,20 @@ namespace SCESS {
                         indxArray->emplace_back((uint8_t) i, (uint8_t) j, (uint8_t) k, (uint8_t) l);
                     }
 
-        constexpr size_t NUM_THREADS = 8;
-        std::thread threads[NUM_THREADS];
-        std::unordered_map<size_t, double> integralResultMaps[NUM_THREADS + 1];
+        if (parentThread)
+            if (parentThread->ShouldStop())
+                return {};
 
+        constexpr size_t NUM_THREADS = 7;
+        GEng::Thread threads[NUM_THREADS];
 
-        auto threadWorker = [](const YoshIdxMapT &yoshIdxMap,
-                               const Molecule &molecule, std::unordered_map<size_t, double> &integralResult,
+        using IntResultMap_T = std::unordered_map<size_t, double>;
+        IntResultMap_T integralResultMaps[NUM_THREADS + 1];
+
+        auto threadWorker = [](const GEng::Thread *thread,
+                               const YoshMap_T &yoshIdxMap,
+                               const Molecule &molecule,
+                               IntResultMap_T &integralResult,
                                size_t startingIdx,
                                size_t chunkSize) {
             auto it = yoshIdxMap.begin();
@@ -375,6 +387,10 @@ namespace SCESS {
             std::vector<double> bz;
 
             for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
+                if (thread)
+                    if (thread->ShouldStop())
+                        return;
+
                 const auto &indices = it->second[0];
                 integralResult[it->first] = TwoElectronRepulsion(molecule.GetOrbital(indices.x()),
                                                                  molecule.GetOrbital(indices.y()),
@@ -391,19 +407,35 @@ namespace SCESS {
 
         if (chunkSize >= 20) {
             for (uint32_t i = 0; i < NUM_THREADS; i++)
-                threads[i] = std::thread(threadWorker, std::ref(yoshIdxMap), std::ref(molecule),
-                                         std::ref(integralResultMaps[i + 1]),
-                                         i * chunkSize, chunkSize);
+                threads[i].Start(threadWorker,
+                                 &threads[i],
+                                 std::ref(yoshIdxMap),
+                                 std::ref(molecule),
+                                 std::ref(integralResultMaps[i + 1]),
+                                 i * chunkSize,
+                                 chunkSize);
 
             //Dispatch work on current thread as well
-            threadWorker(yoshIdxMap, molecule, integralResultMaps[0], NUM_THREADS * chunkSize,
+            threadWorker(parentThread,
+                         yoshIdxMap,
+                         molecule,
+                         integralResultMaps[0],
+                         NUM_THREADS * chunkSize,
                          yoshIdxMap.size() - NUM_THREADS * chunkSize);
 
             for (auto &thread: threads)
-                thread.join();
+                thread.Join();
         } else
-            threadWorker(yoshIdxMap, molecule, integralResultMaps[0], 0, yoshIdxMap.size());
+            threadWorker(parentThread,
+                         yoshIdxMap,
+                         molecule,
+                         integralResultMaps[0],
+                         0,
+                         yoshIdxMap.size());
 
+        if (parentThread)
+            if (parentThread->ShouldStop())
+                return {};
 
         TEITensor teiTensor((Eigen::Index) molecule.GetNoOrbitals(),
                             (Eigen::Index) molecule.GetNoOrbitals(),

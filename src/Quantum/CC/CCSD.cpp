@@ -2,15 +2,12 @@
 // Created by charlie on 30/09/24.
 //
 #include <pch.h>
-
-#include  "Quantum/CC/CoupledCluster.h"
-#include  "Quantum/HF/HartreeFock.h"
-
-#include"Utilities/Utilities.h"
 #include<iostream>
-#include <boost/math/constants/constants.hpp>
-#include <GL/glew.h>
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "Quantum/CC/CoupledCluster.h"
+#include "Quantum/HF/HartreeFock.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
 
@@ -30,7 +27,8 @@ namespace SCESS {
         return tensor;
     }
 
-    uRef<CCSDWavefunction> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, std::stringstream *console) {
+    uRef<CCSDWavefunction> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, const GEng::Thread *thread,
+                                                std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
         //Maximum coupled cluster iterations
@@ -40,7 +38,7 @@ namespace SCESS {
         //for MP2 calculation. Integrals are in chemist's notation
         TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.eri, rhfResult.C);
         //Evaluate MP2 energy
-        double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, console);
+        double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, thread, console);
 
         if (console) {
             *console << std::setprecision(12);
@@ -82,8 +80,13 @@ namespace SCESS {
         size_t ccIteration = 0;
 
         for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
+
+            if(thread)
+                if(thread->ShouldStop())
+                    return nullptr;
+
             //Solve the CC equations
-            CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps);
+            CoupledCluster::IterateCCSD(moTEI, F, nOcc, nVirt, Dia, Dijab, t1Amps, t2Amps, thread);
 
             //Calculate CC correlation energy
             correlationEnergy = CoupledCluster::CalculateEnergyCCSD(F, nOcc, nVirt, moTEI, t1Amps, t2Amps);
@@ -388,7 +391,13 @@ namespace SCESS {
 
     void CoupledCluster::IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                                      const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
-                                     const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2) {
+                                     const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2,
+                                     const GEng::Thread* thread) {
+
+        if(thread)
+            if(thread->ShouldStop())
+                return;
+
         TauTensor
                 tildeTau = MakeTildeTau(t1, t2),
                 tau = MakeTau(t1, t2);
@@ -403,6 +412,9 @@ namespace SCESS {
                 Wabef = MakeWabef(moTEI, nOcc, nVirt, t1, t2, tau),
                 Wmbej = MakeWmbej(moTEI, nOcc, nVirt, t1, t2);
 
+        if(thread)
+            if(thread->ShouldStop())
+                return;
 
         //Make the t1 RHS
         //Dimensions of nOcc and nVirt
@@ -455,6 +467,10 @@ namespace SCESS {
                                        Eigen::IndexPair<int>{3, 2}
                                    })
                 .shuffle(array<int, 2>{1, 0});
+
+        if(thread)
+            if(thread->ShouldStop())
+                return;
 
         //Make the t2 RHS
         T2Tensor t2RHS = moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},

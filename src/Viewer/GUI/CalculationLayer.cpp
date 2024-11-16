@@ -290,15 +290,22 @@ namespace SCESS {
                 //Run SCF as RHF if a SCF determinant is not available
                 if (!mUseLastSCF || mInvalidateLastSCF)
                     mRHFWfn = HartreeFock::RHF(
-                        *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
+                        *mMolecule,
+                        nullptr,
+                        nullptr,
+                        1E-5,
+                        100,
+                        &mCalculationThread,
+                        &mConsoleOutput,
                         mCalcBasisSet);
 
                 switch (mCalcCorrelationMethod) {
                     case CorrelationMethod::MP2:
-                        mMP2Energy = HartreeFock::MP2ClosedShell(*mRHFWfn, &mConsoleOutput);
+                        mMP2Energy = HartreeFock::MP2ClosedShell(*mRHFWfn, &mCalculationThread, &mConsoleOutput);
                         break;
                     case CorrelationMethod::CCSD: {
-                        uRef<CCSDWavefunction> ccResult = SCESS::CoupledCluster::CCSD_DIIS(*mRHFWfn, &mConsoleOutput);
+                        uRef<CCSDWavefunction> ccResult = CoupledCluster::CCSD_DIIS(
+                            *mRHFWfn, &mCalculationThread, &mConsoleOutput);
                         if (ccResult != nullptr) {
                             mCCSDWfn = std::move(ccResult);
                             mMP2Energy = mCCSDWfn->mp2CorrelationEnergy;
@@ -307,7 +314,8 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::CCSD_T: {
-                        uRef<CCSD_TWavefunction> ccResult = SCESS::CoupledCluster::CCSD_T(*mRHFWfn, &mConsoleOutput);
+                        uRef<CCSD_TWavefunction> ccResult = SCESS::CoupledCluster::CCSD_T(
+                            *mRHFWfn, &mCalculationThread, &mConsoleOutput);
                         if (ccResult != nullptr) {
                             mCCSD_TWfn = std::move(ccResult);
                             mMP2Energy = mCCSD_TWfn->mp2CorrelationEnergy;
@@ -317,7 +325,7 @@ namespace SCESS {
 
                     case CorrelationMethod::FCI: {
                         uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
-                            *mRHFWfn, mMolecule->CalculateNuclearRepulsion(), &mConsoleOutput);
+                            *mRHFWfn, mMolecule->CalculateNuclearRepulsion(), &mCalculationThread, &mConsoleOutput);
                         if (ciResult != nullptr) {
                             mFCIWfn = std::move(ciResult);
                         }
@@ -325,13 +333,18 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::FCIQMC: {
-                        mQMCEnergy = QuantumMonteCarlo::SimpleFCIQMC(*mRHFWfn, mMolecule->CalculateNuclearRepulsion(),
-                                                                     &mConsoleOutput, &mQMCGraphData);
+                        mQMCEnergy = QuantumMonteCarlo::FCIQMC(*mRHFWfn,
+                                                               mMolecule->CalculateNuclearRepulsion(),
+                                                               &mCalculationThread,
+                                                               &mConsoleOutput,
+                                                               &mQMCGraphData);
                         break;
                     }
 
                     case CorrelationMethod::CCQMC: {
-                        mQMCEnergy = QuantumMonteCarlo::CCQMC(*mRHFWfn, mMolecule->CalculateNuclearRepulsion(),
+                        mQMCEnergy = QuantumMonteCarlo::CCQMC(*mRHFWfn,
+                                                              mMolecule->CalculateNuclearRepulsion(),
+                                                              &mCalculationThread,
                                                               &mQMCGraphData);
                         break;
                     }
@@ -347,77 +360,104 @@ namespace SCESS {
                         if (mUseLastSCF && !mInvalidateLastSCF)
                             mRHFWfn =
                                     HartreeFock::RHF(
-                                        *mMolecule, mLastMolecule.get(), mRHFWfn.get(), 1E-5, 100, &mConsoleOutput,
+                                        *mMolecule,
+                                        mLastMolecule.get(),
+                                        mRHFWfn.get(),
+                                        1E-5,
+                                        100,
+                                        &mCalculationThread,
+                                        &mConsoleOutput,
                                         mCalcBasisSet);
                         else
-                            mRHFWfn =
-                                    HartreeFock::RHF(
-                                        *mMolecule, nullptr, nullptr, 1E-5, 100, &mConsoleOutput,
-                                        mCalcBasisSet);
+                            mRHFWfn = HartreeFock::RHF(
+                                *mMolecule,
+                                nullptr,
+                                nullptr,
+                                1E-5,
+                                100,
+                                &mCalculationThread,
+                                &mConsoleOutput,
+                                mCalcBasisSet);
                         break;
                     case SCFMethod::UHF:
-                        mUHFWfn =
-                                HartreeFock::UHF(*mMolecule, 1E-5, 100, &mConsoleOutput,
-                                                 mCalcBasisSet);
+                        mUHFWfn = HartreeFock::UHF(*mMolecule,
+                                                   1E-5,
+                                                   100,
+                                                   &mCalculationThread,
+                                                   &mConsoleOutput,
+                                                   mCalcBasisSet);
                         break;
                     case SCFMethod::KS_DFT:
-                        mKSWfn = DensityFunctional::KohnShamDFT(*mMolecule, MolecularGrid::MEDIUM_RES,
-                                                                &mConsoleOutput, mCalcBasisSet);
+                        mKSWfn = DensityFunctional::KohnShamDFT(*mMolecule,
+                                                                DFTGridResToRes(mDFTGridRes),
+                                                                &mCalculationThread,
+                                                                &mConsoleOutput,
+                                                                mCalcBasisSet);
                         break;
                 }
             }
 
+
+            if (!mCalculationThread.ShouldStop()) {
+                mLastMolecule = std::make_unique<Molecule>(*mMolecule);
+            } else {
+                mConsoleOutput << "Calculation cancelled\n";
+            }
+
             std::cout << mConsoleOutput.str();
-            mLastMolecule = std::make_unique<Molecule>(*mMolecule);
             mInvalidateLastSCF = false;
             mCalculationThread.MarkAsFinished();
         });
     }
 
-    void CalculationLayer::DrawProgressScreen() {
-        float dpiFactor = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize({600.0f * dpiFactor, 300.0f * dpiFactor}, ImGuiCond_Once);
-        if (ImGui::BeginPopupModal(PROG_SCREEN_NAME)) {
-            ImSpinner::SpinnerAtom("##atomSpinner", 20.0f * dpiFactor, 2.5f);
-            ImGui::SameLine();
-            ImGui::Text("Running %s single-point energy. Please wait...", [this]() {
-                if (mCorrelationMethod != CorrelationMethod::None)
-                    switch (mCorrelationMethod) {
-                        case CorrelationMethod::MP2:
-                            return "MP2";
-                        case CorrelationMethod::CCSD:
-                            return "CCSD";
-                        case CorrelationMethod::CCSD_T:
-                            return "CCSD(T)";
-                        case CorrelationMethod::FCI:
-                            return "FCI";
-                        default:
-                            return "";
-                    };
-
-                switch (mSCFMethod) {
-                    case SCFMethod::RHF:
-                        return "RHF";
-                    case SCFMethod::UHF:
-                        return "UHF";
-                    case SCFMethod::KS_DFT:
-                        return "DFT";
-                    default:
-                        return "";
-                };
-            }());
-
-            const std::string &consoleStr = mConsoleOutput.str();
-            ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
-                                      {-FLT_MIN, -FLT_MIN}, ImGuiInputTextFlags_ReadOnly);
-
-            if (mCalculationThread.HasFinished())
-                ImGui::CloseCurrentPopup();
-
-            ImGui::EndPopup();
-        }
+    void CalculationLayer::StopCalculation() {
+        mCalculationThread.Stop();
     }
+
+    // void CalculationLayer::DrawProgressScreen() {
+    //     float dpiFactor = ImGui::GetWindowDpiScale();
+    //     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+    //     ImGui::SetNextWindowSize({600.0f * dpiFactor, 300.0f * dpiFactor}, ImGuiCond_Once);
+    //     if (ImGui::BeginPopupModal(PROG_SCREEN_NAME)) {
+    //         ImSpinner::SpinnerAtom("##atomSpinner", 20.0f * dpiFactor, 2.5f);
+    //         ImGui::SameLine();
+    //         ImGui::Text("Running %s single-point energy. Please wait...", [this]() {
+    //             if (mCorrelationMethod != CorrelationMethod::None)
+    //                 switch (mCorrelationMethod) {
+    //                     case CorrelationMethod::MP2:
+    //                         return "MP2";
+    //                     case CorrelationMethod::CCSD:
+    //                         return "CCSD";
+    //                     case CorrelationMethod::CCSD_T:
+    //                         return "CCSD(T)";
+    //                     case CorrelationMethod::FCI:
+    //                         return "FCI";
+    //                     default:
+    //                         return "";
+    //                 };
+    //
+    //             switch (mSCFMethod) {
+    //                 case SCFMethod::RHF:
+    //                     return "RHF";
+    //                 case SCFMethod::UHF:
+    //                     return "UHF";
+    //                 case SCFMethod::KS_DFT:
+    //                     return "DFT";
+    //                 default:
+    //                     return "";
+    //             };
+    //         }());
+    //
+    //         const std::string &consoleStr = mConsoleOutput.str();
+    //         ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
+    //                                   {-FLT_MIN, -FLT_MIN}, ImGuiInputTextFlags_ReadOnly);
+    //
+    //         if (mCalculationThread.HasFinished())
+    //             ImGui::CloseCurrentPopup();
+    //
+    //         ImGui::EndPopup();
+    //     }
+    // }
 
     void CalculationLayer::OrderOrbitals() {
         auto sortCoeffs = [this](Eigen::VectorXd &Energies, Eigen::MatrixXd &Coeffs,
@@ -451,6 +491,9 @@ namespace SCESS {
             Coeffs = sortedCoeffs;
         };
 
+        if (!HaveSCFResult())
+            return;
+
         mMOLabels.clear();
 
         switch (mCalcSCFMethod) {
@@ -472,6 +515,8 @@ namespace SCESS {
     void CalculationLayer::DrawQuantumCalcPanel() {
         if (ImGui::Begin("Quantum Calculation")) {
             if (mMolecule != nullptr) {
+                ImGui::BeginDisabled(mCalculationThread.IsRunning());
+
                 ImGui::SeparatorText("SCF Methods");
 
                 ImGui::Indent(100.0);
@@ -572,12 +617,30 @@ namespace SCESS {
                     ImGui::TextDisabled("SCF will be re-run");
                 }
 
+                ImGui::EndDisabled();
 
                 ImGui::NewLine();
-                ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.4f, 0.0f, 1.0f});
-                if (ImGui::Button("Execute Calculation", ImVec2{-FLT_MIN, 0.0f})) {
-                    ExecuteCalculation();
+
+                if (!mCalculationThread.IsRunning()) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, {0.0f, 0.4f, 0.0f, 1.0f});
+                    if (ImGui::Button("Execute Calculation", ImVec2{-FLT_MIN, 0.0f})) {
+                        ExecuteCalculation();
+                    }
+                } else {
+                    ImGui::PushStyleColor(ImGuiCol_Button, {0.8f, 0.1f, 0.0f, 1.0f});
+
+                    ImGui::Text("Running %s single point energy...",
+                                mCalcCorrelationMethod == CorrelationMethod::None
+                                    ? SCFMethosToStr(mCalcSCFMethod)
+                                    : CorrelationMethodToStr(mCalcCorrelationMethod));
+                    ImGui::SameLine();
+                    ImSpinner::SpinnerAtom("##atomSpinner", 12.0f * ImGui::GetWindowDpiScale(), 1.5f);
+
+                    if (ImGui::Button("Stop Calculation", ImVec2{-FLT_MIN, 0.0f})) {
+                        StopCalculation();
+                    }
                 }
+
                 ImGui::PopStyleColor();
             }
         }
@@ -587,7 +650,8 @@ namespace SCESS {
     void CalculationLayer::DrawResultsPanel() {
         if (ImGui::Begin("Results")) {
             if (mCalculationThread.HasFinished()) {
-                if (mCalcCorrelationMethod != CorrelationMethod::None && ImGui::CollapsingHeader(
+                if (mCalcCorrelationMethod != CorrelationMethod::None && HaveCorrelationResult() &&
+                    ImGui::CollapsingHeader(
                         "Electron Correlation Result", ImGuiTreeNodeFlags_DefaultOpen)) {
                     auto DrawMP2 = [this]() {
                         if (!mMP2Energy.has_value())return;
@@ -664,7 +728,7 @@ namespace SCESS {
                     }
                 }
 
-                if (ImGui::CollapsingHeader("SCF Result", ImGuiTreeNodeFlags_DefaultOpen)) {
+                if (HaveSCFResult() && ImGui::CollapsingHeader("SCF Result", ImGuiTreeNodeFlags_DefaultOpen)) {
                     if (mCalcSCFMethod != SCFMethod::None) {
                         if (!mOrbitalsOrdered) {
                             OrderOrbitals();
@@ -692,7 +756,8 @@ namespace SCESS {
                                                                     ? mRHFWfn->Energies
                                                                     : mKSWfn->Energies;
 
-                                    ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i", mSelectedMO + 1);
+                                    ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i",
+                                                       mSelectedMO + 1);
                                     if (mSelectedMO + 1 < Occ.rows())
                                         if (Occ(mSelectedMO + 1) == 0 && Occ(
                                                 mSelectedMO) > 0)
@@ -709,14 +774,16 @@ namespace SCESS {
                                     const auto &occupation = mSelectedSpin == 1
                                                                  ? mUHFWfn->OccupationAlpha
                                                                  : mUHFWfn->OccupationBeta;
-                                    ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i", mSelectedMO + 1);
+                                    ImGui::TextColored({1.0f, 1.0f, 0.0f, 1.0f}, "Previewing MO %i",
+                                                       mSelectedMO + 1);
                                     if (mSelectedMO + 1 < occupation.rows())
                                         if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
                                             ImGui::TextColored({1.0f, 0.0f, 0.0f, 1.0f}, "HOMO");
                                     if (mSelectedMO - 1 > 0)
                                         if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
                                             ImGui::TextColored({0.0f, 0.5f, 0.5f, 1.0f}, "LUMO");
-                                    ImGui::BulletText("Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
+                                    ImGui::BulletText(
+                                        "Spin: %s", mSelectedSpin == 1 ? "Alpha (up)" : "Beta (down)");
                                     ImGui::BulletText("Energy: %.3f hartrees", energies(mSelectedMO));
                                     ImGui::BulletText("Occupation: %i e-", occupation(mSelectedMO));
                                 }
@@ -777,8 +844,7 @@ namespace SCESS {
                                 // if (mNegTrisurf.triangles.size() != 0)
                                 UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
 
-                                mIsoWasNull = mPosTrisurf.GetTriangles().size() == 0 && mNegTrisurf.GetTriangles().
-                                              size() == 0;
+                                mIsoWasNull = mPosTrisurf.GetTriangles().empty() && mNegTrisurf.GetTriangles().empty();
 
                                 mPosTrisurf.Reset();
                                 mNegTrisurf.Reset();
@@ -786,14 +852,19 @@ namespace SCESS {
                             }
 
                             if (mPosTrisurf.IsRunning() || mNegTrisurf.IsRunning()) {
-                                ImSpinner::SpinnerTwinBall("spinner1", 16.0, 16.0f, 3.0, 6.0, {1.0f, 0.0f, 0.0f, 1.0f},
+                                ImSpinner::SpinnerTwinBall("##spinner1", 10.0f * ImGui::GetWindowDpiScale(),
+                                                           10.0f * ImGui::GetWindowDpiScale(), 3.0, 6.0,
+                                                           {1.0f, 0.0f, 0.0f, 1.0f},
                                                            ImSpinner::white, 3.0f, 1);
                                 ImGui::SameLine();
                                 ImGui::Text("Generating isosurface...");
+                                ImGui::SameLine();
+                                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.6f, 0.0f, 0.0f, 1.0f});
                                 if (ImGui::Button("Cancel", {100, 0})) {
                                     mPosTrisurf.Reset();
                                     mNegTrisurf.Reset();
                                 }
+                                ImGui::PopStyleColor();
                             } else {
                                 if (mIsosurfaceUploaded) {
                                     if (!mIsoWasNull)
@@ -852,6 +923,8 @@ namespace SCESS {
         };
 
         if (ImGui::Begin("Select Molecule")) {
+            ImGui::BeginDisabled(mCalculationThread.IsRunning());
+
             ImGui::Indent(100.0f);
             int lastSelectedMol = mSelectedMolecule;
             for (int i = 0; i < IM_ARRAYSIZE(moleculeNames); i++)
@@ -868,6 +941,8 @@ namespace SCESS {
             ImGui::NewLine();
             ImGui::SeparatorText("Selected Molecule");
             ImGui::Indent(100.0f);
+
+            ImGui::EndDisabled();
 
 
             ImGui::Text("Draw Molecule: ");

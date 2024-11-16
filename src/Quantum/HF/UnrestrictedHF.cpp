@@ -1,21 +1,24 @@
 #include<pch.h>
 
-#include  "Quantum/HF/HartreeFock.h"
-#include  "Quantum/Integrals/Integrals.h"
-#include  "Quantum/Molecule.h"
-
 #include <chrono>
-#include <algorithm>
 #include <Eigen/Core>
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "HartreeFock.h"
+#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Molecule.h"
 #include "Utilities/Utilities.h"
 
 namespace SCESS {
     using namespace Eigen;
 
-    uRef<UHFWavefunction> HartreeFock::UHF(const Molecule &molecule, const double convergeLimit,
-                                              const size_t scfMaxIterations,
-                                              std::stringstream *console, const std::string_view basisSet) {
+    uRef<UHFWavefunction> HartreeFock::UHF(const Molecule &molecule,
+                                           const double convergeLimit,
+                                           const size_t scfMaxIterations,
+                                           const GEng::Thread *thread,
+                                           std::stringstream *console,
+                                           const std::string_view basisSet) {
         using namespace std::chrono;
 
 
@@ -29,8 +32,12 @@ namespace SCESS {
         Eigen::Index betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
 
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule);
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule, thread);
         auto integralEndTP = high_resolution_clock::now();
+
+        if(thread)
+            if(thread->ShouldStop())
+                return nullptr;
 
         const MatrixXd &S = integrals.S;
         const MatrixXd &T = integrals.T;
@@ -67,6 +74,11 @@ namespace SCESS {
         VectorXd EnergiesAlpha, EnergiesBeta;
 
         while (delta > convergeLimit && scfCount < scfMaxIterations) {
+
+            if(thread)
+                if(thread->ShouldStop())
+                    return nullptr;
+
             const auto [GAlpha, GBeta] = ConstructGUHF(DensityAlpha, DensityBeta, tei);
             FockAlpha = Hcore + GAlpha;
             FockAlpha = (FockAlpha + FockAlpha.transpose()) * 0.5;

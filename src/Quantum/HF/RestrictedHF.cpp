@@ -1,16 +1,16 @@
 #include<pch.h>
 
-#include "Quantum/HF/HartreeFock.h"
-#include "Quantum/Basis/Gaussian.h"
-#include "Quantum/Integrals/Integrals.h"
-#include "Quantum/Molecule.h"
-
 #include <chrono>
 #include <algorithm>
 #include <Eigen/Core>
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
+#include "HartreeFock.h"
+#include "Quantum/Basis/Gaussian.h"
+#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Molecule.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
-#include "Utilities/Utilities.h"
 
 
 //
@@ -23,6 +23,7 @@ namespace SCESS {
                                            const RHFWavefunction *lastResult,
                                            const double convergeLimit,
                                            const size_t scfMaxIterations,
+                                           const GEng::Thread *thread,
                                            std::stringstream *console,
                                            const std::string_view basisSet) {
         using namespace std::chrono;
@@ -33,8 +34,12 @@ namespace SCESS {
                     GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
 
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule);
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule, thread);
         auto integralEndTP = high_resolution_clock::now();
+
+        if (thread)
+            if (thread->ShouldStop())
+                return nullptr;
 
         const MatrixXd &S = integrals.S;
         const MatrixXd &T = integrals.T;
@@ -84,6 +89,10 @@ namespace SCESS {
 
         Eigen::Index scfIter = 1;
         for (; scfIter < scfMaxIterations + 1; scfIter++) {
+            if (thread)
+                if (thread->ShouldStop())
+                    return nullptr;
+
             //Generate the Fock matrix
             Fock = Hcore + ConstructGRHF(Density, eri);
             Fock = (Fock + Fock.transpose()) * 0.5;
@@ -247,13 +256,15 @@ namespace SCESS {
         // return 0.5 * vDensity.dot(vHPlusF);
     }
 
-    double HartreeFock::MP2ClosedShell(const RHFWavefunction &result, std::stringstream *console) {
+    double HartreeFock::MP2ClosedShell(const RHFWavefunction &result, const GEng::Thread *thread,
+                                       std::stringstream *console) {
         //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
         const TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(result.Integrals.eri, result.C);
-        return MP2ClosedShell(result, moTEI, console);
+        return MP2ClosedShell(result, moTEI, thread, console);
     }
 
     double HartreeFock::MP2ClosedShell(const RHFWavefunction &result, const TEITensor &moTEI,
+                                       const GEng::Thread *thread,
                                        std::stringstream *console) {
         const VectorXi &occ = result.Occupation;
         const VectorXd &energies = result.Energies;
@@ -270,7 +281,11 @@ namespace SCESS {
 
         //i and j run over the occupied orbitals
         for (Eigen::Index i = 0; i < nOcc; i++)
-            for (Eigen::Index j = 0; j < nOcc; j++)
+            for (Eigen::Index j = 0; j < nOcc; j++) {
+                if (thread)
+                    if (thread->ShouldStop())
+                        return 0.0;
+
                 //a and b run over the virtual orbitals
                 for (Eigen::Index a = nOcc; a < occ.size(); a++)
                     for (Eigen::Index b = nOcc; b < occ.size(); b++) {
@@ -283,6 +298,7 @@ namespace SCESS {
                         //configuration
                         MP2_E += intIJAB * (2.0 * intIJAB - intIJBA) / epsilonIJAB;
                     }
+            }
 
         MP2_E = -MP2_E;
 

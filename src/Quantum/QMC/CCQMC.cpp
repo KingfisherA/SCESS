@@ -1,6 +1,8 @@
 #include  "Quantum/QMC/QMC.h"
 #include  "Quantum/CI/ConfigurationInteraction.h"
 
+#include "GraphicsEngine/Utilities/Threading.h"
+
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_int.hpp>
@@ -16,6 +18,7 @@ namespace SCESS {
     using namespace boost::random;
 
     double QuantumMonteCarlo::CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
+                                    const GEng::Thread *thread,
                                     boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts
@@ -291,6 +294,10 @@ namespace SCESS {
             EProjCycle = 0.0;
 
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
+                if(thread)
+                    if(thread->ShouldStop())
+                        return 0.0;
+
                 for (auto &val: excitorSpawn)
                     val = 0;
                 UpdateCumulativePop();
@@ -300,7 +307,6 @@ namespace SCESS {
                 Na = nExcips;
 
                 for (size_t cluster = 0; cluster < Na; cluster++) {
-                CLUSTER_LOOP_BEGIN:
                     // -- Cluster selection --
                     // Randomly choose a number of excitors to sample between 0 and the truncation level (l) + 2
                     // These excitators will be combined with each other and used to generate a given
@@ -374,7 +380,7 @@ namespace SCESS {
                     //goto CLUSTER_LOOP_BEGIN;
 
                     uint32_t DiIdx = FindExcitorIdx(Di ^ D0);
-                    if (DiIdx == excitors.size()) goto CLUSTER_LOOP_BEGIN;
+                    if (DiIdx == excitors.size()) continue;
                     uint32_t DjIdx = 0;
 
                     //Now randomly produce a determinant that is 1 or 2 excitations away from Dj
