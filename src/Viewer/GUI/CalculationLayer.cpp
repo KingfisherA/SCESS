@@ -198,7 +198,7 @@ namespace SCESS {
     constexpr const char *PROG_SCREEN_NAME = "Calculation Progress";
 
     void CalculationLayer::SelectMolecule() {
-        static Molecule (*moleculeFuncs[])() =
+        Molecule (*moleculeFuncs[])() =
         {
             &GenerateWaterMolecule,
             &GenerateAmmoniaMolecule,
