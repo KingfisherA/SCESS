@@ -37,8 +37,9 @@ Release binaries are available for testing from the releases GitHub section.
 5. Run `.\Build.sh`
 6. Make a cup of tea while everything compiles ☕
 7. Be happy when you have all your binaries 😊
-8. The binaries are located in `.\bin\{OS}\{Release/Debug}-x64\`
-9. You should be able to run `.\bin\linux\Release-x64\ViewerSCESS` straight away and the assets directory should be automatically found
+8. The binaries are located in `..\bin\{OS}\{Release/Debug}-x64\`
+9. Move into directory `cd ..\bin\linux\Release-x64`
+10. You should be able to run `.\ViewerSCESS` straight away and the assets directory should be automatically found
 
 # Dependencies
 
