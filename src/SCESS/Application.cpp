@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     //
 
     //Tests::TestFCIQMC();
-    Tests::TestCCQMC();
+    //Tests::TestCCQMC();
 
     Integrals::LibInt::CloseLibInt();
 

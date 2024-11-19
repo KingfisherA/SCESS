@@ -1,9 +1,7 @@
 ﻿add_library("ImPlot" STATIC
     "../ImPlot/.github/example_implot.cpp"
-          "../ImPlot/cmake-build-release/CMakeFiles/3.28.3/CompilerIdCXX/CMakeCXXCompilerId.cpp"
-  "../ImPlot/imgui_demo.cpp"
+   "../ImPlot/cmake-build-release/CMakeFiles/3.28.3/CompilerIdCXX/CMakeCXXCompilerId.cpp"
   "../ImPlot/implot.cpp"
-  "../ImPlot/implot_demo.cpp"
   "../ImPlot/implot_items.cpp"
 )
 if(CMAKE_BUILD_TYPE STREQUAL Debug)

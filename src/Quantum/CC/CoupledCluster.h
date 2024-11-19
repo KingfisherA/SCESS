@@ -83,24 +83,6 @@ namespace SCESS {
                                              Eigen::Tensor<double, 2> &Dia, Eigen::Tensor<double, 4> &Dijab);
         static T2Tensor CreateInitialT2Tensor(const Eigen::Index nOcc, const Eigen::Index nVirt, const TEITensor &moTEI,
                                               const Eigen::Tensor<double, 4> &Dijab);
-        static TauTensor MakeTildeTau(const T1Tensor &t1, const T2Tensor &t2);
-        static TauTensor MakeTau(const T1Tensor &t1, const T2Tensor &t2);
-        static FTensor MakeFae(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
-                               const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                               const TauTensor &tildeTau);
-        static FTensor MakeFmi(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
-                               const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                               const TauTensor &tildeTau);
-        static FTensor MakeFme(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
-                               const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2);
-        static WTensor MakeWmnij(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                 const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                                 const TauTensor &tau);
-        static WTensor MakeWabef(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                 const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                                 const TauTensor &tau);
-        static WTensor MakeWmbej(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                 const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2);
         static void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                                 const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
                                 const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2, const GEng::Thread* thread = nullptr);

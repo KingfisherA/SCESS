@@ -80,9 +80,8 @@ namespace SCESS {
         size_t ccIteration = 0;
 
         for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
-
-            if(thread)
-                if(thread->ShouldStop())
+            if (thread)
+                if (thread->ShouldStop())
                     return nullptr;
 
             //Solve the CC equations
@@ -169,251 +168,243 @@ namespace SCESS {
     }
 
     //
-    CoupledCluster::TauTensor CoupledCluster::MakeTildeTau(const T1Tensor &t1, const T2Tensor &t2) {
-        Tensor<double, 4> tildeTau = t2;
 
-        //ia,jb-> iajb -> ijab
-        Tensor<double, 4> tmp = 0.5 * t1.contract(t1, array<Eigen::IndexPair<int>, 0>{}).shuffle(
-                                    array<int, 4>{0, 2, 1, 3});
-        tildeTau += tmp;
-        tildeTau -= tmp.shuffle(array<int, 4>{0, 1, 3, 2});
-
-        return tildeTau;
-    }
-
-    //
-    CoupledCluster::TauTensor CoupledCluster::MakeTau(const T1Tensor &t1, const T2Tensor &t2) {
-        TauTensor tau = t2;
-
-        //ia,jb-> iajb -> ijab
-        TauTensor tmp = t1.contract(t1, array<Eigen::IndexPair<int>, 0>{}).shuffle(
-            array<int, 4>{0, 2, 1, 3});
-        tau += tmp;
-        tau -= tmp.shuffle(array<int, 4>{0, 1, 3, 2});
-
-
-        return tau;
-    }
-
-    CoupledCluster::FTensor CoupledCluster::MakeFae(const TEITensor &moTEI, const FockTensor &F,
-                                                    const Eigen::Index nOcc, const Eigen::Index nVirt,
-                                                    const T1Tensor &t1, const T2Tensor &t2,
-                                                    const TauTensor &tildeTau) {
-        FTensor Fae(nVirt, nVirt);
-        Fae.setZero();
-
-        //me,ma-> ea -> ae
-        Fae -= 0.5 * F.slice(array<Eigen::Index, 2>{0, nOcc},
-                             array<Eigen::Index, 2>{nOcc, nVirt})
-                .contract(
-                    t1, array<Eigen::IndexPair<int>, 1>{
-                        Eigen::IndexPair<int>{0, 0}
-                    }).shuffle(array<int, 2>{1, 0});
-
-        //MO[o,v,v,v]
-        //mf,mafe -> ae
-        Fae += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, nOcc},
-                                       array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nVirt}),
-                           array<Eigen::IndexPair<int>, 2>{
-                               Eigen::IndexPair<int>{0, 0},
-                               Eigen::IndexPair<int>{1, 2}
-                           });
-
-        //MO[o, o, v, v]
-        //mnaf,mnef->ae
-        Fae -= 0.5 * tildeTau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                   array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                                       array<Eigen::IndexPair<int>, 3>{
-                                           Eigen::IndexPair<int>{0, 0},
-                                           Eigen::IndexPair<int>{1, 1},
-                                           Eigen::IndexPair<int>{3, 3}
-                                       });
-
-        return Fae;
-    }
-
-    //
-    CoupledCluster::FTensor CoupledCluster::MakeFmi(const TEITensor &moTEI, const FockTensor &F,
-                                                    const Eigen::Index nOcc, const Eigen::Index nVirt,
-                                                    const T1Tensor &t1, const T2Tensor &t2,
-                                                    const TauTensor &tildeTau) {
-        FTensor Fmi(nOcc, nOcc);
-        Fmi.setZero();
-
-        //F[o, v]
-        //ie,me-> im -> mi
-        Fmi += 0.5 * F.slice(array<Eigen::Index, 2>{0, nOcc},
-                             array<Eigen::Index, 2>{nOcc, nVirt})
-                .contract(
-                    t1, array<Eigen::IndexPair<int>, 1>{
-                        Eigen::IndexPair<int>{1, 1}
-                    }).shuffle(array<int, 2>{1, 0});
-
-        //MO[o, o, o, v]
-        //ne,mnie->mi
-        Fmi += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, nOcc},
-                                       array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nVirt}),
-                           array<Eigen::IndexPair<int>, 2>{
-                               Eigen::IndexPair<int>{0, 1},
-                               Eigen::IndexPair<int>{1, 3}
-                           });
-
-        //MO[o, o, v, v]
-        //inef,mnef-> im -> mi
-        Fmi += 0.5 * tildeTau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                   array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                                       array<Eigen::IndexPair<int>, 3>{
-                                           Eigen::IndexPair<int>{1, 1},
-                                           Eigen::IndexPair<int>{2, 2},
-                                           Eigen::IndexPair<int>{3, 3}
-                                       }).shuffle(array<int, 2>{1, 0});
-
-        return Fmi;
-    }
-
-    CoupledCluster::FTensor CoupledCluster::MakeFme(const TEITensor &moTEI, const FockTensor &F,
-                                                    const Eigen::Index nOcc, const Eigen::Index nVirt,
-                                                    const T1Tensor &t1, const T2Tensor &t2) {
-        FTensor Fme = F.slice(array<Eigen::Index, 2>{0, nOcc},
-                              array<Eigen::Index, 2>{nOcc, nVirt});
-        //nf,mnef->me
-        Fme += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                       array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                           array<Eigen::IndexPair<int>, 2>{
-                               Eigen::IndexPair<int>{0, 1},
-                               Eigen::IndexPair<int>{1, 3}
-                           });
-
-        return Fme;
-    }
-
-    CoupledCluster::WTensor CoupledCluster::MakeWmnij(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                                      const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                                                      const TauTensor &tau) {
-        WTensor Wmnij = moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, 0},
-                                    array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc});
-
-        //je,mnie-> jmni -> mnij
-        WTensor slicedMO = moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, nOcc},
-                                       array<Eigen::Index, 4>{
-                                           nOcc, nOcc, nOcc, nVirt
-                                       });
-        WTensor Pij = t1.contract(slicedMO,
-                                  array<Eigen::IndexPair<int>, 1>{
-                                      Eigen::IndexPair<int>{1, 3}
-                                  }).shuffle(array<int, 4>{1, 2, 3, 0});
-        Wmnij += Pij;
-        Wmnij -= Pij.shuffle(array<int, 4>{0, 1, 3, 2});
-
-        //ijef,mnef-> ijmn -> mnij
-        Wmnij += 0.25 * tau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                 array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                                     array<Eigen::IndexPair<int>, 2>{
-                                         Eigen::IndexPair<int>{2, 2},
-                                         Eigen::IndexPair<int>{3, 3}
-                                     }).shuffle(array<int, 4>{2, 3, 0, 1});
-
-
-        return Wmnij;
-    }
-
-    CoupledCluster::WTensor CoupledCluster::MakeWabef(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                                      const Eigen::Index nVirt, const T1Tensor &t1, const T2Tensor &t2,
-                                                      const TauTensor &tau) {
-        WTensor Wabef = moTEI.slice(array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc},
-                                    array<Eigen::Index, 4>{nVirt, nVirt, nVirt, nVirt});
-
-        //mb,amef-> baef -> abef
-        WTensor Pab = t1.contract(moTEI.slice(array<Eigen::Index, 4>{nOcc, 0, nOcc, nOcc},
-                                              array<Eigen::Index, 4>{
-                                                  nVirt, nOcc, nVirt, nVirt
-                                              }),
-                                  array<Eigen::IndexPair<int>, 1>{
-                                      Eigen::IndexPair<int>{0, 1}
-                                  })
-                .shuffle(array<int, 4>{1, 0, 2, 3});
-
-        Wabef -= Pab;
-        Wabef += Pab.shuffle(array<int, 4>{1, 0, 2, 3});
-
-        //MO[o, o, v, v]
-        //mnab,mnef->abef
-        Wabef += 0.25 * tau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                 array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                                     array<Eigen::IndexPair<int>, 2>{
-                                         Eigen::IndexPair<int>{0, 0},
-                                         Eigen::IndexPair<int>{1, 1}
-                                     });
-
-
-        return Wabef;
-    }
-
-    CoupledCluster::WTensor CoupledCluster::MakeWmbej(const TEITensor &moTEI, const Eigen::Index nOcc,
-                                                      const Eigen::Index nVirt, const T1Tensor &t1,
-                                                      const T2Tensor &t2) {
-        WTensor Wmbej = moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, 0},
-                                    array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nOcc});
-
-        //jf,mbef-> jmbe -> mbej
-        Wmbej += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, nOcc},
-                                         array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nVirt}),
-                             array<Eigen::IndexPair<int>, 1>{
-                                 Eigen::IndexPair<int>{1, 3}
-                             })
-                .shuffle(array<int, 4>{1, 2, 3, 0});
-
-        //nb,mnej-> bmej -> mbej
-        Wmbej -= t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, 0},
-                                         array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nOcc}),
-                             array<Eigen::IndexPair<int>, 1>{
-                                 Eigen::IndexPair<int>{0, 1}
-                             })
-                .shuffle(array<int, 4>{1, 0, 2, 3});
-
-        //jf,nb-> jfnb -> jnfb
-        WTensor tmp = (0.5 * t2) + t1.contract(t1, array<Eigen::IndexPair<int>, 0>{})
-                      .shuffle(array<int, 4>{0, 2, 1, 3});
-
-        //MO[o, o, v, v]
-        //jnfb,mnef-> jbme -> mbej
-        Wmbej -= 0.25 * tmp.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                 array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
-                                     array<Eigen::IndexPair<int>, 2>{
-                                         Eigen::IndexPair<int>{1, 1},
-                                         Eigen::IndexPair<int>{2, 3}
-                                     })
-                .shuffle(array<int, 4>{2, 1, 3, 0});
-
-
-        return Wmbej;
-    }
 
     void CoupledCluster::IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                                      const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
                                      const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2,
-                                     const GEng::Thread* thread) {
+                                     const GEng::Thread *thread) {
 
-        if(thread)
-            if(thread->ShouldStop())
+        //Intermediates
+        auto MakeTildeTau = [&t1, &t2]() -> TauTensor {
+            Tensor<double, 4> tildeTau = t2;
+
+            //ia,jb-> iajb -> ijab
+            Tensor<double, 4> tmp = 0.5 * t1.contract(t1, array<Eigen::IndexPair<int>, 0>{}).shuffle(
+                                        array<int, 4>{0, 2, 1, 3});
+            tildeTau += tmp;
+            tildeTau -= tmp.shuffle(array<int, 4>{0, 1, 3, 2});
+
+            return tildeTau;
+        };
+        //
+        auto MakeTau = [&t1, &t2]() -> TauTensor {
+            TauTensor tau = t2;
+
+            //ia,jb-> iajb -> ijab
+            TauTensor tmp = t1.contract(t1, array<Eigen::IndexPair<int>, 0>{}).shuffle(
+                array<int, 4>{0, 2, 1, 3});
+            tau += tmp;
+            tau -= tmp.shuffle(array<int, 4>{0, 1, 3, 2});
+
+
+            return tau;
+        };
+        //
+        auto MakeFae = [&moTEI, &F, &nOcc, &nVirt, &t1](
+            const TauTensor &tildeTau)-> FTensor {
+            FTensor Fae(nVirt, nVirt);
+            Fae.setZero();
+
+            //me,ma-> ea -> ae
+            Fae -= 0.5 * F.slice(array<Eigen::Index, 2>{0, nOcc},
+                                 array<Eigen::Index, 2>{nOcc, nVirt})
+                    .contract(
+                        t1, array<Eigen::IndexPair<int>, 1>{
+                            Eigen::IndexPair<int>{0, 0}
+                        }).shuffle(array<int, 2>{1, 0});
+
+            //MO[o,v,v,v]
+            //mf,mafe -> ae
+            Fae += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, nOcc},
+                                           array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nVirt}),
+                               array<Eigen::IndexPair<int>, 2>{
+                                   Eigen::IndexPair<int>{0, 0},
+                                   Eigen::IndexPair<int>{1, 2}
+                               });
+
+            //MO[o, o, v, v]
+            //mnaf,mnef->ae
+            Fae -= 0.5 * tildeTau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                       array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                                           array<Eigen::IndexPair<int>, 3>{
+                                               Eigen::IndexPair<int>{0, 0},
+                                               Eigen::IndexPair<int>{1, 1},
+                                               Eigen::IndexPair<int>{3, 3}
+                                           });
+
+            return Fae;
+        };
+        //
+        auto MakeFmi = [&moTEI, &F, &nOcc, &nVirt, &t1](const TauTensor &tildeTau) -> FTensor {
+            FTensor Fmi(nOcc, nOcc);
+            Fmi.setZero();
+
+            //F[o, v]
+            //ie,me-> im -> mi
+            Fmi += 0.5 * F.slice(array<Eigen::Index, 2>{0, nOcc},
+                                 array<Eigen::Index, 2>{nOcc, nVirt})
+                    .contract(
+                        t1, array<Eigen::IndexPair<int>, 1>{
+                            Eigen::IndexPair<int>{1, 1}
+                        }).shuffle(array<int, 2>{1, 0});
+
+            //MO[o, o, o, v]
+            //ne,mnie->mi
+            Fmi += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, nOcc},
+                                           array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nVirt}),
+                               array<Eigen::IndexPair<int>, 2>{
+                                   Eigen::IndexPair<int>{0, 1},
+                                   Eigen::IndexPair<int>{1, 3}
+                               });
+
+            //MO[o, o, v, v]
+            //inef,mnef-> im -> mi
+            Fmi += 0.5 * tildeTau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                       array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                                           array<Eigen::IndexPair<int>, 3>{
+                                               Eigen::IndexPair<int>{1, 1},
+                                               Eigen::IndexPair<int>{2, 2},
+                                               Eigen::IndexPair<int>{3, 3}
+                                           }).shuffle(array<int, 2>{1, 0});
+
+            return Fmi;
+        };
+        //
+        auto MakeFme = [&moTEI, &F, &nOcc, &nVirt, &t1]()-> FTensor {
+            FTensor Fme = F.slice(array<Eigen::Index, 2>{0, nOcc},
+                                  array<Eigen::Index, 2>{nOcc, nVirt});
+            //nf,mnef->me
+            Fme += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                           array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                               array<Eigen::IndexPair<int>, 2>{
+                                   Eigen::IndexPair<int>{0, 1},
+                                   Eigen::IndexPair<int>{1, 3}
+                               });
+
+            return Fme;
+        };
+        //
+        auto MakeWmnij = [&moTEI, &nOcc, &nVirt, &t1](
+            const TauTensor &tau)-> WTensor {
+            WTensor Wmnij = moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, 0},
+                                        array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc});
+
+            //je,mnie-> jmni -> mnij
+            WTensor slicedMO = moTEI.slice(array<Eigen::Index, 4>{0, 0, 0, nOcc},
+                                           array<Eigen::Index, 4>{
+                                               nOcc, nOcc, nOcc, nVirt
+                                           });
+            WTensor Pij = t1.contract(slicedMO,
+                                      array<Eigen::IndexPair<int>, 1>{
+                                          Eigen::IndexPair<int>{1, 3}
+                                      }).shuffle(array<int, 4>{1, 2, 3, 0});
+            Wmnij += Pij;
+            Wmnij -= Pij.shuffle(array<int, 4>{0, 1, 3, 2});
+
+            //ijef,mnef-> ijmn -> mnij
+            Wmnij += 0.25 * tau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                     array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                                         array<Eigen::IndexPair<int>, 2>{
+                                             Eigen::IndexPair<int>{2, 2},
+                                             Eigen::IndexPair<int>{3, 3}
+                                         }).shuffle(array<int, 4>{2, 3, 0, 1});
+
+
+            return Wmnij;
+        };
+        //
+        auto MakeWabef = [&moTEI,&nOcc, &nVirt, &t1](
+            const TauTensor &tau) -> WTensor {
+            WTensor Wabef = moTEI.slice(array<Eigen::Index, 4>{nOcc, nOcc, nOcc, nOcc},
+                                        array<Eigen::Index, 4>{nVirt, nVirt, nVirt, nVirt});
+
+            //mb,amef-> baef -> abef
+            WTensor Pab = t1.contract(moTEI.slice(array<Eigen::Index, 4>{nOcc, 0, nOcc, nOcc},
+                                                  array<Eigen::Index, 4>{
+                                                      nVirt, nOcc, nVirt, nVirt
+                                                  }),
+                                      array<Eigen::IndexPair<int>, 1>{
+                                          Eigen::IndexPair<int>{0, 1}
+                                      })
+                    .shuffle(array<int, 4>{1, 0, 2, 3});
+
+            Wabef -= Pab;
+            Wabef += Pab.shuffle(array<int, 4>{1, 0, 2, 3});
+
+            //MO[o, o, v, v]
+            //mnab,mnef->abef
+            Wabef += 0.25 * tau.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                     array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                                         array<Eigen::IndexPair<int>, 2>{
+                                             Eigen::IndexPair<int>{0, 0},
+                                             Eigen::IndexPair<int>{1, 1}
+                                         });
+
+
+            return Wabef;
+        };
+        //
+        auto MakeWmbej = [&moTEI, &nOcc, &nVirt, &t1, &t2]() -> WTensor {
+            WTensor Wmbej = moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, 0},
+                                        array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nOcc});
+
+            //jf,mbef-> jmbe -> mbej
+            Wmbej += t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, nOcc, nOcc, nOcc},
+                                             array<Eigen::Index, 4>{nOcc, nVirt, nVirt, nVirt}),
+                                 array<Eigen::IndexPair<int>, 1>{
+                                     Eigen::IndexPair<int>{1, 3}
+                                 })
+                    .shuffle(array<int, 4>{1, 2, 3, 0});
+
+            //nb,mnej-> bmej -> mbej
+            Wmbej -= t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, 0},
+                                             array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nOcc}),
+                                 array<Eigen::IndexPair<int>, 1>{
+                                     Eigen::IndexPair<int>{0, 1}
+                                 })
+                    .shuffle(array<int, 4>{1, 0, 2, 3});
+
+            //jf,nb-> jfnb -> jnfb
+            WTensor tmp = (0.5 * t2) + t1.contract(t1, array<Eigen::IndexPair<int>, 0>{})
+                          .shuffle(array<int, 4>{0, 2, 1, 3});
+
+            //MO[o, o, v, v]
+            //jnfb,mnef-> jbme -> mbej
+            Wmbej -= 0.25 * tmp.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                     array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+                                         array<Eigen::IndexPair<int>, 2>{
+                                             Eigen::IndexPair<int>{1, 1},
+                                             Eigen::IndexPair<int>{2, 3}
+                                         })
+                    .shuffle(array<int, 4>{2, 1, 3, 0});
+
+
+            return Wmbej;
+        };
+
+
+
+        if (thread)
+            if (thread->ShouldStop())
                 return;
 
         TauTensor
-                tildeTau = MakeTildeTau(t1, t2),
-                tau = MakeTau(t1, t2);
+                tildeTau = MakeTildeTau(),
+                tau = MakeTau();
 
         FTensor
-                Fae = MakeFae(moTEI, F, nOcc, nVirt, t1, t2, tildeTau),
-                Fmi = MakeFmi(moTEI, F, nOcc, nVirt, t1, t2, tildeTau),
-                Fme = MakeFme(moTEI, F, nOcc, nVirt, t1, t2);
+                Fae = MakeFae(tildeTau),
+                Fmi = MakeFmi(tildeTau),
+                Fme = MakeFme();
 
         WTensor
-                Wmnij = MakeWmnij(moTEI, nOcc, nVirt, t1, t2, tau),
-                Wabef = MakeWabef(moTEI, nOcc, nVirt, t1, t2, tau),
-                Wmbej = MakeWmbej(moTEI, nOcc, nVirt, t1, t2);
+                Wmnij = MakeWmnij(tau),
+                Wabef = MakeWabef(tau),
+                Wmbej = MakeWmbej();
 
-        if(thread)
-            if(thread->ShouldStop())
+        if (thread)
+            if (thread->ShouldStop())
                 return;
 
         //Make the t1 RHS
@@ -468,8 +459,8 @@ namespace SCESS {
                                    })
                 .shuffle(array<int, 2>{1, 0});
 
-        if(thread)
-            if(thread->ShouldStop())
+        if (thread)
+            if (thread->ShouldStop())
                 return;
 
         //Make the t2 RHS
