@@ -35,7 +35,7 @@ namespace SCESS {
     public:
         template<typename T, int rank>
         static void PrintTensor(const Eigen::Tensor<T, rank> &tensor) {
-            std::cout << "Rank " << rank << " Tensor:\n";
+            //std::cout << "Rank " << rank << " Tensor:\n";
             std::array<uint32_t, rank> indicesArray;
 
             PrintTensorRecursive<T, rank>(tensor, 0, &indicesArray);

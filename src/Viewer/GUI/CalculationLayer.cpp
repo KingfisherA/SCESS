@@ -363,7 +363,7 @@ namespace SCESS {
                                         *mMolecule,
                                         mLastMolecule.get(),
                                         mRHFWfn.get(),
-                                        1E-5,
+                                        1E-10,
                                         100,
                                         &mCalculationThread,
                                         &mConsoleOutput,
@@ -373,7 +373,7 @@ namespace SCESS {
                                 *mMolecule,
                                 nullptr,
                                 nullptr,
-                                1E-5,
+                                1E-10,
                                 100,
                                 &mCalculationThread,
                                 &mConsoleOutput,
@@ -381,7 +381,7 @@ namespace SCESS {
                         break;
                     case SCFMethod::UHF:
                         mUHFWfn = HartreeFock::UHF(*mMolecule,
-                                                   1E-5,
+                                                   1E-10,
                                                    100,
                                                    &mCalculationThread,
                                                    &mConsoleOutput,
@@ -738,10 +738,10 @@ namespace SCESS {
                         ImGui::BulletText("Basis Set: %s", mCalcBasisSet.c_str());
 
                         if (mCalcSCFMethod == SCFMethod::KS_DFT)
-                            ImGui::BulletText("Total Kohn-Sham DFT Electronic Energy : %.4f hartrees",
+                            ImGui::BulletText("Total Kohn-Sham DFT Electronic Energy : %.10f hartrees",
                                               mKSWfn->ElectronicE);
                         else
-                            ImGui::BulletText("Total Hartree Fock Energy: %.4f hartrees",
+                            ImGui::BulletText("Total Hartree Fock Energy: %.10f hartrees",
                                               mCalcSCFMethod == SCFMethod::RHF ? mRHFWfn->Energy : mUHFWfn->Energy);
 
 

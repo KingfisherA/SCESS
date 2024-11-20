@@ -5,6 +5,9 @@ namespace SCESS::Integrals {
     TEITensor Transforms::ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C) {
         //Note that the tei tensors are in chemists’ notation
 
+
+        //tei(p,q,r,s)= C(mu,p)*C(nu,q)*tei(mu, nu, kap, lam)*C(kap,r)*C(lam, s)
+
         TEITensor transformed1(tei.dimensions());
         transformed1.setZero();
         TEITensor transformed2(tei.dimensions());
@@ -22,29 +25,29 @@ namespace SCESS::Integrals {
                     for (Eigen::Index kap = 0; kap < dim; ++kap)
                         for (Eigen::Index lam = 0; lam < dim; ++lam)
                             //From <mu nu | kap lam> to <mu nu | kap s>
-                                //Einsum("mnkl,ls->mnks")
-                                    transformed1(mu, nu, kap, s) += C(lam, s) * tei(mu, nu, kap, lam);
+                            //Einsum("mnkl,ls->mnks")
+                            transformed1(mu, nu, kap, s) += C(lam, s) * tei(mu, nu, kap, lam);
 
             for (Eigen::Index r = 0; r < dim; ++r) {
                 for (Eigen::Index mu = 0; mu < dim; ++mu)
                     for (Eigen::Index nu = 0; nu < dim; ++nu)
                         for (Eigen::Index kap = 0; kap < dim; ++kap)
                             //From <mu nu | kap s> to <mu nu | r s>
-                                //Einsum("mnks,kr->mnrs")
-                                    transformed2(mu, nu, r, s) += C(kap, r) * transformed1(mu, nu, kap, s);
+                            //Einsum("mnks,kr->mnrs")
+                            transformed2(mu, nu, r, s) += C(kap, r) * transformed1(mu, nu, kap, s);
 
                 for (Eigen::Index q = 0; q < dim; ++q) {
                     for (Eigen::Index mu = 0; mu < dim; ++mu)
                         for (Eigen::Index nu = 0; nu < dim; ++nu)
                             //From <mu nu | r s> to <mu q | r s>
-                                //Einsum("mnrs,nq->mqrs")
-                                    transformed3(mu, q, r, s) += C(nu, q) * transformed2(mu, nu, r, s);
+                            //Einsum("mnrs,nq->mqrs")
+                            transformed3(mu, q, r, s) += C(nu, q) * transformed2(mu, nu, r, s);
 
                     for (Eigen::Index p = 0; p < dim; ++p) {
                         for (Eigen::Index mu = 0; mu < dim; ++mu)
                             //From <mu q | r s> to <p q | r s>
-                                //Einsum("mqrs,mp->pqrs")
-                                    transformed4(p, q, r, s) += C(mu, p) * transformed3(mu, q, r, s);
+                            //Einsum("mqrs,mp->pqrs")
+                            transformed4(p, q, r, s) += C(mu, p) * transformed3(mu, q, r, s);
                     }
                 }
             }

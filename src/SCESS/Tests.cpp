@@ -9,6 +9,7 @@
 #include "Quantum/CI/ConfigurationInteraction.h"
 #include "Quantum/QMC/QMC.h"
 #include "Utilities/Utilities.h"
+#include "Quantum/Integrals/IntegralTransforms.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 
@@ -226,19 +227,53 @@ namespace SCESS::Tests {
 
     void TestF12Integrals() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
+        constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
         Molecule hydrogenMolecule = GenerateHydrogenMolecule();
         hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
 
-        libint2::BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
+        libint2::BasisSet hfBasisSet(BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
+        libint2::BasisSet cabsBasisSet(CABS_BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
 
-        double gamma = 0.5;
-        TEITensor f12Ints = Integrals::F12::TwoElectronSlaterF12Tensor(basisSet, gamma);
-        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronSlaterF12RepulsionTensor(basisSet, gamma);
+        Integrals::F12::LibIntCGF slaterGeminal = Integrals::F12::CalculateSlaterContraction(1.0);
+        Integrals::F12::LibIntCGF slaterGeminal2 = Integrals::F12::CalculateSlaterSquaredContraction(slaterGeminal);
 
-        std::cout << "(ij | exp(-gamma * r12) | kl) integral tensor:\n";
+        //Calculates (ij | 1/r12 | kl)
+        TEITensor repulsionInts = Integrals::LibInt::TwoElectronRepulsionTensor(hfBasisSet);
+        //Calculates (ij | f(12) | kl)
+        TEITensor f12Ints = Integrals::F12::TwoElectronCGFF12Tensor(hfBasisSet, slaterGeminal);
+        //Calculates (ij | f(12)^2 | kl)
+        TEITensor f12SquaredInts = Integrals::F12::TwoElectronCGFF12Tensor(hfBasisSet, slaterGeminal2);
+        //Calculates (ij | |Del f(12)|^2 | kl)
+        TEITensor f12DelInts = Integrals::F12::TwoElectronCGFDelF12SquaredTensor(hfBasisSet, slaterGeminal);
+        //Calculates (ij | f(12)/r12 | kl)
+        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronCGFF12RepulsionTensor(hfBasisSet, slaterGeminal);
+
+        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(hydrogenMolecule, 1E-10);
+
+        repulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+            Integrals::Transforms::ToMolecularTEI(repulsionInts, uhfWfn->CAlpha));
+        f12Ints = Integrals::Transforms::ConvertChemistsToPhysicists(
+            Integrals::Transforms::ToMolecularTEI(f12Ints, uhfWfn->CAlpha));
+        f12SquaredInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+            Integrals::Transforms::ToMolecularTEI(f12SquaredInts, uhfWfn->CAlpha));
+        f12DelInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+            Integrals::Transforms::ToMolecularTEI(f12DelInts, uhfWfn->CAlpha));
+        f12RepulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+            Integrals::Transforms::ToMolecularTEI(f12RepulsionInts, uhfWfn->CAlpha));
+
+        std::cout << std::setprecision(15);
+
+        std::cout << "F12 Integral Tensors\n--All are in physicits' notation--\n";
+
+        std::cout << "<ij | 1/r12 | kl>\n";
+        Utilities::PrintTensor(repulsionInts);
+        std::cout << "<ij | f(12) | kl>\n";
         Utilities::PrintTensor(f12Ints);
-
-        std::cout << "(ij | exp(-gamma * r12) * 1/r12 | kl) integral tensor:\n";
+        std::cout << "<ij | f(12)^2 | kl>\n";
+        Utilities::PrintTensor(f12SquaredInts);
+        std::cout << "<ij | |Del 1/r12|^2 | kl>\n";
+        Utilities::PrintTensor(f12DelInts);
+        std::cout << "<ij | f(12)/r12 | kl>\n";
         Utilities::PrintTensor(f12RepulsionInts);
 
         std::cout << "Press any key to continue..\n";

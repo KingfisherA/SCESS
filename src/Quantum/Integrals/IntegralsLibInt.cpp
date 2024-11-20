@@ -19,16 +19,27 @@ namespace SCESS::Integrals {
         libint2::finalize();
     }
 
-    static TEITensor EvaluateTwoElectronTensor(const BasisSet &basisSet, Operator op, const std::any &params = {}) {
-        TEITensor f12Tensor(
+    static TEITensor EvaluateTwoElectronTensor(const BasisSet &basisSet, Operator op,
+                                               const std::any &params = {}) {
+        TEITensor teiTensor(
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf());
 
-        //Slater type geminal operator
-        Engine integralEngine(op, basisSet.max_nprim(), static_cast<int>(basisSet.max_l()));
-        integralEngine.set_params(params);
+
+        Engine integralEngine;
+        if (params.has_value())
+            integralEngine = Engine(op,
+                                    basisSet.max_nprim(),
+                                    static_cast<int>(basisSet.max_l()),
+                                    0,
+                                    std::numeric_limits<double>::epsilon(),
+                                    params);
+        else
+            integralEngine = Engine(op,
+                                    basisSet.max_nprim(),
+                                    static_cast<int>(basisSet.max_l()));
 
         const auto &shell2bf = basisSet.shell2bf();
         const auto &results = integralEngine.results();
@@ -46,7 +57,7 @@ namespace SCESS::Integrals {
                         uint32_t n4 = basisSet[s4].size();
                         uint32_t bf4 = shell2bf[s4];
 
-                        integralEngine.compute2<Operator::coulomb, BraKet::xx_xx, 0>(
+                        integralEngine.compute(
                             basisSet[s1], basisSet[s2], basisSet[s3], basisSet[s4]);
                         const double *integrals = results[0];
                         if (integrals == nullptr)
@@ -60,7 +71,7 @@ namespace SCESS::Integrals {
                                     uint32_t k = f3 + bf3;
                                     for (uint32_t f4 = 0; f4 < n4; f4++, ++f1234) {
                                         uint32_t l = f4 + bf4;
-                                        f12Tensor(i, j, k, l) =
+                                        teiTensor(i, j, k, l) =
                                                 integrals[f1234];
                                     }
                                 }
@@ -71,7 +82,7 @@ namespace SCESS::Integrals {
             }
         }
 
-        return f12Tensor;
+        return teiTensor;
     }
 
     static Eigen::MatrixXd
@@ -124,12 +135,52 @@ namespace SCESS::Integrals {
         return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
     }
 
-    //F12 integrals
-    TEITensor F12::TwoElectronSlaterF12Tensor(const BasisSet &basisSet, double gamma) {
-        return EvaluateTwoElectronTensor(basisSet, Operator::stg, gamma);
+    F12::LibIntCGF F12::CalculateSlaterContraction(double gamma) {
+        if (gamma != 1.0)
+            throw std::runtime_error(
+                "Ability to calculate contraction of exp(-gamma*r12) for any gamma which is not one is not yet supported.");
+
+        //Alpha exponent followed by the Gaussian coefficient
+        LibIntCGF cgf({
+            {0.2209, 0.3144},
+            {1.004, 0.3037},
+            {3.622, 0.1681},
+            {12.16, 0.09811},
+            {45.87, 0.06024},
+            {254.4, 0.03726}
+        });
+
+        for (auto &ele: cgf)
+            ele.second *= -1.0 / gamma;
+
+        return cgf;
     }
 
-    TEITensor F12::TwoElectronSlaterF12RepulsionTensor(const BasisSet &basisSet, double gamma) {
-        return EvaluateTwoElectronTensor(basisSet, Operator::yukawa, gamma);
+    F12::LibIntCGF F12::CalculateSlaterSquaredContraction(const LibIntCGF &slaterContraction) {
+        size_t cgfLength = slaterContraction.size();
+        LibIntCGF squaredCGF(cgfLength * cgfLength, {0.0, 0.0});
+
+        for (uint32_t i = 0; i < slaterContraction.size(); i++)
+            for (uint32_t j = 0; j < slaterContraction.size(); j++) {
+                squaredCGF[i * cgfLength + j].first = slaterContraction[i].first * slaterContraction[j].first;
+                squaredCGF[i * cgfLength + j].second = slaterContraction[i].second + slaterContraction[j].second;
+            }
+
+        return squaredCGF;
+    }
+
+    constexpr double gamma = 1.0;
+
+    //F12 integrals
+    TEITensor F12::TwoElectronCGFF12Tensor(const BasisSet &basisSet, const LibIntCGF &cgf) {
+        return EvaluateTwoElectronTensor(basisSet, Operator::cgtg, cgf);
+    }
+
+    TEITensor F12::TwoElectronCGFF12RepulsionTensor(const BasisSet &basisSet, const LibIntCGF &cgf) {
+        return EvaluateTwoElectronTensor(basisSet, Operator::cgtg_x_coulomb, cgf);
+    }
+
+    TEITensor F12::TwoElectronCGFDelF12SquaredTensor(const libint2::BasisSet &basisSet, const LibIntCGF &cgf) {
+        return EvaluateTwoElectronTensor(basisSet, Operator::delcgtg2, cgf);
     }
 }
