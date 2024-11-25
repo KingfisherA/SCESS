@@ -12,6 +12,9 @@
 #include "Quantum/Integrals/IntegralTransforms.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
+#include "Quantum/Basis/BasisUtils.h"
+
+#include<libint2.h>
 
 namespace SCESS::Tests {
     void TestDFT() {
@@ -234,47 +237,51 @@ namespace SCESS::Tests {
         libint2::BasisSet hfBasisSet(BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
         libint2::BasisSet cabsBasisSet(CABS_BASIS_SET_NAME, hydrogenMolecule.GetAtomsLibInt());
 
+        BasisUtils::F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME,
+                                            hydrogenMolecule.GetAtomsLibInt());
+
         Integrals::F12::LibIntCGF slaterGeminal = Integrals::F12::CalculateSlaterContraction(1.0);
         Integrals::F12::LibIntCGF slaterGeminal2 = Integrals::F12::CalculateSlaterSquaredContraction(slaterGeminal);
 
         //Calculates (ij | 1/r12 | kl)
-        TEITensor repulsionInts = Integrals::LibInt::TwoElectronRepulsionTensor(hfBasisSet);
+        TEITensor repulsionInts = Integrals::LibInt::TwoElectronRepulsionTensor(f12BasisSet);
         //Calculates (ij | f(12) | kl)
-        TEITensor f12Ints = Integrals::F12::TwoElectronCGFF12Tensor(hfBasisSet, slaterGeminal);
+        TEITensor f12Ints = Integrals::F12::TwoElectronCGFF12Tensor(f12BasisSet, slaterGeminal);
         //Calculates (ij | f(12)^2 | kl)
-        TEITensor f12SquaredInts = Integrals::F12::TwoElectronCGFF12Tensor(hfBasisSet, slaterGeminal2);
+        TEITensor f12SquaredInts = Integrals::F12::TwoElectronCGFF12Tensor(f12BasisSet, slaterGeminal2);
         //Calculates (ij | |Del f(12)|^2 | kl)
-        TEITensor f12DelInts = Integrals::F12::TwoElectronCGFDelF12SquaredTensor(hfBasisSet, slaterGeminal);
+        TEITensor f12DelInts = Integrals::F12::TwoElectronCGFDelF12SquaredTensor(f12BasisSet, slaterGeminal);
         //Calculates (ij | f(12)/r12 | kl)
-        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronCGFF12RepulsionTensor(hfBasisSet, slaterGeminal);
+        TEITensor f12RepulsionInts = Integrals::F12::TwoElectronCGFF12RepulsionTensor(f12BasisSet, slaterGeminal);
 
-        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(hydrogenMolecule, 1E-10);
+        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(hydrogenMolecule,
+                                                        std::numeric_limits<double>::epsilon());
 
-        repulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
-            Integrals::Transforms::ToMolecularTEI(repulsionInts, uhfWfn->CAlpha));
-        f12Ints = Integrals::Transforms::ConvertChemistsToPhysicists(
-            Integrals::Transforms::ToMolecularTEI(f12Ints, uhfWfn->CAlpha));
-        f12SquaredInts = Integrals::Transforms::ConvertChemistsToPhysicists(
-            Integrals::Transforms::ToMolecularTEI(f12SquaredInts, uhfWfn->CAlpha));
-        f12DelInts = Integrals::Transforms::ConvertChemistsToPhysicists(
-            Integrals::Transforms::ToMolecularTEI(f12DelInts, uhfWfn->CAlpha));
-        f12RepulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
-            Integrals::Transforms::ToMolecularTEI(f12RepulsionInts, uhfWfn->CAlpha));
+        // repulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+        //     Integrals::Transforms::ToMolecularTEI(repulsionInts, f12BasisSet, uhfWfn->CAlpha));
+        // f12Ints = Integrals::Transforms::ConvertChemistsToPhysicists(
+        //     Integrals::Transforms::ToMolecularTEI(f12Ints, f12BasisSet, uhfWfn->CAlpha));
+        // f12SquaredInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+        //     Integrals::Transforms::ToMolecularTEI(f12SquaredInts, f12BasisSet, uhfWfn->CAlpha));
+        // f12DelInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+        //     Integrals::Transforms::ToMolecularTEI(f12DelInts, f12BasisSet, uhfWfn->CAlpha));
+        // f12RepulsionInts = Integrals::Transforms::ConvertChemistsToPhysicists(
+        //     Integrals::Transforms::ToMolecularTEI(f12RepulsionInts, f12BasisSet, uhfWfn->CAlpha));
 
         std::cout << std::setprecision(15);
 
         std::cout << "F12 Integral Tensors\n--All are in physicits' notation--\n";
 
-        std::cout << "<ij | 1/r12 | kl>\n";
-        Utilities::PrintTensor(repulsionInts);
+        //std::cout << "<ij | 1/r12 | kl>\n";
+        //Utilities::PrintTensor(repulsionInts);
         std::cout << "<ij | f(12) | kl>\n";
         Utilities::PrintTensor(f12Ints);
-        std::cout << "<ij | f(12)^2 | kl>\n";
-        Utilities::PrintTensor(f12SquaredInts);
-        std::cout << "<ij | |Del 1/r12|^2 | kl>\n";
-        Utilities::PrintTensor(f12DelInts);
-        std::cout << "<ij | f(12)/r12 | kl>\n";
-        Utilities::PrintTensor(f12RepulsionInts);
+        //std::cout << "<ij | f(12)^2 | kl>\n";
+        //Utilities::PrintTensor(f12SquaredInts);
+        // std::cout << "<ij | |Del 1/r12|^2 | kl>\n";
+        // Utilities::PrintTensor(f12DelInts);
+        // std::cout << "<ij | f(12)/r12 | kl>\n";
+        // Utilities::PrintTensor(f12RepulsionInts);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

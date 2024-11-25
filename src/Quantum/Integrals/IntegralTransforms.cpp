@@ -1,5 +1,6 @@
 #include<pch.h>
 #include"IntegralTransforms.h"
+#include "Quantum/Basis/BasisUtils.h"
 
 namespace SCESS::Integrals {
     TEITensor Transforms::ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C) {
@@ -54,6 +55,26 @@ namespace SCESS::Integrals {
         }
 
         return transformed4;
+    }
+
+    TEITensor Transforms::ToMolecularTEI(const TEITensor &tei, const BasisUtils::F12BasisSet &f12BasisSet,
+                                         const Eigen::MatrixXd &C) {
+        Eigen::Index hfStartIdx = (Eigen::Index) f12BasisSet.GetHFIndices().first;
+        Eigen::Index hfSize = (Eigen::Index) f12BasisSet.GetNoHFFuncs();
+        TEITensor transformed = ToMolecularTEI(
+            tei.slice(Eigen::array<Eigen::Index, 4>{hfStartIdx, hfStartIdx, hfStartIdx, hfStartIdx},
+                      Eigen::array<Eigen::Index, 4>{hfSize, hfSize, hfSize, hfSize}), C);
+
+        TEITensor result = tei;
+
+        for (Eigen::Index p = 0; p < transformed.dimension(0); ++p)
+            for (Eigen::Index q = 0; q < transformed.dimension(1); ++q)
+                for (Eigen::Index r = 0; r < transformed.dimension(2); ++r)
+                    for (Eigen::Index s = 0; s < transformed.dimension(3); ++s)
+                        result(p + hfStartIdx, q + hfStartIdx, r + hfStartIdx, s + hfStartIdx) =
+                                transformed(p, q, r, s);
+
+        return result;
     }
 
     TEITensor Transforms::AntisymmetriseTEI(const TEITensor &tei) {

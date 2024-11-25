@@ -13,6 +13,10 @@ namespace SCESS {
         for (Eigen::Index row = 0; row < matrix.rows(); ++row) {
             std::cout << "| ";
             for (Eigen::Index col = 0; col < matrix.cols(); ++col) {
+                if (matrix(row, col) >= 0.0) {
+                    std::cout << ' ';
+                }
+
                 std::cout << matrix(row, col) << ' ';
             }
             std::cout << " |\n";

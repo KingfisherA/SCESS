@@ -1,5 +1,9 @@
 #pragma once
 
+namespace SCESS::BasisUtils {
+    class F12BasisSet;
+}
+
 //Evaluate integrals with f(12) correlation kernels
 namespace SCESS {
     using TEITensor = Eigen::Tensor<double, 4>;
@@ -16,7 +20,7 @@ namespace SCESS {
          * @param gamma The exponent of the f(12) correlation factor
          * @return A tensor of the required integrals
          */
-        TEITensor TwoElectronCGFF12Tensor(const libint2::BasisSet &basisSet, const LibIntCGF &cgf);
+        TEITensor TwoElectronCGFF12Tensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
 
         /**
          * Evaluate the integral (ij | exp(-gamma * r12) * 1/r12 | kl) for a Gaussian-contracted Slater type f(12)
@@ -24,7 +28,7 @@ namespace SCESS {
          * @param gamma The exponent of the f(12) correlation factor
          * @return A tensor of the required integrals
          */
-        TEITensor TwoElectronCGFF12RepulsionTensor(const libint2::BasisSet &basisSet, const LibIntCGF &cgf);
+        TEITensor TwoElectronCGFF12RepulsionTensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
 
 
         /**
@@ -33,7 +37,7 @@ namespace SCESS {
          * @param cgf
          * @return
          */
-        TEITensor TwoElectronCGFDelF12SquaredTensor(const libint2::BasisSet &basisSet, const LibIntCGF &cgf);
+        TEITensor TwoElectronCGFDelF12SquaredTensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
 
     }
 }

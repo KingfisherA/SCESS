@@ -12,7 +12,6 @@
 #include "Quantum/Molecule.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
-
 //
 //
 namespace SCESS {
