@@ -33,7 +33,7 @@ namespace SCESS {
                                         (Eigen::Index) determinants.size()); {
             MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWavefunction);
             TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                Integrals::Transforms::ToMolecularTEI(rhfWavefunction.Integrals.eri, rhfWavefunction.C));
+                Integrals::Transforms::TransformTEI(rhfWavefunction.Integrals.eri, rhfWavefunction.C));
 
             for (uint32_t i = 0; i < H_FCI.rows(); i++)
                 for (uint32_t j = i; j < H_FCI.cols(); j++)

@@ -36,6 +36,13 @@ namespace SCESS {
                                          std::stringstream *console = nullptr,
                                          std::string_view basisSet = "");
 
+        // static uRef<RHFWavefunction> RHF(const ConfigIntegrals &mints,
+        //                                  double convergeLimit = 1E-5,
+        //                                  size_t scfMaxIterations = 100,
+        //                                  const GEng::Thread *thread = nullptr,
+        //                                  std::stringstream *console = nullptr,
+        //                                  std::string_view basisSet = "");
+
         /// <summary>
         /// Computes the unrestricted open-shell hartree fock energy and orbitals in the given basis set defined by the molecule.
         /// </summary>
@@ -47,6 +54,16 @@ namespace SCESS {
         /// <param name="basisSet">The basis set for this calculation</param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
         static uRef<UHFWavefunction> UHF(const Molecule &molecule,
+                                         double convergeLimit = 1E-5,
+                                         size_t scfMaxIterations = 100,
+                                         const GEng::Thread *thread = nullptr,
+                                         std::stringstream *console = nullptr,
+                                         std::string_view basisSet = "");
+
+        static uRef<UHFWavefunction> UHF(const ConfigIntegrals &mints,
+                                         uint32_t alphaElectrons,
+                                         uint32_t betaElectrons,
+                                         double Vnn,
                                          double convergeLimit = 1E-5,
                                          size_t scfMaxIterations = 100,
                                          const GEng::Thread *thread = nullptr,

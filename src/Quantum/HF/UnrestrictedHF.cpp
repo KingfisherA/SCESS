@@ -21,39 +21,46 @@ namespace SCESS {
                                            const std::string_view basisSet) {
         using namespace std::chrono;
 
-
         if (console != nullptr)
-            *console << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
-                    GetOrbitals().size() << " basis set functions\nBeginning integral evaluation...\n";
+            *console << "Starting integral evaluation for unrestricted Hartree-Fock\n";
 
-        //Spin-up electrons
-        Eigen::Index alphaElectrons = molecule.GetNoElectrons() / 2;
-        //Spin-down electrons
-        Eigen::Index betaElectrons = molecule.GetNoElectrons() - alphaElectrons;
 
         auto integralStartTP = high_resolution_clock::now();
         ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule, thread);
         auto integralEndTP = high_resolution_clock::now();
 
-        if(thread)
-            if(thread->ShouldStop())
+        if (thread)
+            if (thread->ShouldStop())
                 return nullptr;
-
-        const MatrixXd &S = integrals.S;
-        const MatrixXd &T = integrals.T;
-        const MatrixXd &V = integrals.V;
-        const TEITensor &tei = integrals.eri; //Two-electron tensor
 
         if (console)
             *console << "Integral evaluation completed in " <<
                     duration_cast<milliseconds>(integralEndTP - integralStartTP).count() << " milliseconds\n";
 
-        const Eigen::Index dimensions = S.rows();
+        auto alphaElectrons = molecule.GetNoElectrons() / 2;
 
+        return UHF(integrals, alphaElectrons, molecule.GetNoElectrons() - alphaElectrons,
+                   molecule.CalculateNuclearRepulsion(), convergeLimit, scfMaxIterations, thread, console, basisSet);
+    }
+
+    uRef<UHFWavefunction> HartreeFock::UHF(const ConfigIntegrals &mints, uint32_t alphaElectrons,
+                                           uint32_t betaElectrons, double Vnn, double convergeLimit,
+                                           size_t scfMaxIterations,
+                                           const GEng::Thread *thread, std::stringstream *console,
+                                           std::string_view basisSet) {
+        if (console != nullptr)
+            *console << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << mints.S.rows() <<
+                    " basis set functions\nBeginning integral evaluation...\n";
+
+        const MatrixXd &S = mints.S;
+        const MatrixXd &T = mints.T;
+        const MatrixXd &V = mints.V;
+        const TEITensor &tei = mints.eri; //Two-electron tensor
+
+        const Index dimensions = S.rows();
 
         double delta = 1.0;
-        Eigen::Index scfCount = 0;
-        double Vnn = molecule.CalculateNuclearRepulsion();
+        Index scfCount = 0;
         double currentE = 0.0;
 
         const MatrixXd &Hcore = T + V;
@@ -74,9 +81,8 @@ namespace SCESS {
         VectorXd EnergiesAlpha, EnergiesBeta;
 
         while (delta > convergeLimit && scfCount < scfMaxIterations) {
-
-            if(thread)
-                if(thread->ShouldStop())
+            if (thread)
+                if (thread->ShouldStop())
                     return nullptr;
 
             const auto [GAlpha, GBeta] = ConstructGUHF(DensityAlpha, DensityBeta, tei);
@@ -149,10 +155,10 @@ namespace SCESS {
 
         VectorXi OccupationAlpha = VectorXi::Zero(Hcore.rows());
         VectorXi OccupationBeta = VectorXi::Zero(Hcore.rows());
-        for (long i = alphaElectrons - 1; i >= 0; i--) {
+        for (long i = long(alphaElectrons) - 1; i >= 0; i--) {
             OccupationAlpha(i) = 1;
         }
-        for (long i = betaElectrons - 1; i >= 0; i--) {
+        for (long i = long(betaElectrons) - 1; i >= 0; i--) {
             OccupationBeta(i) = 1;
         }
 
@@ -160,7 +166,7 @@ namespace SCESS {
         return std::make_unique<UHFWavefunction>(
             FockAlpha, FockBeta, Hcore, DensityAlpha, DensityBeta,
             CoeffsAlpha, CoeffsBeta, EnergiesAlpha, EnergiesBeta, OccupationAlpha, OccupationBeta,
-            integrals, currentE
+            mints, currentE
         );
     }
 

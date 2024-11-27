@@ -258,7 +258,7 @@ namespace SCESS {
     double HartreeFock::MP2ClosedShell(const RHFWavefunction &result, const GEng::Thread *thread,
                                        std::stringstream *console) {
         //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
-        const TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(result.Integrals.eri, result.C);
+        const TEITensor moTEI = Integrals::Transforms::TransformTEI(result.Integrals.eri, result.C);
         return MP2ClosedShell(result, moTEI, thread, console);
     }
 

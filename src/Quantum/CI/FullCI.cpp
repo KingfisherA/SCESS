@@ -164,7 +164,7 @@ namespace SCESS {
         // integrate out spin functions
         TEITensor moSpinTEI =
                 Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                    Integrals::Transforms::ToMolecularTEI(ints.eri, C));
+                    Integrals::Transforms::TransformTEI(ints.eri, C));
 
         if (console)
             *console << "   Transformation of integrals completed!\n";

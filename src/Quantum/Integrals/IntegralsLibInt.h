@@ -6,25 +6,25 @@
 
 #include "Quantum/Basis/BasisUtils.h"
 
+namespace SCESS {
+    struct ConfigIntegrals;
+}
+
 namespace SCESS::BasisUtils {
     class F12BasisSet;
 }
 
 namespace SCESS::Integrals::LibInt {
     using TEITensor = Eigen::Tensor<double, 4>;
-
-
+    using AtomListLI = std::vector<libint2::Atom>;
 
     void InitLibInt();
     void CloseLibInt();
 
-    Eigen::MatrixXd CalculateOverlapMatrix(const libint2::BasisSet &basisSet);
-    Eigen::MatrixXd CalculateTotalOverlapMatrix(const BasisUtils::F12BasisSet& basisSet);
+    ConfigIntegrals CalculateConfiguration(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
 
-    Eigen::MatrixXd CalculateNuclearMatrix(const std::vector<libint2::Atom> &atoms,
-                                                 const libint2::BasisSet &basisSet);
+    Eigen::MatrixXd CalculateOverlapMatrix(const libint2::BasisSet &basisSet);
+    Eigen::MatrixXd CalculateNuclearMatrix(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
     Eigen::MatrixXd CalculateKineticMatrix(const libint2::BasisSet &basisSet);
     TEITensor TwoElectronRepulsionTensor(const libint2::BasisSet &basisSet);
-    TEITensor TwoElectronRepulsionTensor(const BasisUtils::F12BasisSet &basisSet);
-
 }

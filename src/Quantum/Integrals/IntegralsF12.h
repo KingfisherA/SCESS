@@ -1,5 +1,7 @@
 #pragma once
 
+#include<libint2/atom.h>
+
 namespace SCESS::BasisUtils {
     class F12BasisSet;
 }
@@ -10,9 +12,34 @@ namespace SCESS {
 
     namespace Integrals::F12 {
         using LibIntCGF = std::vector<std::pair<double, double> >;
+        using AtomListLI = std::vector<libint2::Atom>;
+
+        struct F12Integrals {
+        public:
+            //eri = ( ij | 1/r12 | kl )
+            TEITensor eri;
+            //f12 = ( ij | f(12) | kl)
+            TEITensor f12;
+            //f12Sq = ( ij | f(12)^2 | kl)
+            TEITensor f12Sq;
+            //f12DelSq = ( ij | |Del f(12)|^2 | kl)
+            TEITensor f12DelSq;
+            //f12Repulsion = ( ij | f(12)/r12 | kl)
+            TEITensor f12Repulsion;
+        };
+
+        ConfigIntegrals CalculateConfiguration(const BasisUtils::F12BasisSet &basisSet, const AtomListLI &atoms);
+
+        Eigen::MatrixXd CalculateOverlapMatrix(const BasisUtils::F12BasisSet &basisSet);
+        Eigen::MatrixXd CalculateNuclearMatrix(const BasisUtils::F12BasisSet &basisSet, const AtomListLI &atoms);
+        Eigen::MatrixXd CalculateKineticMatrix(const BasisUtils::F12BasisSet &basisSet);
+        TEITensor TwoElectronRepulsionTensor(const BasisUtils::F12BasisSet &basisSet);
+
+
+        F12Integrals EvaluateF12Integrals(const BasisUtils::F12BasisSet &basisSet, double gamma = 1.0);
 
         LibIntCGF CalculateSlaterContraction(double gamma = 1.0);
-        LibIntCGF CalculateSlaterSquaredContraction(const LibIntCGF& slaterContraction);
+        LibIntCGF CalculateSlaterSquaredContraction(const LibIntCGF &slaterContraction);
 
         /**
          * Evaluate the integral (ij | exp(-gamma * r12) | kl) for a Gaussian-contracted Slater type f(12)
@@ -20,7 +47,7 @@ namespace SCESS {
          * @param gamma The exponent of the f(12) correlation factor
          * @return A tensor of the required integrals
          */
-        TEITensor TwoElectronCGFF12Tensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
+        TEITensor TwoElectronCGFF12Tensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf);
 
         /**
          * Evaluate the integral (ij | exp(-gamma * r12) * 1/r12 | kl) for a Gaussian-contracted Slater type f(12)
@@ -28,8 +55,7 @@ namespace SCESS {
          * @param gamma The exponent of the f(12) correlation factor
          * @return A tensor of the required integrals
          */
-        TEITensor TwoElectronCGFF12RepulsionTensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
-
+        TEITensor TwoElectronCGFF12RepulsionTensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf);
 
         /**
          * Evaluate the integral (ij | |Del exp(-gamma * r12)|^2 | kl) for a Gaussian-contracted Slater type f(12)
@@ -37,7 +63,6 @@ namespace SCESS {
          * @param cgf
          * @return
          */
-        TEITensor TwoElectronCGFDelF12SquaredTensor(const BasisUtils::F12BasisSet& basisSet, const LibIntCGF &cgf);
-
+        TEITensor TwoElectronCGFDelF12SquaredTensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf);
     }
 }

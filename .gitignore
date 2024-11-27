@@ -28,6 +28,7 @@
 *.tff
 
 # Excluded Folders
+Scratch/
 Python/
 Releases/
 libs/

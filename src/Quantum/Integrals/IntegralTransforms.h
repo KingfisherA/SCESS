@@ -1,7 +1,20 @@
 #pragma once
 
 #include<Eigen/Core>
+#include <GraphicsEngine/Utilities/Memory.h>
 #include<unsupported/Eigen/CXX11/Tensor>
+
+namespace SCESS {
+    struct UHFWavefunction;
+}
+
+namespace SCESS::Integrals::F12 {
+    struct F12Integrals;
+}
+
+namespace SCESS {
+    struct ConfigIntegrals;
+}
 
 namespace SCESS::BasisUtils {
     class F12BasisSet;
@@ -17,16 +30,20 @@ namespace SCESS::Integrals {
          * @param C Wavefunction coefficients
          * @return Transformed TEI tensor (in chemist's notation)
          */
-        TEITensor ToMolecularTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
+        TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
 
         /**
-         * Transform the two-electron integrals (in chemist's notation) from the atomic orbital to the molecular orbital basis set
-         * @param tei Two-electron integral tensor in atomic orbital basis (in chemist's notation)
-         * @param C Wavefunction coefficients
-         * @return Transformed TEI tensor (in chemist's notation)
+         * Transforms all integrals (f12 and eri) in the HF into MO integrals in an F12 basis and:
+         * - Projects out linear dependence of the HF and CABS basis sets
+         * - Diagonalises the CABS basis set
+         * - Makes CABS diagonalise the Fock operator
+         * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
          */
-        TEITensor ToMolecularTEI(const TEITensor &tei, const BasisUtils::F12BasisSet &f12BasisSet,
-                                 const Eigen::MatrixXd &C);
+        void TransformF12Basis(const BasisUtils::F12BasisSet &basisSet,
+                               ConfigIntegrals &mints,
+                               F12::F12Integrals &f12Ints,
+                               uRef<UHFWavefunction> *hfWfnOut = nullptr,
+                               uRef<UHFWavefunction> *cabsHFWfnOut = nullptr);
 
         /**
          * Produce a tensor with < i j || k l>=<i j | k l> - <i j | l k>

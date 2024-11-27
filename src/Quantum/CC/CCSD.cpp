@@ -36,7 +36,7 @@ namespace SCESS {
 
         //Transform the two electron repulsion integrals into the MO basis set
         //for MP2 calculation. Integrals are in chemist's notation
-        TEITensor moTEI = Integrals::Transforms::ToMolecularTEI(rhfResult.Integrals.eri, rhfResult.C);
+        TEITensor moTEI = Integrals::Transforms::TransformTEI(rhfResult.Integrals.eri, rhfResult.C);
         //Evaluate MP2 energy
         double mp2Energy = HartreeFock::MP2ClosedShell(rhfResult, moTEI, thread, console);
 

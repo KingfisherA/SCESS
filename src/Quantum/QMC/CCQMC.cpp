@@ -28,7 +28,7 @@ namespace SCESS {
         std::cout << "--- Coupled Cluster Quantum Monte Carlo ---\n";
 
         TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ToMolecularTEI(rhfWfn.Integrals.eri, rhfWfn.C));
+            Integrals::Transforms::TransformTEI(rhfWfn.Integrals.eri, rhfWfn.C));
 
         MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWfn);
 

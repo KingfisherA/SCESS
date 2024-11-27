@@ -81,8 +81,6 @@ namespace SCESS::BasisUtils {
         [[nodiscard]] int GetMaxL() const { return mMaxL; }
 
     private:
-        void OrthogonaliseCABS(const libint2::BasisSet &hfBasisSet,
-                               const libint2::BasisSet &cabsBasisSet);
 
         Shells_T mShells;
         size_t mHFShellsStartIdx = 0,
