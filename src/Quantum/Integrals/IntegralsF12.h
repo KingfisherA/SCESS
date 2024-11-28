@@ -35,7 +35,7 @@ namespace SCESS {
         Eigen::MatrixXd CalculateKineticMatrix(const BasisUtils::F12BasisSet &basisSet);
         TEITensor TwoElectronRepulsionTensor(const BasisUtils::F12BasisSet &basisSet);
 
-
+        //Chemist's notation
         F12Integrals EvaluateF12Integrals(const BasisUtils::F12BasisSet &basisSet, double gamma = 1.0);
 
         LibIntCGF CalculateSlaterContraction(double gamma = 1.0);

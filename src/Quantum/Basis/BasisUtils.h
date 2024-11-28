@@ -48,12 +48,20 @@ namespace SCESS::BasisUtils {
         Shells_T &GetShells() { return mShells; }
 
 
-        [[nodiscard]] std::pair<size_t, size_t> GetHFIndices() const {
+        [[nodiscard]] std::pair<size_t, size_t> GetHFShellIndices() const {
             return {mHFShellsStartIdx, mCABSShellsSetStartIdx - 1};
         }
 
-        [[nodiscard]] std::pair<size_t, size_t> GetCABSIndices() const {
+        [[nodiscard]] std::pair<size_t, size_t> GetCABSShellIndices() const {
             return {mCABSShellsSetStartIdx, mShells.size() - 1};
+        }
+
+        [[nodiscard]] std::pair<size_t, size_t> GetHFIndices() const {
+            return {mHFShellsStartIdx, GetNoHFFuncs() - 1};
+        }
+
+        [[nodiscard]] std::pair<size_t, size_t> GetCABSIndices() const {
+            return {GetNoHFFuncs(), mNumOfFuncs};
         }
 
         std::vector<size_t> ShellToBasisIdx() const;
@@ -68,20 +76,22 @@ namespace SCESS::BasisUtils {
                 result += mShells[i].size();
             return result;
         }
+
         [[nodiscard]] size_t GetNoCABSShells() const { return mShells.size() - mCABSShellsSetStartIdx; }
+
         [[nodiscard]] size_t GetNoCABSFuncs() const {
             size_t result = 0;
             for (size_t i = mCABSShellsSetStartIdx; i < mShells.size(); i++)
                 result += mShells[i].size();
             return result;
         }
+
         [[nodiscard]] size_t GetNumShells() const { return mShells.size(); }
         [[nodiscard]] size_t GetNumOfFuncs() const { return mNumOfFuncs; }
         [[nodiscard]] size_t GetNumOfPrimitives() const { return mNumPrimitives; }
         [[nodiscard]] int GetMaxL() const { return mMaxL; }
 
     private:
-
         Shells_T mShells;
         size_t mHFShellsStartIdx = 0,
                 mCABSShellsSetStartIdx = 0,

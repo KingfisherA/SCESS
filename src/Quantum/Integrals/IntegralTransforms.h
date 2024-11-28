@@ -32,18 +32,23 @@ namespace SCESS::Integrals {
          */
         TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C);
 
+        TEITensor TransformTEI(
+            const TEITensor &tei,
+            const Eigen::MatrixXd &A,
+            const Eigen::MatrixXd &B,
+            const Eigen::MatrixXd &C,
+            const Eigen::MatrixXd &D);
+
         /**
-         * Transforms all integrals (f12 and eri) in the HF into MO integrals in an F12 basis and:
-         * - Projects out linear dependence of the HF and CABS basis sets
-         * - Diagonalises the CABS basis set
-         * - Makes CABS diagonalise the Fock operator
+         * Transforms all integrals (f12 and eri) in the OBS into MO integrals and:
+         * - Project out linear dependence of the HF and CABS basis sets
+         * - Makes CABS canonicalise the Fock operator
          * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
          */
         void TransformF12Basis(const BasisUtils::F12BasisSet &basisSet,
                                ConfigIntegrals &mints,
                                F12::F12Integrals &f12Ints,
-                               uRef<UHFWavefunction> *hfWfnOut = nullptr,
-                               uRef<UHFWavefunction> *cabsHFWfnOut = nullptr);
+                               uRef<UHFWavefunction> *hfWfnOut = nullptr);
 
         /**
          * Produce a tensor with < i j || k l>=<i j | k l> - <i j | l k>

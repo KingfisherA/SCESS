@@ -243,23 +243,47 @@ namespace SCESS::Tests {
         ConfigIntegrals configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> hfWfn, cabsWfn;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &hfWfn, &cabsWfn);
+        uRef<UHFWavefunction> hfWfn;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &hfWfn);
 
         std::cout << std::setprecision(15);
 
-        std::cout << "F12 Integral Tensors\n--All are in physicits' notation--\n";
+        std::cout << "\n--- F12 Integral Tensors ---\n";
+        std::cout << "--- OBS (Ordinary Basis Set) ---\n";
+        std::cout << "  * Name = " << BASIS_SET_NAME << '\n';
+        std::cout << "  * Indicies = [" << f12BasisSet.GetHFIndices().first << " ... " << f12BasisSet.GetHFIndices().
+                second << "]\n";
+        std::cout << "--- CABS (Complementary Auxiliary Basis Set) ---\n";
+        std::cout << "  * Name = " << CABS_BASIS_SET_NAME << '\n';
+        std::cout << "  * Indicies = [" << f12BasisSet.GetCABSIndices().first << " ... " << f12BasisSet.GetCABSIndices()
+                .second << "]\n";
 
-        std::cout << "<ij | 1/r12 | kl>\n";
-        Utilities::PrintTensor(f12Ints.eri);
-        // std::cout << "<ij | f(12) | kl>\n";
-        // Utilities::PrintTensor(f12Ints.f12);
-        //std::cout << "<ij | f(12)^2 | kl>\n";
-        //Utilities::PrintTensor(f12SquaredInts);
-        // std::cout << "<ij | |Del 1/r12|^2 | kl>\n";
-        // Utilities::PrintTensor(f12DelInts);
-        // std::cout << "<ij | f(12)/r12 | kl>\n";
-        // Utilities::PrintTensor(f12RepulsionInts);
+        std::cout << "--All are in physicists' notation--\n";
+
+        std::cout << "------------------------------------\n";
+        std::cout << "      <ij | 1/r12 | kl>\n";
+        std::cout << "------------------------------------\n";
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.eri));
+
+        std::cout << "\n\n------------------------------------\n";
+        std::cout << "      <ij | f(12) | kl>\n";
+        std::cout << "------------------------------------\n";
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12));
+
+        std::cout << "\n\n------------------------------------\n";
+        std::cout << "      <ij | f(12)^2 | kl>\n";
+        std::cout << "------------------------------------\n";
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq));
+
+        std::cout << "\n\n------------------------------------\n";
+        std::cout << "      <ij | |Del 1/r12|^2 | kl>\n";
+        std::cout << "------------------------------------\n";
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12DelSq));
+
+        std::cout << "\n\n\n------------------------------------\n";
+        std::cout << "      <ij | f(12)/r12 | kl>\n";
+        std::cout << "------------------------------------\n";
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion));
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

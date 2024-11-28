@@ -28,6 +28,7 @@
 *.tff
 
 # Excluded Folders
+Assets/F12 Data/
 Scratch/
 Python/
 Releases/

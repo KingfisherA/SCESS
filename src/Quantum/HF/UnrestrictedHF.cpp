@@ -59,7 +59,7 @@ namespace SCESS {
 
         const Index dimensions = S.rows();
 
-        double delta = 1.0;
+        double delta = 10.0;
         Index scfCount = 0;
         double currentE = 0.0;
 

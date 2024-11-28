@@ -7,8 +7,7 @@
 
 int main(int argc, char *argv[]) {
     using namespace SCESS;
-    std::cout << "SCESS Command Line \n";
-
+    std::cout << "Schrodinger's Cat's Electronic System Solver; Terminal Edition\n    By Charlie Wheelwright (cspw2) \n    Meow!\n";
     if (!Res::AssetsFolder::Get().Init())
         return 1;
 

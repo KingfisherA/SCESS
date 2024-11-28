@@ -112,7 +112,9 @@ namespace SCESS::Integrals {
         else
             integralEngine = Engine(op,
                                     basisSet.GetNumOfPrimitives(),
-                                    basisSet.GetMaxL());
+                                    basisSet.GetMaxL(),
+                                    0,
+                                    std::numeric_limits<double>::epsilon());
 
         const auto &shells = basisSet.GetShells();
 
@@ -228,7 +230,7 @@ namespace SCESS::Integrals {
         for (Eigen::Index s1 = 0; s1 < basisSet.GetNumShells(); s1++) {
             uint32_t n1 = basisSet[s1].size();
             uint32_t bf1 = shell2bf[s1];
-            for (Eigen::Index s2 = s1; s2 < basisSet.GetNumShells(); s2++) {
+            for (Eigen::Index s2 = 0; s2 < basisSet.GetNumShells(); s2++) {
                 uint32_t n2 = basisSet[s2].size();
                 uint32_t bf2 = shell2bf[s2];
 
@@ -240,7 +242,7 @@ namespace SCESS::Integrals {
                     uint32_t i = f1 + bf1;
                     for (uint32_t f2 = 0; f2 < n2; f2++, f12++) {
                         uint32_t j = f2 + bf2;
-                        resultMatrix(i, j) = resultMatrix(j, i) = integrals[f12];
+                        resultMatrix(i, j) = integrals[f12];
                     }
                 }
             }
