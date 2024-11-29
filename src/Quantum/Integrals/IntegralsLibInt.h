@@ -4,7 +4,7 @@
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2.hpp>
 
-#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Basis/BasisSet.h"
 
 namespace SCESS {
     struct ConfigIntegrals;

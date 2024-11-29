@@ -39,7 +39,7 @@ namespace SCESS {
         AtomicGrid() = default;
 
         void Create(const Atom &atom,
-                    const Molecule &mol,
+                    const BasisSet &basisSet,
                     uint32_t angularPoints,
                     uint32_t radialPoints,
                     uint32_t lebedevOffset);

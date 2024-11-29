@@ -69,19 +69,19 @@ OBJECTS :=
 GENERATED += $(OBJDIR)/AssetFolder.o
 GENERATED += $(OBJDIR)/AtomicGrid.o
 GENERATED += $(OBJDIR)/BasisUtils.o
-GENERATED += $(OBJDIR)/BoysFunc.o
 GENERATED += $(OBJDIR)/CCQMC.o
 GENERATED += $(OBJDIR)/CCSD-DIIS.o
 GENERATED += $(OBJDIR)/CCSD.o
 GENERATED += $(OBJDIR)/CCSD_T.o
 GENERATED += $(OBJDIR)/DensityFunctional.o
+GENERATED += $(OBJDIR)/F12_MP2.o
 GENERATED += $(OBJDIR)/FCIQMC.o
-GENERATED += $(OBJDIR)/Fonts.o
 GENERATED += $(OBJDIR)/FullCI.o
 GENERATED += $(OBJDIR)/Gaussian.o
 GENERATED += $(OBJDIR)/GridPoint.o
+GENERATED += $(OBJDIR)/IntegralTransforms.o
 GENERATED += $(OBJDIR)/Integrals.o
-GENERATED += $(OBJDIR)/IntegralsF12.o
+GENERATED += $(OBJDIR)/IntegralsLibInt.o
 GENERATED += $(OBJDIR)/MolecularGrid.o
 GENERATED += $(OBJDIR)/Molecule.o
 GENERATED += $(OBJDIR)/PeriodicTable.o
@@ -94,19 +94,19 @@ GENERATED += $(OBJDIR)/XCFunctionals.o
 OBJECTS += $(OBJDIR)/AssetFolder.o
 OBJECTS += $(OBJDIR)/AtomicGrid.o
 OBJECTS += $(OBJDIR)/BasisUtils.o
-OBJECTS += $(OBJDIR)/BoysFunc.o
 OBJECTS += $(OBJDIR)/CCQMC.o
 OBJECTS += $(OBJDIR)/CCSD-DIIS.o
 OBJECTS += $(OBJDIR)/CCSD.o
 OBJECTS += $(OBJDIR)/CCSD_T.o
 OBJECTS += $(OBJDIR)/DensityFunctional.o
+OBJECTS += $(OBJDIR)/F12_MP2.o
 OBJECTS += $(OBJDIR)/FCIQMC.o
-OBJECTS += $(OBJDIR)/Fonts.o
 OBJECTS += $(OBJDIR)/FullCI.o
 OBJECTS += $(OBJDIR)/Gaussian.o
 OBJECTS += $(OBJDIR)/GridPoint.o
+OBJECTS += $(OBJDIR)/IntegralTransforms.o
 OBJECTS += $(OBJDIR)/Integrals.o
-OBJECTS += $(OBJDIR)/IntegralsF12.o
+OBJECTS += $(OBJDIR)/IntegralsLibInt.o
 OBJECTS += $(OBJDIR)/MolecularGrid.o
 OBJECTS += $(OBJDIR)/Molecule.o
 OBJECTS += $(OBJDIR)/PeriodicTable.o
@@ -203,13 +203,13 @@ $(OBJDIR)/DensityFunctional.o: ../../src/Quantum/DFT/DensityFunctional.cpp
 $(OBJDIR)/XCFunctionals.o: ../../src/Quantum/DFT/XCFunctionals.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/F12_MP2.o: ../../src/Quantum/F12/F12_MP2.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/RestrictedHF.o: ../../src/Quantum/HF/RestrictedHF.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/UnrestrictedHF.o: ../../src/Quantum/HF/UnrestrictedHF.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/BoysFunc.o: ../../src/Quantum/Integrals/BoysFunc.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/AtomicGrid.o: ../../src/Quantum/Integrals/Grid/AtomicGrid.cpp
@@ -224,10 +224,13 @@ $(OBJDIR)/MolecularGrid.o: ../../src/Quantum/Integrals/Grid/MolecularGrid.cpp
 $(OBJDIR)/Quadrature.o: ../../src/Quantum/Integrals/Grid/Quadrature.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/IntegralTransforms.o: ../../src/Quantum/Integrals/IntegralTransforms.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Integrals.o: ../../src/Quantum/Integrals/Integrals.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/IntegralsF12.o: ../../src/Quantum/Integrals/IntegralsF12.cpp
+$(OBJDIR)/IntegralsLibInt.o: ../../src/Quantum/Integrals/IntegralsLibInt.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Molecule.o: ../../src/Quantum/Molecule.cpp
@@ -243,9 +246,6 @@ $(OBJDIR)/FCIQMC.o: ../../src/Quantum/QMC/FCIQMC.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Fonts.o: ../../src/Resources/Fonts.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) -include $(PCH_PLACEHOLDER) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp

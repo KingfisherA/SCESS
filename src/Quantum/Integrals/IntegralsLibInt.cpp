@@ -2,7 +2,7 @@
 #include "IntegralsLibInt.h"
 #include "Integrals.h"
 #include "IntegralsF12.h"
-#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Basis/BasisSet.h"
 
 #include<any>
 
@@ -26,7 +26,7 @@ namespace SCESS::Integrals {
 
 #pragma region Evaluation Functions
 
-    static TEITensor EvaluateTwoElectronTensor(const BasisSet &basisSet, Operator op,
+    static TEITensor EvaluateTwoElectronTensor(const libint2::BasisSet &basisSet, Operator op,
                                                const std::any &params = {}) {
         TEITensor teiTensor(
             (Eigen::Index) basisSet.nbf(),
@@ -92,7 +92,7 @@ namespace SCESS::Integrals {
         return teiTensor;
     }
 
-    static TEITensor EvaluateTwoElectronTensor(const BasisUtils::F12BasisSet &basisSet, Operator op,
+    static TEITensor EvaluateTwoElectronTensor(const F12BasisSet &basisSet, Operator op,
                                                const std::any &params = {}) {
         TEITensor teiTensor(
             (Eigen::Index) basisSet.GetNumOfFuncs(),
@@ -162,7 +162,7 @@ namespace SCESS::Integrals {
         return teiTensor;
     }
 
-    static Eigen::MatrixXd EvaluateOneElectronMatrix(const BasisSet &basisSet,
+    static Eigen::MatrixXd EvaluateOneElectronMatrix(const libint2::BasisSet &basisSet,
                                                      Operator op, const std::any &params = {}) {
         Eigen::MatrixXd resultMatrix(basisSet.nbf(), basisSet.nbf());
 
@@ -207,7 +207,7 @@ namespace SCESS::Integrals {
         return resultMatrix;
     }
 
-    static Eigen::MatrixXd EvaluateOneElectronMatrix(const BasisUtils::F12BasisSet &basisSet,
+    static Eigen::MatrixXd EvaluateOneElectronMatrix(const F12BasisSet &basisSet,
                                                      Operator op, const std::any &params = {}) {
         Eigen::MatrixXd resultMatrix(basisSet.GetNumOfFuncs(), basisSet.GetNumOfFuncs());
 
@@ -255,7 +255,7 @@ namespace SCESS::Integrals {
 
 #pragma region IntegralsLibInt
 
-    ConfigIntegrals LibInt::CalculateConfiguration(const BasisSet &basisSet,
+    ConfigIntegrals LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
                                                    const AtomListLI &atoms) {
         ConfigIntegrals mints;
 
@@ -267,11 +267,11 @@ namespace SCESS::Integrals {
         return mints;
     }
 
-    Eigen::MatrixXd LibInt::CalculateOverlapMatrix(const BasisSet &basisSet) {
+    Eigen::MatrixXd LibInt::CalculateOverlapMatrix(const libint2::BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::overlap);
     }
 
-    Eigen::MatrixXd LibInt::CalculateNuclearMatrix(const BasisSet &basisSet, const AtomListLI &atoms) {
+    Eigen::MatrixXd LibInt::CalculateNuclearMatrix(const libint2::BasisSet &basisSet, const AtomListLI &atoms) {
         return EvaluateOneElectronMatrix(basisSet, Operator::nuclear, make_point_charges(atoms));
     }
 
@@ -287,7 +287,7 @@ namespace SCESS::Integrals {
 
 #pragma region F12 Integrals
 
-    ConfigIntegrals F12::CalculateConfiguration(const BasisUtils::F12BasisSet &basisSet, const AtomListLI &atoms) {
+    ConfigIntegrals F12::CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms) {
         ConfigIntegrals mints;
 
         mints.S = CalculateOverlapMatrix(basisSet);
@@ -298,24 +298,24 @@ namespace SCESS::Integrals {
         return mints;
     }
 
-    Eigen::MatrixXd F12::CalculateOverlapMatrix(const BasisUtils::F12BasisSet &basisSet) {
+    Eigen::MatrixXd F12::CalculateOverlapMatrix(const F12BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::overlap);
     }
 
-    Eigen::MatrixXd F12::CalculateNuclearMatrix(const BasisUtils::F12BasisSet &basisSet,
+    Eigen::MatrixXd F12::CalculateNuclearMatrix(const F12BasisSet &basisSet,
                                                 const std::vector<libint2::Atom> &atoms) {
         return EvaluateOneElectronMatrix(basisSet, Operator::nuclear, make_point_charges(atoms));
     }
 
-    Eigen::MatrixXd F12::CalculateKineticMatrix(const BasisUtils::F12BasisSet &basisSet) {
+    Eigen::MatrixXd F12::CalculateKineticMatrix(const F12BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::kinetic);
     }
 
-    TEITensor F12::TwoElectronRepulsionTensor(const BasisUtils::F12BasisSet &basisSet) {
+    TEITensor F12::TwoElectronRepulsionTensor(const F12BasisSet &basisSet) {
         return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
     }
 
-    F12::F12Integrals F12::EvaluateF12Integrals(const BasisUtils::F12BasisSet &basisSet, double gamma) {
+    F12::F12Integrals F12::EvaluateF12Integrals(const F12BasisSet &basisSet, double gamma) {
         LibIntCGF slaterGeminal = CalculateSlaterContraction(gamma);
         LibIntCGF slaterGeminalSquared = CalculateSlaterSquaredContraction(slaterGeminal);
 
@@ -365,15 +365,15 @@ namespace SCESS::Integrals {
     constexpr double gamma = 1.0;
 
     //F12 integrals
-    TEITensor F12::TwoElectronCGFF12Tensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf) {
+    TEITensor F12::TwoElectronCGFF12Tensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::cgtg, cgf);
     }
 
-    TEITensor F12::TwoElectronCGFF12RepulsionTensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf) {
+    TEITensor F12::TwoElectronCGFF12RepulsionTensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::cgtg_x_coulomb, cgf);
     }
 
-    TEITensor F12::TwoElectronCGFDelF12SquaredTensor(const BasisUtils::F12BasisSet &basisSet, const LibIntCGF &cgf) {
+    TEITensor F12::TwoElectronCGFDelF12SquaredTensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::delcgtg2, cgf);
     }
 

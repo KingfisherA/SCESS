@@ -14,7 +14,7 @@
 #include "GraphicsEngine/Maths/Geometry.h"
 #include "Viewer/GUI/ImSpinner.h"
 
-#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/HF/HartreeFock.h"
@@ -82,7 +82,7 @@ namespace SCESS {
 
         mMoleculeBondVAO = VertexArray::Create(Geometry::CreateCylinder(0.2f, 0.7f, 20));
 
-        auto basisSets = BasisUtils::ListBasisSets();
+        auto basisSets = BasisSet::ListBasisSets();
         mBasisSets.assign(basisSets.begin(), basisSets.end());
         mSelectedBasisSet = std::max(0,
                                      (int) std::distance(mBasisSets.begin(),
@@ -184,7 +184,7 @@ namespace SCESS {
 
         std::shared_ptr<ScalarField> field = std::make_shared<ScalarField>();
         field->Initilise(mIsosurfaceResolution,
-                         GenerateMolecularWavefunction<float>(coeffsM->col(mSelectedMO), *mMolecule),
+                         GenerateMolecularWavefunction<float>(coeffsM->col(mSelectedMO), mMoleculeBasisSet),
                          mIsosurfaceVolume);
         field->Evaluate(true);
 
@@ -200,13 +200,13 @@ namespace SCESS {
     void CalculationLayer::SelectMolecule() {
         Molecule (*moleculeFuncs[])() =
         {
-            &GenerateWaterMolecule,
-            &GenerateAmmoniaMolecule,
-            &GenerateCOMolecule,
-            &GenerateEtheneMolecule,
-            &GenerateMethaneMolecule,
-            &GenerateLithiumHydrideMolecule,
-            &GenerateHydrogenMolecule
+            &Molecule::GenerateWaterMolecule,
+            &Molecule::GenerateAmmoniaMolecule,
+            &Molecule::GenerateCOMolecule,
+            &Molecule::GenerateEtheneMolecule,
+            &Molecule::GenerateMethaneMolecule,
+            &Molecule::GenerateLithiumHydrideMolecule,
+            &Molecule::GenerateHydrogenMolecule
         };
 
         mMolecule = std::make_unique<Molecule>(moleculeFuncs[mSelectedMolecule]());
@@ -273,7 +273,7 @@ namespace SCESS {
         mSelectedMO = -1;
 
         mCalcBasisSet = mBasisSets[mSelectedBasisSet];
-        mMolecule->MakeOrbitals(mCalcBasisSet);
+        mMoleculeBasisSet = BasisSet(mCalcBasisSet, *mMolecule);
 
         mCalcSCFMethod = mSCFMethod;
         mCalcCorrelationMethod = mCorrelationMethod;
@@ -291,8 +291,7 @@ namespace SCESS {
                 if (!mUseLastSCF || mInvalidateLastSCF)
                     mRHFWfn = HartreeFock::RHF(
                         *mMolecule,
-                        nullptr,
-                        nullptr,
+                        mMoleculeBasisSet,
                         1E-5,
                         100,
                         &mCalculationThread,
@@ -361,8 +360,7 @@ namespace SCESS {
                             mRHFWfn =
                                     HartreeFock::RHF(
                                         *mMolecule,
-                                        mLastMolecule.get(),
-                                        mRHFWfn.get(),
+                                        mMoleculeBasisSet,
                                         1E-10,
                                         100,
                                         &mCalculationThread,
@@ -371,8 +369,7 @@ namespace SCESS {
                         else
                             mRHFWfn = HartreeFock::RHF(
                                 *mMolecule,
-                                nullptr,
-                                nullptr,
+                                mMoleculeBasisSet,
                                 1E-10,
                                 100,
                                 &mCalculationThread,
@@ -381,6 +378,7 @@ namespace SCESS {
                         break;
                     case SCFMethod::UHF:
                         mUHFWfn = HartreeFock::UHF(*mMolecule,
+                                                   mMoleculeBasisSet,
                                                    1E-10,
                                                    100,
                                                    &mCalculationThread,
@@ -389,10 +387,10 @@ namespace SCESS {
                         break;
                     case SCFMethod::KS_DFT:
                         mKSWfn = DensityFunctional::KohnShamDFT(*mMolecule,
+                                                                mMoleculeBasisSet,
                                                                 DFTGridResToRes(mDFTGridRes),
                                                                 &mCalculationThread,
-                                                                &mConsoleOutput,
-                                                                mCalcBasisSet);
+                                                                &mConsoleOutput);
                         break;
                 }
             }

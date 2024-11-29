@@ -17,7 +17,7 @@
 #include <filesystem>
 
 #include "xc.h"
-#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/CC/CoupledCluster.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/Resources.h"

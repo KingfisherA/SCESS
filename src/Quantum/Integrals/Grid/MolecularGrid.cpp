@@ -2,23 +2,25 @@
 
 #include "MolecularGrid.h"
 
+#include "Quantum/Basis/BasisSet.h"
 #include  "Quantum/Molecule.h"
 #include  "Quantum/Integrals/Grid/Quadrature.h"
 
 namespace SCESS {
     using namespace Eigen;
 
-    MolecularGrid::MolecularGrid(const Molecule *mol): mMolecule(mol) {
+    MolecularGrid::MolecularGrid(const Molecule *molecule, const BasisSet *basisSet): mMolecule(molecule),
+        mBasisSet(basisSet) {
     }
 
     void MolecularGrid::Create(Resolution res) {
-        mAngularPoints = Quadrature::nLebedevPoints[(int)res.lebedevOrder];
+        mAngularPoints = Quadrature::nLebedevPoints[(int) res.lebedevOrder];
 
         // The Lebedev coefficients and radial points are stored in a large matrix.
         // Given a particular order for the integration, we have to start reading
         // this matrix from a specific position. Here, we calculate that position.
         uint32_t lebedevOffset = 0;
-        for (uint32_t i = 0; i < (int)res.lebedevOrder; i++)
+        for (uint32_t i = 0; i < (int) res.lebedevOrder; i++)
             lebedevOffset += Quadrature::nLebedevPoints[i];
 
         // generate for each atom an atomic grid
@@ -26,7 +28,7 @@ namespace SCESS {
             AtomicGrid &grid =
                     mAtomicGrids.emplace_back();
             grid.Create(mMolecule->GetAtom(i),
-                        *mMolecule,
+                        *mBasisSet,
                         mAngularPoints,
                         res.radialPoints,
                         lebedevOffset);
@@ -89,14 +91,14 @@ namespace SCESS {
 
     MatrixXd MolecularGrid::GetAmplitudes() const {
         MatrixXd amplitudes = MatrixXd::Zero(
-            static_cast<Eigen::Index>(mMolecule->GetNoOrbitals()),
+            static_cast<Eigen::Index>(mBasisSet->GetNoCGFs()),
             static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
         for (const AtomicGrid &grid: mAtomicGrids) {
             MatrixXd atomicAmplitudes = grid.GetAmplitudes();
 
-            for (uint32_t k = 0; k < mMolecule->GetNoOrbitals(); k++)
+            for (uint32_t k = 0; k < mBasisSet->GetNoCGFs(); k++)
                 for (uint32_t j = 0; j < grid.GetNoOfGridPoints(); j++)
                     amplitudes(k, idx + j) = atomicAmplitudes(k, j);
 

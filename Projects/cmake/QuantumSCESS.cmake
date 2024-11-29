@@ -1,6 +1,6 @@
 ﻿add_library("QuantumSCESS" SHARED
-      "src/Quantum/Basis/BasisUtils.cpp"
-      "src/Quantum/Basis/BasisUtils.h"
+      "src/Quantum/Basis/BasisSet.cpp"
+      "src/Quantum/Basis/BasisSet.h"
       "src/Quantum/Basis/Gaussian.cpp"
       "src/Quantum/Basis/Gaussian.h"
       "src/Quantum/CC/CCSD-DIIS.cpp"

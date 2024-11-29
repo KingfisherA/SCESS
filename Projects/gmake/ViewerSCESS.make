@@ -18,15 +18,15 @@ ifeq ($(config),debug)
   PCH = ../../src/pch.h
   GCH = $(OBJDIR)/$(notdir $(PCH)).gch
   DEFINES += -DOS_LINUX -DCONFIG_DEBUG -D_DEBUG
-  INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/nfd/src/include -I../../Libraries/LibXC/lib/include
+  INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/GraphicsEngine-1.0.0/include/ImGui -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/nfd/src/include -I../../Libraries/LibXC/lib/include -I../../Libraries/ImPlot
   FORCE_INCLUDE += -include $(OBJDIR)/$(notdir $(PCH))
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O0 -g -std=c++20
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so -lGraphicsEngine -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
+  LIBS += ../../bin/linux/Debug-x64/libQuantumSCESS.so -lGraphicsEngine -lImPlot.a -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
   LDDEPS += ../../bin/linux/Debug-x64/libQuantumSCESS.so
-  ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
+  ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L../../Libraries/ImPlot/bin/linux/Release-x64 -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -47,15 +47,15 @@ ifeq ($(config),release)
   PCH = ../../src/pch.h
   GCH = $(OBJDIR)/$(notdir $(PCH)).gch
   DEFINES += -DOS_LINUX -DCONFIG_RELEASE
-  INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/nfd/src/include -I../../Libraries/LibXC/lib/include
+  INCLUDES += -I../../src -I../../Libraries/GraphicsEngine-1.0.0/include -I../../Libraries/GraphicsEngine-1.0.0/include/ImGui -I../../Libraries/glm -I../../Libraries/cppitertools -I../../Libraries/JSON/include -I../../Libraries/Eigen -I../../Libraries/LibInt2/include -I../../Libraries/nfd/src/include -I../../Libraries/LibXC/lib/include -I../../Libraries/ImPlot
   FORCE_INCLUDE += -include $(OBJDIR)/$(notdir $(PCH))
   ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O3 -mavx2 -std=c++20
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so -lGraphicsEngine -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
+  LIBS += ../../bin/linux/Release-x64/libQuantumSCESS.so -lGraphicsEngine -lImPlot.a -lxc.a -lnfd.a -lgtk-3 -lgdk-3 -lglib-2.0
   LDDEPS += ../../bin/linux/Release-x64/libQuantumSCESS.so
-  ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
+  ALL_LDFLAGS += $(LDFLAGS) -L../../Libraries/GraphicsEngine-1.0.0 -L../../Libraries/nfd/build/lib/Release/x64 -L../../Libraries/LibXC/lib -L../../Libraries/ImPlot/bin/linux/Release-x64 -L/usr/lib64 -Wl,-rpath,'$$ORIGIN' -m64 -s
   LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -70,11 +70,10 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/AssetFolder.o \
-	$(OBJDIR)/Fonts.o \
 	$(OBJDIR)/ShaderSources.o \
 	$(OBJDIR)/Utilities.o \
 	$(OBJDIR)/Application.o \
-	$(OBJDIR)/AtomStyle.o \
+	$(OBJDIR)/AtomDraw.o \
 	$(OBJDIR)/CalculationLayer.o \
 	$(OBJDIR)/IsosurfaceConstants.o \
 	$(OBJDIR)/Isosurfaces.o \
@@ -139,9 +138,6 @@ endif
 $(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Fonts.o: ../../src/Resources/Fonts.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -151,7 +147,7 @@ $(OBJDIR)/Utilities.o: ../../src/Utilities/Utilities.cpp
 $(OBJDIR)/Application.o: ../../src/Viewer/Application/Application.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/AtomStyle.o: ../../src/Viewer/GUI/AtomStyle.cpp
+$(OBJDIR)/AtomDraw.o: ../../src/Viewer/GUI/AtomDraw.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/CalculationLayer.o: ../../src/Viewer/GUI/CalculationLayer.cpp

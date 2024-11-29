@@ -1,22 +1,22 @@
 #include<pch.h>
 #include<numbers>
 
-#include  "Quantum/Molecule.h"
-#include  "Quantum/Integrals/Grid/AtomicGrid.h"
-
-#include  "Quantum/Integrals/Grid/Quadrature.h"
+#include "Quantum/Basis/BasisSet.h"
+#include "Quantum/Molecule.h"
+#include "Quantum/Integrals/Grid/AtomicGrid.h"
+#include "Quantum/Integrals/Grid/Quadrature.h"
 
 namespace SCESS {
     using namespace Eigen;
     using std::numbers::pi;
 
 
-    void AtomicGrid::Create(const Atom &atom, const Molecule &mol, uint32_t angularPoints,
+    void AtomicGrid::Create(const Atom &atom, const BasisSet &basisSet, uint32_t angularPoints,
                             uint32_t radialPoints, uint32_t lebedevOffset) {
         mNumAngularPoints = angularPoints;
         mNumRadialPoints = radialPoints;
         mLebedevOffset = lebedevOffset;
-        mNumBasisSetFuncs = mol.GetNoOrbitals();
+        mNumBasisSetFuncs = basisSet.GetNoCGFs();
 
         mRadialPoints = VectorXd::Zero(radialPoints);
 
@@ -54,7 +54,7 @@ namespace SCESS {
                 gridPoint.SetWeight(w * Quadrature::LEBEDEV_COEFFICIENTS[a][3]);
 
                 // set the amplitudes of the basis functions at this grid point
-                gridPoint.SetBasisSetAmplitudes(mol);
+                gridPoint.SetBasisSetAmplitudes(basisSet);
 
                 // correct the weights for the Jacobian r**2 and the 4PI from the Lebedev quadrature
                 gridPoint.ScaleWeight(gridPoint.GetRelativePosition().squaredNorm() * 4.0 * pi);

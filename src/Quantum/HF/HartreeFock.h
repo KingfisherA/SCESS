@@ -5,6 +5,10 @@
 #include "Eigen/Dense"
 #include  "Quantum/Integrals/Integrals.h"
 
+namespace SCESS {
+    class BasisSet;
+}
+
 namespace GEng {
     class Thread;
 }
@@ -15,8 +19,7 @@ namespace SCESS {
     struct UHFWavefunction;
     class Molecule;
 
-    class HartreeFock {
-    public:
+    namespace HartreeFock {
         /// <summary>
         /// Computes the restricted closed-shell hartree fock energy and orbitals in the given basis set defined by the molecule.
         /// </summary>
@@ -25,50 +28,68 @@ namespace SCESS {
         /// <param name="scfMaxIterations">Maximum amount of scf iterations to perform. The iterations are automatically terminated when the convergence limit has been achieved.</param>
         /// <param name="thread">The parent thread running this calculation</param>
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
-        /// <param name="basisSet">The basis set for this calculation</param>
+        /// <param name="basisSetName">The basis set name for this calculation</param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static uRef<RHFWavefunction> RHF(const Molecule &molecule,
-                                         const Molecule *lastMolecule = nullptr,
-                                         const RHFWavefunction *lastResult = nullptr,
-                                         double convergeLimit = 1E-5,
-                                         size_t scfMaxIterations = 100,
-                                         const GEng::Thread *thread = nullptr,
-                                         std::stringstream *console = nullptr,
-                                         std::string_view basisSet = "");
+        uRef<RHFWavefunction> RHF(const Molecule &molecule,
+                                  const BasisSet &basis,
+                                  double convergeLimit = 1E-5,
+                                  size_t scfMaxIterations = 100,
+                                  const GEng::Thread *thread = nullptr,
+                                  std::stringstream *console = nullptr,
+                                  std::string_view basisSetName = "");
 
-        // static uRef<RHFWavefunction> RHF(const ConfigIntegrals &mints,
-        //                                  double convergeLimit = 1E-5,
-        //                                  size_t scfMaxIterations = 100,
-        //                                  const GEng::Thread *thread = nullptr,
-        //                                  std::stringstream *console = nullptr,
-        //                                  std::string_view basisSet = "");
+        uRef<RHFWavefunction> RHF(const ConfigIntegrals &mints,
+                                  uint32_t nElectronPairs,
+                                  double Vnn,
+                                  double convergeLimit = 1E-5,
+                                  size_t scfMaxIterations = 100,
+                                  const GEng::Thread *thread = nullptr,
+                                  std::stringstream *console = nullptr,
+                                  std::string_view basisSetName = "");
 
         /// <summary>
         /// Computes the unrestricted open-shell hartree fock energy and orbitals in the given basis set defined by the molecule.
         /// </summary>
         /// <param name="molecule">The molecule to compute RHF on. This molecule must be finalised with a set of orbital basis functions</param>
+        /// <param name="basis">The basis set for this calculation</param>
         /// <param name="convergeLimit">Convergence limit of the SCF procedure</param>
         /// <param name="scfMaxIterations">Maximum amount of scf iterations to perform. The iterations are automatically terminated when the convergence limit has been achieved.</param>
         /// <param name="thread">The parent thread running this calculation</param>
         /// <param name="console">An optional pointer to a string stream to output progress information to</param>
-        /// <param name="basisSet">The basis set for this calculation</param>
         /// <returns>A RHFResult structure with MO coefficients and energies</returns>
-        static uRef<UHFWavefunction> UHF(const Molecule &molecule,
-                                         double convergeLimit = 1E-5,
-                                         size_t scfMaxIterations = 100,
-                                         const GEng::Thread *thread = nullptr,
-                                         std::stringstream *console = nullptr,
-                                         std::string_view basisSet = "");
+        uRef<UHFWavefunction> UHF(const Molecule &molecule,
+                                  const BasisSet &basis,
+                                  double convergeLimit = 1E-5,
+                                  size_t scfMaxIterations = 100,
+                                  const GEng::Thread *thread = nullptr,
+                                  std::stringstream *console = nullptr,
+                                  std::string_view basisSetName = "");
 
-        static uRef<UHFWavefunction> UHF(const ConfigIntegrals &mints,
-                                         uint32_t alphaElectrons,
-                                         uint32_t betaElectrons,
-                                         double Vnn,
-                                         double convergeLimit = 1E-5,
-                                         size_t scfMaxIterations = 100,
-                                         const GEng::Thread *thread = nullptr,
-                                         std::stringstream *console = nullptr,
-                                         std::string_view basisSet = "");
+        uRef<UHFWavefunction> UHF(const ConfigIntegrals &mints,
+                                  uint32_t alphaElectrons,
+                                  uint32_t betaElectrons,
+                                  double Vnn,
+                                  double convergeLimit = 1E-5,
+                                  size_t scfMaxIterations = 100,
+                                  const GEng::Thread *thread = nullptr,
+                                  std::stringstream *console = nullptr,
+                                  std::string_view basisSetName = "");
+
+        Eigen::MatrixXd ConstructGRHF(const Eigen::MatrixXd &Density,
+                                      const TEITensor &teiTensor);
+        std::pair<Eigen::MatrixXd, Eigen::MatrixXd> ConstructGUHF(const Eigen::MatrixXd &DensityAlpha,
+                                                                  const Eigen::MatrixXd &DensityBeta,
+                                                                  const TEITensor &teiTensor);
+
+
+        Eigen::MatrixXd ProjectOrbitalDensity(const BasisSet &set1,
+                                              const BasisSet &set2,
+                                              const RHFWavefunction &rhfWfn);
+        Eigen::MatrixXd ConstructDensityRHF(const Eigen::MatrixXd &Coeffs,
+                                            Eigen::Index nElecPairs);
+
+        double CalculateDelta(const Eigen::MatrixXd &oldDensity,
+                              const Eigen::MatrixXd &density);
 
         /// <summary>
         /// Evaluate the energy for a given density, hamiltonian and fock matrix for a closed-shell RHF procedure.
@@ -77,8 +98,9 @@ namespace SCESS {
         /// <param name="Hcore">Hamiltonian matrix</param>
         /// <param name="Fock">RHF Fock matrix</param>
         /// <returns>Computed energy value</returns>
-        static double CalculateEnergyRHF(const Eigen::MatrixXd &Density,
-                                         const Eigen::MatrixXd &Hcore, const Eigen::MatrixXd &Fock);
+        double CalculateEnergyRHF(const Eigen::MatrixXd &Density,
+                                  const Eigen::MatrixXd &Hcore,
+                                  const Eigen::MatrixXd &Fock);
 
         /// <summary>
         /// Evaluate the energy for a given density, hamiltonian and fock matrix for an open-shell UHF procedure.
@@ -89,7 +111,7 @@ namespace SCESS {
         /// <param name="FockAlpha">Fock matrix for spin-up electrons</param>
         /// <param name="FockBeta">Fock matrix for spin-down electrons</param>
         /// <returns>Computed energy value</returns>
-        static double CalculateEnergyUHF(
+        double CalculateEnergyUHF(
             const Eigen::MatrixXd &DensityAlpha,
             const Eigen::MatrixXd &DensityBeta,
             const Eigen::MatrixXd &Hcore,
@@ -101,32 +123,19 @@ namespace SCESS {
         /// </summary>
         /// <param name="result">Result from a RHF computation</param>
         /// <returns>MP2 correction energy</returns>
-        static double MP2ClosedShell(const RHFWavefunction &result,
-                                     const GEng::Thread *thread = nullptr,
-                                     std::stringstream *console = nullptr);
+        double MP2ClosedShell(const RHFWavefunction &result,
+                              const GEng::Thread *thread = nullptr,
+                              std::stringstream *console = nullptr);
         /**
          * Compute the closed-shell restricted HF Moller-Plesset Order 2 correction energy
          * @param result Result from a RHF computation
          * @param moTEI The tei transformed into a molecular orbital basis in chemist's notation
          * @return MP2 correction energy
          */
-        static double MP2ClosedShell(const RHFWavefunction &result,
-                                     const TEITensor &moTEI,
-                                     const GEng::Thread *thread = nullptr,
-                                     std::stringstream *console = nullptr);
-
-    private:
-        static Eigen::MatrixXd ConstructGRHF(const Eigen::MatrixXd &Density, const TEITensor &teiTensor);
-        static std::pair<Eigen::MatrixXd, Eigen::MatrixXd> ConstructGUHF(const Eigen::MatrixXd &DensityAlpha,
-                                                                         const Eigen::MatrixXd &DensityBeta,
-                                                                         const TEITensor &teiTensor);
-
-
-        static Eigen::MatrixXd ConstructDensityRHF(const Eigen::MatrixXd &Coeffs,
-                                                   const Eigen::Index Nelecs);
-
-        static double CalculateDelta(const Eigen::MatrixXd &oldDensity,
-                                     const Eigen::MatrixXd &density);
+        double MP2ClosedShell(const RHFWavefunction &result,
+                              const TEITensor &moTEI,
+                              const GEng::Thread *thread = nullptr,
+                              std::stringstream *console = nullptr);
     };
 
 

@@ -5,6 +5,7 @@
 #include<unsupported/Eigen/CXX11/Tensor>
 
 namespace SCESS {
+    class F12BasisSet;
     struct UHFWavefunction;
 }
 
@@ -45,7 +46,7 @@ namespace SCESS::Integrals {
          * - Makes CABS canonicalise the Fock operator
          * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
          */
-        void TransformF12Basis(const BasisUtils::F12BasisSet &basisSet,
+        void TransformF12Basis(const F12BasisSet &basisSet,
                                ConfigIntegrals &mints,
                                F12::F12Integrals &f12Ints,
                                uRef<UHFWavefunction> *hfWfnOut = nullptr);

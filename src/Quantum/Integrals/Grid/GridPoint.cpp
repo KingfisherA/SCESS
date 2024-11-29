@@ -2,6 +2,7 @@
 
 #include  "Quantum/Integrals/Grid/GridPoint.h"
 #include  "Quantum/Molecule.h"
+#include "Quantum/Basis/BasisSet.h"
 
 namespace SCESS {
     using namespace Eigen;
@@ -31,17 +32,17 @@ namespace SCESS {
         mGradient = {gx, gy, gz};
     }
 
-    void GridPoint::SetBasisSetAmplitudes(const Molecule &mol) {
-        mBasisAmplitudes = VectorXd::Zero(mol.GetNoOrbitals());
+    void GridPoint::SetBasisSetAmplitudes(const BasisSet &basisSet) {
+        mBasisAmplitudes = VectorXd::Zero(basisSet.GetNoCGFs());
 
-        for (uint32_t i = 0; i < mol.GetNoOrbitals(); i++)
-            mBasisAmplitudes(i) = mol.GetOrbital(i).Evaluate(mPos);
+        for (uint32_t i = 0; i < basisSet.GetNoCGFs(); i++)
+            mBasisAmplitudes(i) = basisSet.Get(i).Evaluate(mPos);
     }
 
-    void GridPoint::SetBasisSetGradients(const Molecule &mol) {
-        mBasisGradients = MatrixXd::Zero(mol.GetNoOrbitals(), 3);
+    void GridPoint::SetBasisSetGradients(const BasisSet &basisSet) {
+        mBasisGradients = MatrixXd::Zero(basisSet.GetNoCGFs(), 3);
 
-        for (uint32_t i = 0; i < mol.GetNoOrbitals(); i++)
-            mBasisGradients.row(i) = mol.GetOrbital(i).EvaluateGradient(mPos);
+        for (uint32_t i = 0; i < basisSet.GetNoCGFs(); i++)
+            mBasisGradients.row(i) = basisSet.Get(i).EvaluateGradient(mPos);
     }
 } // SCESS

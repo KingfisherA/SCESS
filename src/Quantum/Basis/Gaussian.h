@@ -6,6 +6,10 @@
 #include<vector>
 
 namespace SCESS {
+    class BasisSet;
+}
+
+namespace SCESS {
     class Molecule;
 
     //Represents a single gaussian function with three polynomial components
@@ -86,7 +90,7 @@ namespace SCESS {
 
     template<typename T>
     std::function<T(T, T, T)> GenerateMolecularWavefunction(const Eigen::VectorXd &coeffsIn,
-                                                            const Molecule &mol);
+                                                            const BasisSet &basisSet);
 
 
 }

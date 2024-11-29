@@ -12,6 +12,7 @@ namespace GEng {
 
 namespace SCESS {
     class Molecule;
+    class BasisSet;
 
     //A structure representing a Kohn-Sham wavefunction
     struct KSWavefunction {
@@ -33,17 +34,17 @@ namespace SCESS {
 
     class DensityFunctional {
     public:
-        static uRef<KSWavefunction> KohnShamDFT(const Molecule &mol, MolecularGrid::Resolution gridRes,
+        static uRef<KSWavefunction> KohnShamDFT(const Molecule &mol,
+                                                const BasisSet &basisSet,
+                                                MolecularGrid::Resolution gridRes,
                                                 const GEng::Thread *thread = nullptr,
-                                                std::stringstream *console = nullptr,
-                                                std::string_view basisSetName = "");
+                                                std::stringstream *console = nullptr);
 
         static Eigen::MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
                                                       const Eigen::MatrixXd &Density);
-
         static Eigen::MatrixXd CreateDensityMatrix(const Eigen::MatrixXd &C, uint32_t Nelecs);
-
-        static void CalculateXCMatrix(const Molecule &mol, const MolecularGrid &grid,
-                                      Eigen::MatrixXd &ExchangeCorr, double &E_XC);
+        static void CalculateXCMatrix(const MolecularGrid &grid,
+                                      Eigen::MatrixXd &ExchangeCorr,
+                                      double &E_XC);
     };
 }

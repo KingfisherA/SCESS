@@ -5,6 +5,7 @@
 namespace SCESS {
     class Atom;
     class Molecule;
+    class BasisSet;
 
     class GridPoint {
     public:
@@ -14,8 +15,8 @@ namespace SCESS {
         //Set density from the density matrix
         void SetDensity(const Eigen::MatrixXd &D);
         void SetGradient(const Eigen::MatrixXd &D);
-        void SetBasisSetAmplitudes(const Molecule &mol);
-        void SetBasisSetGradients(const Molecule &mol);
+        void SetBasisSetAmplitudes(const BasisSet &basisSet);
+        void SetBasisSetGradients(const BasisSet &basisSet);
 
         void SetWeight(double w) {
             mWeight = w;

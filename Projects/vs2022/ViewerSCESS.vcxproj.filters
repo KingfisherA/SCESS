@@ -36,7 +36,7 @@
     <ClInclude Include="..\..\src\Viewer\Application\Application.h">
       <Filter>Viewer\Application</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Viewer\GUI\AtomStyle.h">
+    <ClInclude Include="..\..\src\Viewer\GUI\AtomDraw.h">
       <Filter>Viewer\GUI</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Viewer\GUI\CalculationLayer.h">
@@ -53,9 +53,6 @@
     <ClCompile Include="..\..\src\Resources\AssetFolder.cpp">
       <Filter>Resources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Resources\Fonts.cpp">
-      <Filter>Resources</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\Resources\ShaderSources.cpp">
       <Filter>Resources</Filter>
     </ClCompile>
@@ -65,7 +62,7 @@
     <ClCompile Include="..\..\src\Viewer\Application\Application.cpp">
       <Filter>Viewer\Application</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Viewer\GUI\AtomStyle.cpp">
+    <ClCompile Include="..\..\src\Viewer\GUI\AtomDraw.cpp">
       <Filter>Viewer\GUI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Viewer\GUI\CalculationLayer.cpp">

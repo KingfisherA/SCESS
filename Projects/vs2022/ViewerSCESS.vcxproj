@@ -60,7 +60,7 @@
       <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_DEBUG;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\GraphicsEngine-1.0.0\include\ImGui;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;..\..\Libraries\ImPlot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -69,8 +69,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>GraphicsEngine.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;ImPlot.a.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;..\..\Libraries\ImPlot\bin\linux\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -79,7 +79,7 @@
       <PrecompiledHeaderFile>./src/pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\src;..\..\Libraries\GraphicsEngine-1.0.0\include;..\..\Libraries\GraphicsEngine-1.0.0\include\ImGui;..\..\Libraries\glm;..\..\Libraries\cppitertools;..\..\Libraries\JSON\include;..\..\Libraries\Eigen;..\..\Libraries\LibInt2\include;..\..\Libraries\nfd\src\include;..\..\Libraries\LibXC\lib\include;..\..\Libraries\ImPlot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -95,8 +95,8 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>GraphicsEngine.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>GraphicsEngine.lib;ImPlot.a.lib;xc.a.lib;nfd.a.lib;gtk-3.lib;gdk-3.lib;glib-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Libraries\GraphicsEngine-1.0.0;..\..\Libraries\nfd\build\lib\Release\x64;..\..\Libraries\LibXC\lib;..\..\Libraries\ImPlot\bin\linux\Release-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -105,18 +105,17 @@
     <ClInclude Include="..\..\src\Utilities\Intrinsics.h" />
     <ClInclude Include="..\..\src\Utilities\Utilities.h" />
     <ClInclude Include="..\..\src\Viewer\Application\Application.h" />
-    <ClInclude Include="..\..\src\Viewer\GUI\AtomStyle.h" />
+    <ClInclude Include="..\..\src\Viewer\GUI\AtomDraw.h" />
     <ClInclude Include="..\..\src\Viewer\GUI\CalculationLayer.h" />
     <ClInclude Include="..\..\src\Viewer\GUI\ImSpinner.h" />
     <ClInclude Include="..\..\src\Viewer\Isosurfaces\Isosurfaces.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Resources\AssetFolder.cpp" />
-    <ClCompile Include="..\..\src\Resources\Fonts.cpp" />
     <ClCompile Include="..\..\src\Resources\ShaderSources.cpp" />
     <ClCompile Include="..\..\src\Utilities\Utilities.cpp" />
     <ClCompile Include="..\..\src\Viewer\Application\Application.cpp" />
-    <ClCompile Include="..\..\src\Viewer\GUI\AtomStyle.cpp" />
+    <ClCompile Include="..\..\src\Viewer\GUI\AtomDraw.cpp" />
     <ClCompile Include="..\..\src\Viewer\GUI\CalculationLayer.cpp" />
     <ClCompile Include="..\..\src\Viewer\Isosurfaces\IsosurfaceConstants.cpp" />
     <ClCompile Include="..\..\src\Viewer\Isosurfaces\Isosurfaces.cpp" />

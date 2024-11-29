@@ -1,10 +1,9 @@
 #include <pch.h>
 #include<iostream>
-
-#include  "Quantum/DFT/DensityFunctional.h"
-
 #include <GraphicsEngine/Utilities/Threading.h>
 
+#include  "Quantum/DFT/DensityFunctional.h"
+#include "Quantum/Basis/BasisSet.h"
 #include  "Quantum/Integrals/Integrals.h"
 #include  "Quantum/Integrals/Grid/MolecularGrid.h"
 
@@ -17,9 +16,11 @@
 namespace SCESS {
     using namespace Eigen;
 
-    uRef<KSWavefunction> DensityFunctional::KohnShamDFT(const Molecule &mol, MolecularGrid::Resolution gridRes,
+    uRef<KSWavefunction> DensityFunctional::KohnShamDFT(const Molecule &mol,
+                                                        const BasisSet &basis,
+                                                        MolecularGrid::Resolution gridRes,
                                                         const GEng::Thread *thread,
-                                                        std::stringstream *console, std::string_view basisSetName) {
+                                                        std::stringstream *console) {
         if (console) {
             *console << "--- Kohn-Sham Density Functional Theory ---\n";
             *console << "--- Selected Functionals ---\n";
@@ -29,10 +30,10 @@ namespace SCESS {
         }
 
         constexpr double ALPHA = 0.9;
-        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(mol, thread);
+        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(basis, mol.GetAtoms(), thread);
 
-        if(thread)
-            if(thread->ShouldStop())
+        if (thread)
+            if (thread->ShouldStop())
                 return nullptr;
 
         if (console)
@@ -55,7 +56,7 @@ namespace SCESS {
 
         if (console)
             *console << "Creating Molecular Gauss-Chebyshev-Lebedev grid...\n";
-        MolecularGrid molecularGrid(&mol);
+        MolecularGrid molecularGrid(&mol, &basis);
         molecularGrid.Create(gridRes);
         if (console) {
             *console << "Molecular Gauss-Chebyshev-Lebedev grid created with:\n";
@@ -93,10 +94,9 @@ namespace SCESS {
             *console << "--- Starting SCF cycles ---\n";
 
         for (uint32_t iter = 0; iter < MAX_ITERATIONS; ++iter) {
-
             //Poll to check whether we should cancel the calculation
-            if(thread)
-                if(thread->ShouldStop())
+            if (thread)
+                if (thread->ShouldStop())
                     return nullptr;
 
             F = H + 2.0 * J + ExchangeCorr;
@@ -119,7 +119,7 @@ namespace SCESS {
             J = CreateColoumbMatrixTEI(tei, Density);
             //Exchange-correlation energy
             double E_XC = 0.0;
-            CalculateXCMatrix(mol, molecularGrid, ExchangeCorr, E_XC);
+            CalculateXCMatrix(molecularGrid, ExchangeCorr, E_XC);
 
             //Single electron energy
             double kineticPotentialE = 2.0 * (Density * H).trace();
@@ -179,8 +179,9 @@ namespace SCESS {
         return Density;
     }
 
-    void DensityFunctional::CalculateXCMatrix(const Molecule &mol, const MolecularGrid &grid,
-                                              MatrixXd &ExchangeCorr, double &E_XC) {
+    void DensityFunctional::CalculateXCMatrix(const MolecularGrid &grid,
+                                              MatrixXd &ExchangeCorr,
+                                              double &E_XC) {
         for (Eigen::Index i = 0; i < ExchangeCorr.size(); i++)
             ExchangeCorr.data()[i] = 0.0;
 
@@ -212,10 +213,10 @@ namespace SCESS {
 
         VectorXd wva = weights.cwiseProduct((vxa + vxb + vca + vcb) * 0.5);
 
-        for (uint32_t i = 0; i < mol.GetNoOrbitals(); i++) {
+        for (uint32_t i = 0; i < amplitudes.rows(); i++) {
             VectorXd row = amplitudes.row(i);
             VectorXd wva_i = wva.cwiseProduct(row);
-            for (uint32_t j = 0; j < mol.GetNoOrbitals(); j++) {
+            for (uint32_t j = 0; j < amplitudes.rows(); j++) {
                 ExchangeCorr(i, j) = wva_i.dot(amplitudes.row(j));
             }
         }

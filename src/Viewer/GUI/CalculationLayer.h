@@ -5,6 +5,7 @@
 #include"GraphicsEngine/3D/ShaderProgram.h"
 #include"GraphicsEngine/Utilities/Threading.h"
 
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
 #include "Quantum/CI/ConfigurationInteraction.h"
 #include "Quantum/DFT/DensityFunctional.h"
@@ -138,6 +139,7 @@ namespace SCESS {
         int mSelectedMolecule = -1;
         uRef<Molecule> mMolecule;
         uRef<Molecule> mLastMolecule;
+        BasisSet mMoleculeBasisSet;
         sRef<GEng::VertexArray> mMoleculeVAO;
         sRef<GEng::VertexBuffer> mMoleculeBuffer;
         sRef<GEng::VertexArray> mMoleculeBondVAO;

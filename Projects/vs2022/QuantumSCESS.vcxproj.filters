@@ -16,6 +16,9 @@
     <Filter Include="Quantum\DFT">
       <UniqueIdentifier>{FD372298-69ED-9A8D-F2E1-94645E969191}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Quantum\F12">
+      <UniqueIdentifier>{A83D2298-14F3-9A8D-9DE7-9464099C9191}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Quantum\HF">
       <UniqueIdentifier>{0D677569-F91E-B7B6-6226-90124EFD51A7}</UniqueIdentifier>
     </Filter>
@@ -54,11 +57,11 @@
     <ClInclude Include="..\..\src\Quantum\DFT\XCFunctionals.h">
       <Filter>Quantum\DFT</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Quantum\F12\F12.h">
+      <Filter>Quantum\F12</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\Quantum\HF\HartreeFock.h">
       <Filter>Quantum\HF</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Quantum\Integrals\BoysFunc.h">
-      <Filter>Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Quantum\Integrals\Grid\AtomicGrid.h">
       <Filter>Quantum\Integrals\Grid</Filter>
@@ -72,10 +75,16 @@
     <ClInclude Include="..\..\src\Quantum\Integrals\Grid\Quadrature.h">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Quantum\Integrals\IntegralTransforms.h">
+      <Filter>Quantum\Integrals</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\Quantum\Integrals\Integrals.h">
       <Filter>Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Quantum\Integrals\IntegralsF12.h">
+      <Filter>Quantum\Integrals</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Quantum\Integrals\IntegralsLibInt.h">
       <Filter>Quantum\Integrals</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Quantum\Molecule.h">
@@ -125,14 +134,14 @@
     <ClCompile Include="..\..\src\Quantum\DFT\XCFunctionals.cpp">
       <Filter>Quantum\DFT</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Quantum\F12\F12_MP2.cpp">
+      <Filter>Quantum\F12</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\Quantum\HF\RestrictedHF.cpp">
       <Filter>Quantum\HF</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Quantum\HF\UnrestrictedHF.cpp">
       <Filter>Quantum\HF</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Quantum\Integrals\BoysFunc.cpp">
-      <Filter>Quantum\Integrals</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Quantum\Integrals\Grid\AtomicGrid.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
@@ -146,10 +155,13 @@
     <ClCompile Include="..\..\src\Quantum\Integrals\Grid\Quadrature.cpp">
       <Filter>Quantum\Integrals\Grid</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Quantum\Integrals\IntegralTransforms.cpp">
+      <Filter>Quantum\Integrals</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\Quantum\Integrals\Integrals.cpp">
       <Filter>Quantum\Integrals</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Quantum\Integrals\IntegralsF12.cpp">
+    <ClCompile Include="..\..\src\Quantum\Integrals\IntegralsLibInt.cpp">
       <Filter>Quantum\Integrals</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Quantum\Molecule.cpp">
@@ -165,9 +177,6 @@
       <Filter>Quantum\QMC</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Resources\AssetFolder.cpp">
-      <Filter>Resources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Resources\Fonts.cpp">
       <Filter>Resources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Resources\ShaderSources.cpp">

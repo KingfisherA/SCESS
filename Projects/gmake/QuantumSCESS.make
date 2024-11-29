@@ -77,21 +77,21 @@ OBJECTS := \
 	$(OBJDIR)/FullCI.o \
 	$(OBJDIR)/DensityFunctional.o \
 	$(OBJDIR)/XCFunctionals.o \
+	$(OBJDIR)/F12_MP2.o \
 	$(OBJDIR)/RestrictedHF.o \
 	$(OBJDIR)/UnrestrictedHF.o \
-	$(OBJDIR)/BoysFunc.o \
 	$(OBJDIR)/AtomicGrid.o \
 	$(OBJDIR)/GridPoint.o \
 	$(OBJDIR)/MolecularGrid.o \
 	$(OBJDIR)/Quadrature.o \
+	$(OBJDIR)/IntegralTransforms.o \
 	$(OBJDIR)/Integrals.o \
-	$(OBJDIR)/IntegralsF12.o \
+	$(OBJDIR)/IntegralsLibInt.o \
 	$(OBJDIR)/Molecule.o \
 	$(OBJDIR)/PeriodicTable.o \
 	$(OBJDIR)/CCQMC.o \
 	$(OBJDIR)/FCIQMC.o \
 	$(OBJDIR)/AssetFolder.o \
-	$(OBJDIR)/Fonts.o \
 	$(OBJDIR)/ShaderSources.o \
 	$(OBJDIR)/Utilities.o \
 
@@ -176,13 +176,13 @@ $(OBJDIR)/DensityFunctional.o: ../../src/Quantum/DFT/DensityFunctional.cpp
 $(OBJDIR)/XCFunctionals.o: ../../src/Quantum/DFT/XCFunctionals.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/F12_MP2.o: ../../src/Quantum/F12/F12_MP2.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/RestrictedHF.o: ../../src/Quantum/HF/RestrictedHF.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/UnrestrictedHF.o: ../../src/Quantum/HF/UnrestrictedHF.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/BoysFunc.o: ../../src/Quantum/Integrals/BoysFunc.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/AtomicGrid.o: ../../src/Quantum/Integrals/Grid/AtomicGrid.cpp
@@ -197,10 +197,13 @@ $(OBJDIR)/MolecularGrid.o: ../../src/Quantum/Integrals/Grid/MolecularGrid.cpp
 $(OBJDIR)/Quadrature.o: ../../src/Quantum/Integrals/Grid/Quadrature.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/IntegralTransforms.o: ../../src/Quantum/Integrals/IntegralTransforms.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Integrals.o: ../../src/Quantum/Integrals/Integrals.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/IntegralsF12.o: ../../src/Quantum/Integrals/IntegralsF12.cpp
+$(OBJDIR)/IntegralsLibInt.o: ../../src/Quantum/Integrals/IntegralsLibInt.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Molecule.o: ../../src/Quantum/Molecule.cpp
@@ -216,9 +219,6 @@ $(OBJDIR)/FCIQMC.o: ../../src/Quantum/QMC/FCIQMC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/AssetFolder.o: ../../src/Resources/AssetFolder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/Fonts.o: ../../src/Resources/Fonts.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ShaderSources.o: ../../src/Resources/ShaderSources.cpp

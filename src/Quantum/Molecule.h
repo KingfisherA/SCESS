@@ -5,7 +5,6 @@
 #include<vector>
 #include<string_view>
 #include<utility>
-#include<unordered_map>
 #include<unordered_set>
 #include<Eigen/Core>
 #include<libint2.hpp>
@@ -34,108 +33,83 @@ namespace SCESS {
     constexpr double ANGSTROM_2_BOHR = 1.8897259886;
 
     class Atom {
-    private:
-        Eigen::Vector3d mPosition;
-        std::string mSymbol;
-        int mCharge;
-
     public:
+        Atom() = default;
         Atom(const Atom &a) : mSymbol(a.mSymbol),
                               mCharge(a.mCharge), mPosition(a.mPosition) {
         }
-
         Atom(Atom &&a) noexcept : mSymbol(a.mSymbol), mCharge(a.mCharge), mPosition(std::move(a.mPosition)) {
         }
-
-        Atom(const char *atomSymbol,
-             const Eigen::Vector3d &pos = {0., 0., 0.})
-            : mSymbol(atomSymbol), mPosition(pos), mCharge(0) {
+        Atom(std::string atomSymbol,
+             const Eigen::Vector3d &pos);
+        Atom(std::string atomSymbol, int charge, const Eigen::Vector3d &pos): mSymbol(atomSymbol), mCharge(charge),
+                                                                              mPosition(pos) {
         }
 
-
-        Atom(const char *atomSymbol,
-             int charge, const Eigen::Vector3d &pos = {0., 0., 0.})
-            : mSymbol(atomSymbol), mCharge(charge), mPosition(pos) {
+        Atom &operator=(const Atom &a) {
+            mSymbol = a.mSymbol;
+            mCharge = a.mCharge;
+            mPosition = a.mPosition;
+            return *this;
         }
 
         void SetPos(const Eigen::Vector3d &pos) {
             mPosition = pos;
         }
-
-        const Eigen::Vector3d GetPos() const {
+        const Eigen::Vector3d &GetPos() const {
             return mPosition;
         }
-
-        void SetAtomSymbol(const std::string &s) {
-            mSymbol = s;
-        }
-
-        const std::string GetAtomSymbol() const {
+        void SetAtomSymbol(std::string s);
+        const std::string &GetAtomSymbol() const {
             return mSymbol;
         }
-
         void SetCharge(int charge) {
             mCharge = charge;
         }
-
-        const int GetCharge() const {
+        int GetCharge() const {
             return mCharge;
         }
+
+    private:
+        Eigen::Vector3d mPosition;
+        std::string mSymbol;
+        int mCharge = 0;
     };
 
     class Molecule {
-    private:
-        std::vector<Atom> mAtoms;
-        std::unordered_set<BondPair> mBonds;
-        std::vector<ContractedGaussian> mOrbitals;
-        size_t mNoElectrons;
-
     public:
-        Molecule() : mNoElectrons(0) {
-        }
-
-        Molecule(const Molecule &m) : mAtoms(m.mAtoms), mBonds(m.mBonds), mOrbitals(m.mOrbitals),
+        Molecule() = default;
+        Molecule(const Molecule &m) : mAtoms(m.mAtoms), mBonds(m.mBonds),
                                       mNoElectrons(m.mNoElectrons) {
         }
-
         Molecule(Molecule &&m) noexcept : mAtoms(std::move(m.mAtoms)), mBonds(std::move(m.mBonds)),
-                                          mOrbitals(std::move(m.mOrbitals)), mNoElectrons(m.mNoElectrons) {
+                                          mNoElectrons(m.mNoElectrons) {
+        }
+        explicit Molecule(const std::vector<Atom> &atomsIn): mAtoms(atomsIn) {
+            for (const Atom &a: mAtoms)
+                mNoElectrons += a.GetCharge();
+        }
+        explicit Molecule(std::vector<Atom> &&atomsIn) : mAtoms(std::move(atomsIn)) {
+            for (const Atom &a: mAtoms)
+                mNoElectrons += a.GetCharge();
         }
 
-        explicit Molecule(const std::vector<Atom> &atomsIn) : mAtoms(atomsIn), mNoElectrons(0) {
-        }
-
-        explicit Molecule(std::vector<Atom> &&atomsIn) : mAtoms(std::move(atomsIn)), mNoElectrons(0) {
-        }
-
-        static Molecule LoadFromXYZ(const std::string &filePath);
-
-        void InsertAtom(const Atom &a) {
-            mAtoms.emplace_back(a);
-        }
-
-        void MakeOrbitals(const std::string &basisSetName);
-
+        void AddAtom(const Atom &a);
         const Atom &GetAtom(size_t index) const {
             return mAtoms[index];
         }
-
         Atom &GetAtom(size_t index) {
             return mAtoms[index];
         }
-
         const std::vector<Atom> &GetAtoms() const {
             return mAtoms;
         }
-
-        const size_t GetNoAtoms() const {
-            return mAtoms.size();
-        }
-
         std::vector<Atom> &GetAtoms() {
             return mAtoms;
         }
-
+        const size_t GetNoAtoms() const {
+            return mAtoms.size();
+        }
         std::vector<libint2::Atom> GetAtomsLibInt() const;
 
         /// <summary>
@@ -147,51 +121,28 @@ namespace SCESS {
         std::unordered_set<BondPair> &GetBonds() {
             return mBonds;
         }
-
         const std::unordered_set<BondPair> &GetBonds() const {
             return mBonds;
         }
-
-        ContractedGaussian &GetOrbital(uint32_t i) {
-            return mOrbitals[i];
-        }
-
-        const ContractedGaussian &GetOrbital(uint32_t i) const {
-            return mOrbitals[i];
-        }
-
-        std::vector<ContractedGaussian> &GetOrbitals() {
-            return mOrbitals;
-        }
-
-        const std::vector<ContractedGaussian> &GetOrbitals() const {
-            return mOrbitals;
-        }
-
-        size_t GetNoOrbitals() const {
-            return mOrbitals.size();
-        }
-
         size_t GetNoElectrons() const {
             return mNoElectrons;
         }
 
         double CalculateNuclearRepulsion() const;
+
+        static Molecule LoadFromXYZ(const std::string &filePath);
+        static Molecule GenerateWaterMolecule();
+        static Molecule GenerateHydrogenMolecule();
+        static Molecule GenerateLithiumHydrideMolecule();
+        static Molecule GenerateCOMolecule();
+        static Molecule GenerateMethaneMolecule();
+        static Molecule GenerateEtheneMolecule();
+        static Molecule GenerateAmmoniaMolecule();
+        static Molecule GenerateCarbeneMolecule();
+
+    private:
+        std::vector<Atom> mAtoms;
+        std::unordered_set<BondPair> mBonds;
+        size_t mNoElectrons = 0;
     };
-
-    Molecule GenerateWaterMolecule();
-
-    Molecule GenerateHydrogenMolecule();
-
-    Molecule GenerateLithiumHydrideMolecule();
-
-    Molecule GenerateCOMolecule();
-
-    Molecule GenerateMethaneMolecule();
-
-    Molecule GenerateEtheneMolecule();
-
-    Molecule GenerateAmmoniaMolecule();
-
-    Molecule GenerateCarbeneMolecule();
 }

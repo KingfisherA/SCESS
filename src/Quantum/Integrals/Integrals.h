@@ -47,7 +47,6 @@ namespace SCESS {
     };
 
     namespace Integrals {
-
         namespace Utils {
             //Helper functions
             /**
@@ -131,7 +130,9 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the integrals on
          * @return Configuration integrals
          */
-        ConfigIntegrals CalculateConfiguration(const Molecule &molecule, const GEng::Thread* thread = nullptr);
+        ConfigIntegrals CalculateConfiguration(const BasisSet &basisSet,
+                                               const std::vector<Atom> &atoms,
+                                               const GEng::Thread *thread = nullptr);
 
         //Overlap Integrals
         double Overlap1D(double gamma,
@@ -139,8 +140,8 @@ namespace SCESS {
                          int angX2, double posX2);
         double OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2);
         double EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2);
-        Eigen::MatrixXd CalculateOverlapMatrix(const Molecule &molecule);
-        Eigen::MatrixXd CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2);
+        Eigen::MatrixXd CalculateOverlapMatrix(const BasisSet &basisSet);
+        Eigen::MatrixXd CalculateMixedOverlapMatrix(const BasisSet &set1, const BasisSet &set2);
 
         using AArray = std::vector<double>;
         //Nuclear attraction integrals
@@ -152,12 +153,12 @@ namespace SCESS {
         double EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                const Eigen::Vector3d &nuclearPos,
                                int charge, AArray &ax, AArray &ay, AArray &az);
-        Eigen::MatrixXd CalculateNuclearMatrix(const Molecule &molecule);
+        Eigen::MatrixXd CalculateNuclearMatrix(const BasisSet &basisSet, const std::vector<Atom> &atoms);
 
         //Kinetic energy integrals
         double KineticGaussian(const Gaussian &gto1, const Gaussian &gto2);
         double EvaluateKinetic(const ContractedGaussian &c1, const ContractedGaussian &c2);
-        Eigen::MatrixXd CalculateKineticMatrix(const Molecule &molecule);
+        Eigen::MatrixXd CalculateKineticMatrix(const BasisSet &basisSet);
 
         using BArray = std::vector<double>;
         /**
@@ -165,8 +166,9 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the tei for
          * @return The tei in chemist's notation
          */
-        TEITensor TwoElectronRepulsionTensor(const Molecule &molecule, const GEng::Thread* thread =nullptr);
-        TEITensor TwoElectronRepulsionTensorMultithread(const Molecule &molecule, const GEng::Thread* parentThread =nullptr);
+        TEITensor TwoElectronRepulsionTensor(const BasisSet &basisSet, const GEng::Thread *thread = nullptr);
+        TEITensor TwoElectronRepulsionTensorMultithread(const BasisSet &basisSet,
+                                                        const GEng::Thread *parentThread = nullptr);
         //Calculates <ij | 1/r12 | kl> (I1) for a contgacted
         double TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
                                     const ContractedGaussian &c3, const ContractedGaussian &c4,

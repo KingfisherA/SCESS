@@ -2,11 +2,11 @@
 
 #include <chrono>
 #include <Eigen/Core>
-
-#include "GraphicsEngine/Utilities/Threading.h"
+#include <GraphicsEngine/Utilities/Threading.h>
 
 #include "HartreeFock.h"
 #include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
 #include "Utilities/Utilities.h"
 
@@ -14,11 +14,12 @@ namespace SCESS {
     using namespace Eigen;
 
     uRef<UHFWavefunction> HartreeFock::UHF(const Molecule &molecule,
-                                           const double convergeLimit,
-                                           const size_t scfMaxIterations,
+                                           const BasisSet &basis,
+                                           double convergeLimit,
+                                           size_t scfMaxIterations,
                                            const GEng::Thread *thread,
                                            std::stringstream *console,
-                                           const std::string_view basisSet) {
+                                           std::string_view basisSetName) {
         using namespace std::chrono;
 
         if (console != nullptr)
@@ -26,7 +27,7 @@ namespace SCESS {
 
 
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule, thread);
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
         auto integralEndTP = high_resolution_clock::now();
 
         if (thread)
@@ -40,13 +41,18 @@ namespace SCESS {
         auto alphaElectrons = molecule.GetNoElectrons() / 2;
 
         return UHF(integrals, alphaElectrons, molecule.GetNoElectrons() - alphaElectrons,
-                   molecule.CalculateNuclearRepulsion(), convergeLimit, scfMaxIterations, thread, console, basisSet);
+                   molecule.CalculateNuclearRepulsion(), convergeLimit, scfMaxIterations, thread, console,
+                   basisSetName);
     }
 
-    uRef<UHFWavefunction> HartreeFock::UHF(const ConfigIntegrals &mints, uint32_t alphaElectrons,
-                                           uint32_t betaElectrons, double Vnn, double convergeLimit,
+    uRef<UHFWavefunction> HartreeFock::UHF(const ConfigIntegrals &mints,
+                                           uint32_t alphaElectrons,
+                                           uint32_t betaElectrons,
+                                           double Vnn,
+                                           double convergeLimit,
                                            size_t scfMaxIterations,
-                                           const GEng::Thread *thread, std::stringstream *console,
+                                           const GEng::Thread *thread,
+                                           std::stringstream *console,
                                            std::string_view basisSet) {
         if (console != nullptr)
             *console << "---Unrestricted Hartree Fock---\nUsing " << basisSet << " basis set with " << mints.S.rows() <<

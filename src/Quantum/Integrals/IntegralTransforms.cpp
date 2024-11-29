@@ -3,7 +3,7 @@
 
 #include "IntegralsF12.h"
 #include "Quantum/HF/HartreeFock.h"
-#include "Quantum/Basis/BasisUtils.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Utilities/Utilities.h"
 
 namespace SCESS::Integrals {
@@ -65,7 +65,7 @@ namespace SCESS::Integrals {
         return transformed4;
     }
 
-    void Transforms::TransformF12Basis(const BasisUtils::F12BasisSet &basisSet,
+    void Transforms::TransformF12Basis(const   F12BasisSet &basisSet,
                                        ConfigIntegrals &mints,
                                        F12::F12Integrals &f12Ints,
                                        uRef<UHFWavefunction> *hfWfnOut) {
@@ -176,8 +176,7 @@ namespace SCESS::Integrals {
             SelfAdjointEigenSolver<MatrixXd> eigenSolver2(F_Prime);
             C_CABS = X * eigenSolver2.eigenvectors().real();
         }
-
-
+        
         array<uint8_t, 16> combinations = {0};
 
         for (uint8_t i = 0, x = 0; i < 2; ++i)
@@ -245,20 +244,19 @@ namespace SCESS::Integrals {
 
         for (Index p = 0; p < transformed.dimension(0); ++p)
             for (Index q = 0; q < transformed.dimension(1); ++q)
-                for (Index q = 0; q < transformed.dimension(1); ++q)
-                    for (Index r = 0; r < transformed.dimension(2); ++r)
-                        for (Index s = 0; s < transformed.dimension(3); ++s) {
-                            //Only allow the integral to exist if the alpha is integrated with an alpha
-                            //or beta with a beta (spin function orthogonality)
-                            Index coloumbMask = (p % 2 == r % 2) * (q % 2 == s % 2);
-                            //One if the spin functions commute. Zero otherwise
-                            Index exchangeMask = (p % 2 == s % 2) * (q % 2 == r % 2);
+                for (Index r = 0; r < transformed.dimension(2); ++r)
+                    for (Index s = 0; s < transformed.dimension(3); ++s) {
+                        //Only allow the integral to exist if the alpha is integrated with an alpha
+                        //or beta with a beta (spin function orthogonality)
+                        Index coloumbMask = (p % 2 == r % 2) * (q % 2 == s % 2);
+                        //One if the spin functions commute. Zero otherwise
+                        Index exchangeMask = (p % 2 == s % 2) * (q % 2 == r % 2);
 
-                            //Convert from chemist's to physicists' notation and apply spin integration
-                            transformed(p, q, r, s) =
-                                    moTEI(p / 2, r / 2, q / 2, s / 2) * static_cast<double>(coloumbMask)
-                                    - moTEI(p / 2, s / 2, q / 2, r / 2) * static_cast<double>(exchangeMask);
-                        }
+                        //Convert from chemist's to physicists' notation and apply spin integration
+                        transformed(p, q, r, s) =
+                                moTEI(p / 2, r / 2, q / 2, s / 2) * static_cast<double>(coloumbMask)
+                                - moTEI(p / 2, s / 2, q / 2, r / 2) * static_cast<double>(exchangeMask);
+                    }
 
         return transformed;
     }

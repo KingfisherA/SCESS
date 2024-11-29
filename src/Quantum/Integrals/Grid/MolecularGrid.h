@@ -6,6 +6,10 @@
 #include "Quadrature.h"
 
 namespace SCESS {
+    class BasisSet;
+}
+
+namespace SCESS {
     class Molecule;
     enum class LebedevOrder;
 
@@ -21,7 +25,7 @@ namespace SCESS {
         constexpr static Resolution HIGH_RES{20, LebedevOrder::LEBEDEV_110};
         constexpr static Resolution ULTRAFINE_RES{30, LebedevOrder::LEBEDEV_194};
 
-        explicit MolecularGrid(const Molecule *mol);
+        explicit MolecularGrid(const Molecule* molecule, const BasisSet *basisSet);
 
         void Create(Resolution resolution);
 
@@ -47,5 +51,6 @@ namespace SCESS {
         size_t mGridSize = 0;
 
         const Molecule *mMolecule = nullptr;
+        const BasisSet *mBasisSet = nullptr;
     };
 } // SCESS

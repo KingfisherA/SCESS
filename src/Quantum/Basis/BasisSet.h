@@ -5,14 +5,46 @@
 #include<nlohmann/json.hpp>
 
 #include "Quantum/Basis/Gaussian.h"
-#include "Resources/Resources.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 
-namespace SCESS::BasisUtils {
-    std::unordered_set<std::string> ListBasisSets();
-    std::optional<nlohmann::json> LoadBasisSetJSON(std::string_view jsonFilePath);
+namespace SCESS {
+    class Molecule;
+}
 
-    std::vector<Eigen::Vector3i> GenerateAngularMomenta(size_t angMom);
+namespace SCESS {
+
+
+    class BasisSet {
+    public:
+        BasisSet() = default;
+        BasisSet(const std::string &basisSetName, const Molecule &mol);
+        BasisSet(const BasisSet&) = default;
+        BasisSet(BasisSet&&) = default;
+
+        BasisSet& operator=(const BasisSet&) = default;
+        BasisSet& operator=(BasisSet&&) = default;
+
+        static std::unordered_set<std::string> ListBasisSets();
+
+        void LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol);
+        void AddCGF(const ContractedGaussian &cgf);
+        template<typename Iterator>
+        void AddCGFs(const Iterator begin, const Iterator end) {
+            mBasisFuncs.insert(mBasisFuncs.end(), begin, end);
+        }
+        void Clear() { mBasisFuncs.clear(); }
+        size_t GetNoCGFs() const { return mBasisFuncs.size(); }
+        size_t GetNoPrimitives() const;
+
+        ContractedGaussian& Get(size_t i){return mBasisFuncs[i];}
+        const ContractedGaussian& Get(size_t i) const{return mBasisFuncs[i];}
+        std::vector<ContractedGaussian> &GetCGFs() { return mBasisFuncs; }
+        const std::vector<ContractedGaussian> &GetCGFs() const { return mBasisFuncs; }
+
+    private:
+        std::vector<ContractedGaussian> mBasisFuncs;
+    };
+
 
     class F12BasisSet {
     public:
@@ -99,25 +131,4 @@ namespace SCESS::BasisUtils {
                 mNumPrimitives = 0;
         int mMaxL = 0;
     };
-
-    // //Represents a combined basis set
-    // class CombinedBasisSet {
-    // public:
-    //     using ShellTensor = std::vector<std::vector<libint2::Shell> >;
-    //     using BasisRanges_T = std::vector<std::pair<size_t, size_t> >;
-    //
-    //     CombinedBasisSet() = default;
-    //
-    //     void AddBasisFunctions(const std::string &basisSetName, const std::vector<libint2::Atom> &molecule);
-    //
-    //     [[nodiscard]] const ShellTensor &GetShells() const { return mShells; }
-    //     ShellTensor &GetShells() { return mShells; }
-    //
-    //     BasisRanges_T &GetBasisRanges() { return mBasisRanges; }
-    //     [[nodiscard]] const BasisRanges_T &GetBasisRanges() const { return mBasisRanges; }
-    //
-    // protected:
-    //     ShellTensor mShells;
-    //     BasisRanges_T mBasisRanges;
-    // };
 }

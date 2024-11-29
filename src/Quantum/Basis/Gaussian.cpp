@@ -1,10 +1,10 @@
 #include<pch.h>
-#include "Gaussian.h"
-
-#include  "Quantum/Molecule.h"
-
-#include "Utilities/Intrinsics.h"
 #include<type_traits>
+
+#include "Gaussian.h"
+#include "Quantum/Basis/BasisSet.h"
+
+
 
 
 namespace SCESS {
@@ -81,12 +81,12 @@ namespace SCESS {
 
     template<typename T>
     std::function<T(T, T, T)> GenerateMolecularWavefunction(const Eigen::VectorXd &coeffsIn,
-                                                            const Molecule &mol) {
+                                                            const BasisSet &basisSet) {
         static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
                       "Can only instantiate template with a floating point type");
         return [
                     coeffs = coeffsIn,
-                    &molecule = static_cast<const Molecule &>(mol),
+                    &basisSet,
                     gaussianData = std::vector<T>()
                 ](T x, T y, T z) mutable -> T {
             // #ifdef __AVX2__
@@ -393,7 +393,7 @@ namespace SCESS {
             // #else
             if (gaussianData.size() == 0) {
                 size_t dataSize = 0;
-                for (const ContractedGaussian &gc: molecule.GetOrbitals()) {
+                for (const ContractedGaussian &gc: basisSet.GetCGFs()) {
                     //3 for angular, 3 for position, 1 for exponent, 1 for normalisation
                     //1 for coefficient, 1 for MO coefficient
                     dataSize += gc.Size() * 10;
@@ -401,8 +401,8 @@ namespace SCESS {
                 gaussianData.resize(dataSize);
 
                 size_t idx = 0;
-                for (size_t i = 0; i < molecule.GetOrbitals().size(); i++) {
-                    const ContractedGaussian &gc = molecule.GetOrbital(i);
+                for (size_t i = 0; i < basisSet.GetNoCGFs(); i++) {
+                    const ContractedGaussian &gc = basisSet.Get(i);
                     for (size_t j = 0; j < gc.Size(); j++) {
                         const Gaussian &g = gc.Get(j);
                         gaussianData[idx + 0] = (T) coeffs[i];
@@ -454,7 +454,7 @@ namespace SCESS {
     }
 
     template std::function<float(float, float, float)>
-    GenerateMolecularWavefunction(const Eigen::VectorXd &coeffs, const Molecule &mol);
+    GenerateMolecularWavefunction(const Eigen::VectorXd &coeffs, const BasisSet &basisSet);
     template std::function<double(double, double, double)>
-    GenerateMolecularWavefunction(const Eigen::VectorXd &coeffs, const Molecule &mol);
+    GenerateMolecularWavefunction(const Eigen::VectorXd &coeffs, const BasisSet &basisSet);
 }

@@ -7,6 +7,7 @@
 #include "GraphicsEngine/Utilities/Threading.h"
 
 #include "HartreeFock.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Molecule.h"
@@ -18,43 +19,58 @@ namespace SCESS {
     using namespace Eigen;
 
     uRef<RHFWavefunction> HartreeFock::RHF(const Molecule &molecule,
-                                           const Molecule *lastMolecule,
-                                           const RHFWavefunction *lastResult,
+                                           const BasisSet &basis,
                                            const double convergeLimit,
                                            const size_t scfMaxIterations,
                                            const GEng::Thread *thread,
                                            std::stringstream *console,
-                                           const std::string_view basisSet) {
+                                           const std::string_view basisSetName) {
         using namespace std::chrono;
 
-
-        if (console)
-            *console << "---Restricted Hartree Fock---\nUsing " << basisSet << " basis set with " << molecule.
-                    GetOrbitals().size() << " basis set functions \nBeginning integral evaluation...\n";
-
+        std::cout << "\nBeginning integral evaluation...\n";
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(molecule, thread);
+        ConfigIntegrals integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
         auto integralEndTP = high_resolution_clock::now();
-
-        if (thread)
-            if (thread->ShouldStop())
-                return nullptr;
-
-        const MatrixXd &S = integrals.S;
-        const MatrixXd &T = integrals.T;
-        const MatrixXd &V = integrals.V;
-        const TEITensor &eri = integrals.eri; //Two-electron repulsion integral tensor
 
         if (console)
             *console << "Integral evaluation completed in " <<
                     duration_cast<milliseconds>(integralEndTP - integralStartTP).count() << " milliseconds\n";
 
-        const Eigen::Index dimensions = S.rows();
+        return RHF(integrals,
+                   molecule.GetNoElectrons() / 2,
+                   molecule.CalculateNuclearRepulsion(),
+                   convergeLimit,
+                   scfMaxIterations,
+                   thread,
+                   console,
+                   basisSetName);
+    }
+
+
+    uRef<RHFWavefunction> HartreeFock::RHF(const ConfigIntegrals &mints, uint32_t nElectronPairs, double Vnn,
+                                           double convergeLimit, size_t scfMaxIterations, const GEng::Thread *thread,
+                                           std::stringstream *console,
+                                           std::string_view basisSetName) {
+        if (console)
+            *console << "---Restricted Hartree Fock---\nUsing " << basisSetName << " basis set with " << mints.S.rows()
+                    << " basis set functions\n";
+
+        if (thread)
+            if (thread->ShouldStop())
+                return nullptr;
+
+        const MatrixXd &S = mints.S;
+        const MatrixXd &T = mints.T;
+        const MatrixXd &V = mints.V;
+        const TEITensor &eri = mints.eri; //Two-electron repulsion integral tensor
+
+
+        const Index dimensions = S.rows();
         double delta = 1.0;
-        double Vnn = molecule.CalculateNuclearRepulsion();
         double energy = 0.0, lastEnergy = DBL_MAX;
 
-        MatrixXd Hcore = T + V;
+        //Core one-electron elements of the Hamiltonian
+        MatrixXd h = T + V;
 
         SelfAdjointEigenSolver<MatrixXd> eigensolver;
         eigensolver.compute(S);
@@ -64,43 +80,34 @@ namespace SCESS {
         MatrixXd TransformMat = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
         TransformMat = (TransformMat + TransformMat.transpose()) * 0.5;
 
-        MatrixXd Fock, Coeffs, Density;
+        MatrixXd F, C;
+        MatrixXd Density = MatrixXd::Zero(dimensions, dimensions);
         VectorXd Energies;
 
-        //Project the last result from the smaller into the larger basis set
-        if (lastResult && lastMolecule) {
-            MatrixXd S21 = Integrals::CalculateMixedOverlapMatrix(molecule, *lastMolecule);
-            MatrixXd S22Inv = S.completeOrthogonalDecomposition().pseudoInverse();
-
-            Density = S22Inv * (S21 * lastResult->Density * S21.transpose()) * S22Inv;
-            Density.conservativeResize(dimensions, dimensions);
-        } else
-            Density = MatrixXd::Zero(dimensions, dimensions);
 
         if (console)
             *console << "Beginning SCF iterations...\n";
-
 
         std::vector<MatrixXd> DIIS_Errors;
         DIIS_Errors.reserve(7);
         std::vector<MatrixXd> FockMatrices;
         FockMatrices.reserve(7);
 
-        Eigen::Index scfIter = 1;
+        Index scfIter = 1;
         for (; scfIter < scfMaxIterations + 1; scfIter++) {
             if (thread)
                 if (thread->ShouldStop())
                     return nullptr;
 
             //Generate the Fock matrix
-            Fock = Hcore + ConstructGRHF(Density, eri);
-            Fock = (Fock + Fock.transpose()) * 0.5;
+            F = h + ConstructGRHF(Density, eri);
+            F = (F + F.transpose()) * 0.5;
 
             //Build the DIIS error vector (FDS-SDF)
-            MatrixXd DIIS_Error = Fock * Density * S - S * Density * Fock;
+            MatrixXd DIIS_Error = F * Density * S - S * Density * F;
             DIIS_Error = TransformMat.transpose() * DIIS_Error * TransformMat;
             DIIS_Errors.push_back(DIIS_Error);
-            FockMatrices.push_back(Fock);
+            FockMatrices.push_back(F);
             delta = sqrt(DIIS_Error.cwiseSquare().mean());
 
             if (scfIter >= 4) {
@@ -113,7 +120,7 @@ namespace SCESS {
                         *console << "Turning on DIIS \n";
                 }
 
-                Eigen::Index DIIS_Size = FockMatrices.size();
+                Index DIIS_Size = FockMatrices.size();
 
                 if (DIIS_Size > 6) {
                     FockMatrices.erase(FockMatrices.begin());
@@ -125,8 +132,8 @@ namespace SCESS {
                 ErrorMat(ErrorMat.rows() - 1, ErrorMat.cols() - 1) = 0.0;
 
                 double maxVal = 0.0;
-                for (Eigen::Index i = 0; i < DIIS_Errors.size(); i++)
-                    for (Eigen::Index j = i; j < DIIS_Errors.size(); j++) {
+                for (Index i = 0; i < DIIS_Errors.size(); i++)
+                    for (Index j = i; j < DIIS_Errors.size(); j++) {
                         ErrorMat(i, j) = ErrorMat(j, i) = DIIS_Errors[i].cwiseProduct(DIIS_Errors[j]).sum();
                         maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
                     }
@@ -138,32 +145,31 @@ namespace SCESS {
 
                 VectorXd DIISCoeffs = ErrorMat.lu().solve(Residual);
 
-                Fock = MatrixXd::Zero(Fock.rows(), Fock.cols());
-                for (Eigen::Index i = 0; i < FockMatrices.size(); i++)
-                    Fock += DIISCoeffs(i) * FockMatrices[i];
+                F = MatrixXd::Zero(F.rows(), F.cols());
+                for (Index i = 0; i < FockMatrices.size(); i++)
+                    F += DIISCoeffs(i) * FockMatrices[i];
             }
 
             //Transform the Fock matrix in the orthonormal basis set
-            MatrixXd FockPrime = TransformMat.transpose() * Fock * TransformMat;
+            MatrixXd F_Prime = TransformMat.transpose() * F * TransformMat;
 
             //Diagonalise the transformed Fock matrix
-            SelfAdjointEigenSolver<MatrixXd> eigensolver2(FockPrime);
-            //eigensolver2.compute(FockPrime);
+            SelfAdjointEigenSolver<MatrixXd> eigensolver2(F_Prime);
             Energies = eigensolver2.eigenvalues().real();
 
             //Transform coefficients back into normal basis
-            const MatrixXd &CPrime = eigensolver2.eigenvectors().real();
-            Coeffs = TransformMat * CPrime;
+            const MatrixXd &C_Prime = eigensolver2.eigenvectors().real();
+            C = TransformMat * C_Prime;
 
             //Recompute the density matrix
-            Density = ConstructDensityRHF(Coeffs, molecule.GetNoElectrons());
+            Density = ConstructDensityRHF(C, nElectronPairs);
 
             //Calculate delta change to the density matrix
-            // const  MatrixXd DensityMatriciesDelta = Density - OldDensity;
+            // const MatrixXd DensityMatriciesDelta = Density - OldDensity;
             // delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
 
             lastEnergy = energy;
-            energy = CalculateEnergyRHF(Density, Hcore, Fock) + Vnn;
+            energy = CalculateEnergyRHF(Density, h, F) + Vnn;
 
             if (delta < 1E-3 && abs(energy - lastEnergy) < convergeLimit)
                 break;
@@ -173,7 +179,7 @@ namespace SCESS {
                 *console << "   RHF(" << scfIter << "): E = " << energy << "      dE = " << delta << '\n';
         }
 
-        energy = CalculateEnergyRHF(Density, Hcore, Fock) + Vnn;
+        energy = CalculateEnergyRHF(Density, h, F) + Vnn;
         if (console) {
             if (scfIter < scfMaxIterations)
                 *console << "---- RHF procedure converged! ----\nRHF converged after " <<
@@ -182,24 +188,24 @@ namespace SCESS {
                 *console << "!!! RHF procedure failed to converge !!!\n\n\n";
         }
 
-        VectorXi Occupation = VectorXi::Zero(Hcore.rows());
+        VectorXi Occupation = VectorXi::Zero(h.rows());
 
-        for (int64_t i = ((int64_t) molecule.GetNoElectrons() / 2) - 1; i >= 0; --i) {
+        for (int64_t i = static_cast<int64_t>(nElectronPairs) - 1; i >= 0; --i) {
             Occupation(i) = 2;
         }
 
 
-        return std::make_unique<RHFWavefunction>(Fock, Hcore, Density, Coeffs, Energies, Occupation, integrals, energy);
+        return std::make_unique<RHFWavefunction>(F, h, Density, C, Energies, Occupation, mints, energy);
     }
 
     MatrixXd HartreeFock::ConstructGRHF(const MatrixXd &Density,
                                         const TEITensor &teiTensor) {
         MatrixXd G = MatrixXd::Zero(Density.rows(), Density.rows());
 
-        for (Eigen::Index i = 0; i < G.rows(); i++)
-            for (Eigen::Index j = 0; j < G.rows(); j++)
-                for (Eigen::Index k = 0; k < G.rows(); k++)
-                    for (Eigen::Index l = 0; l < G.rows(); l++) {
+        for (Index i = 0; i < G.rows(); i++)
+            for (Index j = 0; j < G.rows(); j++)
+                for (Index k = 0; k < G.rows(); k++)
+                    for (Index l = 0; l < G.rows(); l++) {
                         //Coulomb integral; <ik | jl> = (ij | kl)
                         double J = teiTensor(i, j, k, l);
                         //Exchange integral; <ij | kl> = (ik | jl)
@@ -210,12 +216,23 @@ namespace SCESS {
         return G;
     }
 
+    MatrixXd HartreeFock::ProjectOrbitalDensity(const BasisSet& set1,
+                                                const BasisSet& set2,
+                                                const RHFWavefunction &rhfWfn) {
+        MatrixXd S21 = Integrals::CalculateMixedOverlapMatrix(set1, set2);
+        MatrixXd S22Inv = rhfWfn.Integrals.S.completeOrthogonalDecomposition().pseudoInverse();
+
+        MatrixXd Density = S22Inv * (S21 * rhfWfn.Density * S21.transpose()) * S22Inv;
+        Density.conservativeResize(rhfWfn.Integrals.S.rows(), rhfWfn.Integrals.S.cols());
+        return Density;
+    }
+
     MatrixXd HartreeFock::ConstructDensityRHF(const MatrixXd &Coeffs,
-                                              const Eigen::Index Nelecs) {
+                                              Index nElecPairs) {
         MatrixXd Density = MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
-        for (int i = 0; i < Density.rows(); i++) {
-            for (int j = 0; j < Density.rows(); j++) {
-                for (int k = 0; k < (Nelecs / 2); k++) {
+        for (Index i = 0; i < Density.rows(); i++) {
+            for (Index j = 0; j < Density.rows(); j++) {
+                for (Index k = 0; k < nElecPairs; k++) {
                     Density(i, j) += 2.0 * Coeffs(i, k) * Coeffs(j, k);
                 }
             }
@@ -271,7 +288,7 @@ namespace SCESS {
         double MP2_E = 0.0;
 
         //Number of doubly-occupied molecular orbitals
-        Eigen::Index nOcc = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
+        Index nOcc = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
 
         if (console) {
             *console << std::setprecision(12);
@@ -279,15 +296,15 @@ namespace SCESS {
         }
 
         //i and j run over the occupied orbitals
-        for (Eigen::Index i = 0; i < nOcc; i++)
-            for (Eigen::Index j = 0; j < nOcc; j++) {
+        for (Index i = 0; i < nOcc; i++)
+            for (Index j = 0; j < nOcc; j++) {
                 if (thread)
                     if (thread->ShouldStop())
                         return 0.0;
 
                 //a and b run over the virtual orbitals
-                for (Eigen::Index a = nOcc; a < occ.size(); a++)
-                    for (Eigen::Index b = nOcc; b < occ.size(); b++) {
+                for (Index a = nOcc; a < occ.size(); a++)
+                    for (Index b = nOcc; b < occ.size(); b++) {
                         //Note that integrals are in chemist's notation
                         double intIJAB = moTEI(i, a, j, b);
                         double intIJBA = moTEI(i, b, j, a);

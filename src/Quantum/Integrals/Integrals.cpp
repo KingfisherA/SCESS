@@ -9,6 +9,7 @@
 
 #include "Integrals.h"
 #include "IntegralTransforms.h"
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "Quantum/Molecule.h"
 
@@ -17,23 +18,25 @@ namespace SCESS {
 
 #pragma region Helper Functions
 
-    ConfigIntegrals Integrals::CalculateConfiguration(const Molecule &molecule, const GEng::Thread *thread) {
+    ConfigIntegrals Integrals::CalculateConfiguration(const BasisSet &basisSet,
+                                                      const std::vector<Atom> &atoms,
+                                                      const GEng::Thread *thread) {
         Eigen::MatrixXd S =
-                Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
+                Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
         Eigen::MatrixXd T =
-                Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
+                Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
         Eigen::MatrixXd V =
-                Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
+                Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         AArray ax, ay, az;
-        for (Eigen::Index i = 0; i < molecule.GetNoOrbitals(); i++) {
+        for (Eigen::Index i = 0; i < basisSet.GetNoCGFs(); i++) {
             if (thread)
                 if (thread->ShouldStop())
                     return {};
 
-            for (Eigen::Index j = i; j < molecule.GetNoOrbitals(); j++) {
-                const ContractedGaussian &c1 = molecule.GetOrbital(i);
-                const ContractedGaussian &c2 = molecule.GetOrbital(j);
+            for (Eigen::Index j = i; j < basisSet.GetNoCGFs(); j++) {
+                const ContractedGaussian &c1 = basisSet.Get(i);
+                const ContractedGaussian &c2 = basisSet.Get(j);
 
                 //Overlap Evaluation
                 S(i, j) = S(j, i) = EvaluateOverlap(c1, c2);
@@ -42,7 +45,7 @@ namespace SCESS {
                 T(i, j) = T(j, i) = EvaluateKinetic(c1, c2);
 
                 double Vn = 0.0;
-                for (const Atom &a: molecule.GetAtoms()) {
+                for (const Atom &a: atoms) {
                     Vn += EvaluateNuclear(c1, c2, a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = Vn;
@@ -50,7 +53,7 @@ namespace SCESS {
         }
 
 
-        TEITensor tei = TwoElectronRepulsionTensorMultithread(molecule, thread);
+        TEITensor tei = TwoElectronRepulsionTensorMultithread(basisSet, thread);
 
         return ConfigIntegrals{S, T, V, tei};
     }
@@ -112,23 +115,23 @@ namespace SCESS {
         return result;
     }
 
-    Eigen::MatrixXd Integrals::CalculateOverlapMatrix(const Molecule &molecule) {
-        Eigen::MatrixXd S = Eigen::MatrixXd::Zero(molecule.GetOrbitals().size(), molecule.GetOrbitals().size());
+    Eigen::MatrixXd Integrals::CalculateOverlapMatrix(const BasisSet &basisSet) {
+        Eigen::MatrixXd S = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         for (Eigen::Index i = 0; i < S.rows(); i++)
             for (Eigen::Index j = i; j < S.cols(); j++)
-                S(i, j) = S(j, i) = EvaluateOverlap(molecule.GetOrbital(i), molecule.GetOrbital(j));
+                S(i, j) = S(j, i) = EvaluateOverlap(basisSet.Get(i), basisSet.Get(j));
 
         return S;
     }
 
 
-    Eigen::MatrixXd Integrals::CalculateMixedOverlapMatrix(const Molecule &mol1, const Molecule &mol2) {
-        Eigen::MatrixXd S = Eigen::MatrixXd::Zero(mol1.GetOrbitals().size(), mol2.GetOrbitals().size());
+    Eigen::MatrixXd Integrals::CalculateMixedOverlapMatrix(const BasisSet &set1, const BasisSet &set2) {
+        Eigen::MatrixXd S = Eigen::MatrixXd::Zero(set1.GetNoCGFs(), set2.GetNoCGFs());
 
         for (Eigen::Index i = 0; i < S.rows(); i++)
             for (Eigen::Index j = i; j < S.cols(); j++)
-                S(i, j) = S(j, i) = EvaluateOverlap(mol1.GetOrbital(i), mol2.GetOrbital(j));
+                S(i, j) = S(j, i) = EvaluateOverlap(set1.Get(i), set2.Get(j));
 
         return S;
     }
@@ -224,15 +227,15 @@ namespace SCESS {
         return result * (double) charge;
     }
 
-    Eigen::MatrixXd Integrals::CalculateNuclearMatrix(const Molecule &molecule) {
-        Eigen::MatrixXd V = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
+    Eigen::MatrixXd Integrals::CalculateNuclearMatrix(const BasisSet &basisSet, const std::vector<Atom> &atoms) {
+        Eigen::MatrixXd V = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         AArray ax, ay, az;
         for (size_t i = 0; i < V.rows(); i++)
             for (size_t j = i; j < V.rows(); j++) {
                 double result = 0.0;
-                for (const Atom &a: molecule.GetAtoms()) {
-                    result += EvaluateNuclear(molecule.GetOrbital(i), molecule.GetOrbital(j),
+                for (const Atom &a: atoms) {
+                    result += EvaluateNuclear(basisSet.Get(i), basisSet.Get(j),
                                               a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = result;
@@ -287,13 +290,13 @@ namespace SCESS {
         return result;
     }
 
-    Eigen::MatrixXd Integrals::CalculateKineticMatrix(const Molecule &molecule) {
-        Eigen::MatrixXd K = Eigen::MatrixXd::Zero(molecule.GetNoOrbitals(), molecule.GetNoOrbitals());
+    Eigen::MatrixXd Integrals::CalculateKineticMatrix(const BasisSet &basisSet) {
+        Eigen::MatrixXd K = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         //i=Rows, j=Cols
         for (size_t i = 0; i < K.rows(); i++) {
             for (size_t j = i; j < K.cols(); j++) {
-                K(i, j) = K(j, i) = EvaluateKinetic(molecule.GetOrbital(i), molecule.GetOrbital(j));
+                K(i, j) = K(j, i) = EvaluateKinetic(basisSet.Get(i), basisSet.Get(j));
             }
         }
 
@@ -304,29 +307,29 @@ namespace SCESS {
 
 #pragma region Two Electron Integrals
 
-    TEITensor Integrals::TwoElectronRepulsionTensor(const Molecule &molecule, const GEng::Thread *thread) {
-        TEITensor returnTensor((Eigen::Index) molecule.GetNoOrbitals(),
-                               (Eigen::Index) molecule.GetNoOrbitals(),
-                               (Eigen::Index) molecule.GetNoOrbitals(),
-                               (Eigen::Index) molecule.GetNoOrbitals());
+    TEITensor Integrals::TwoElectronRepulsionTensor(const BasisSet &basisSet, const GEng::Thread *thread) {
+        TEITensor returnTensor((Eigen::Index) basisSet.GetNoCGFs(),
+                               (Eigen::Index) basisSet.GetNoCGFs(),
+                               (Eigen::Index) basisSet.GetNoCGFs(),
+                               (Eigen::Index) basisSet.GetNoCGFs());
 
         std::vector<double> bx;
         std::vector<double> by;
         std::vector<double> bz;
 
-        for (Eigen::Index i = 0; i < molecule.GetNoOrbitals(); i++) {
-            for (Eigen::Index j = 0; j < molecule.GetNoOrbitals(); j++) {
-                for (Eigen::Index k = 0; k < molecule.GetNoOrbitals(); k++) {
+        for (Eigen::Index i = 0; i < basisSet.GetNoCGFs(); i++) {
+            for (Eigen::Index j = 0; j < basisSet.GetNoCGFs(); j++) {
+                for (Eigen::Index k = 0; k < basisSet.GetNoCGFs(); k++) {
                     if (thread)
                         if (thread->ShouldStop())
                             return {};
 
-                    for (Eigen::Index l = 0; l < molecule.GetNoOrbitals(); l++) {
+                    for (Eigen::Index l = 0; l < basisSet.GetNoCGFs(); l++) {
                         returnTensor(i, j, k, l) = TwoElectronRepulsion(
-                            molecule.GetOrbital(i),
-                            molecule.GetOrbital(j),
-                            molecule.GetOrbital(k),
-                            molecule.GetOrbital(l),
+                            basisSet.Get(i),
+                            basisSet.Get(j),
+                            basisSet.Get(k),
+                            basisSet.Get(l),
                             bx, by, bz);
                     }
                 }
@@ -336,18 +339,18 @@ namespace SCESS {
         return returnTensor;
     }
 
-    TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const Molecule &molecule,
+    TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const BasisSet &basisSet,
                                                                const GEng::Thread *parentThread) {
         using IdxTuple = Eigen::Vector4<uint8_t>;
         using YoshMap_T = std::unordered_map<size_t, std::vector<IdxTuple> >;
 
         YoshMap_T yoshIdxMap;
-        yoshIdxMap.reserve(molecule.GetNoOrbitals() * molecule.GetNoOrbitals());
+        yoshIdxMap.reserve(basisSet.GetNoCGFs() * basisSet.GetNoCGFs());
 
-        for (int i = 0; i < molecule.GetNoOrbitals(); i++)
-            for (int j = 0; j < molecule.GetNoOrbitals(); j++)
-                for (int k = 0; k < molecule.GetNoOrbitals(); k++)
-                    for (int l = 0; l < molecule.GetNoOrbitals(); l++) {
+        for (int i = 0; i < basisSet.GetNoCGFs(); i++)
+            for (int j = 0; j < basisSet.GetNoCGFs(); j++)
+                for (int k = 0; k < basisSet.GetNoCGFs(); k++)
+                    for (int l = 0; l < basisSet.GetNoCGFs(); l++) {
                         size_t yoshIdx = TEIYoshimineIdx(i, j, k, l);
 
                         auto itPair = yoshIdxMap.find(yoshIdx);
@@ -374,7 +377,7 @@ namespace SCESS {
 
         auto threadWorker = [](const GEng::Thread *thread,
                                const YoshMap_T &yoshIdxMap,
-                               const Molecule &molecule,
+                               const BasisSet &basisSet,
                                IntResultMap_T &integralResult,
                                size_t startingIdx,
                                size_t chunkSize) {
@@ -392,10 +395,10 @@ namespace SCESS {
                         return;
 
                 const auto &indices = it->second[0];
-                integralResult[it->first] = TwoElectronRepulsion(molecule.GetOrbital(indices.x()),
-                                                                 molecule.GetOrbital(indices.y()),
-                                                                 molecule.GetOrbital(indices.z()),
-                                                                 molecule.GetOrbital(indices.w()),
+                integralResult[it->first] = TwoElectronRepulsion(basisSet.Get(indices.x()),
+                                                                 basisSet.Get(indices.y()),
+                                                                 basisSet.Get(indices.z()),
+                                                                 basisSet.Get(indices.w()),
                                                                  bx, by, bz);
                 ++it;
             }
@@ -410,7 +413,7 @@ namespace SCESS {
                 threads[i].Start(threadWorker,
                                  &threads[i],
                                  std::ref(yoshIdxMap),
-                                 std::ref(molecule),
+                                 std::ref(basisSet),
                                  std::ref(integralResultMaps[i + 1]),
                                  i * chunkSize,
                                  chunkSize);
@@ -418,7 +421,7 @@ namespace SCESS {
             //Dispatch work on current thread as well
             threadWorker(parentThread,
                          yoshIdxMap,
-                         molecule,
+                         basisSet,
                          integralResultMaps[0],
                          NUM_THREADS * chunkSize,
                          yoshIdxMap.size() - NUM_THREADS * chunkSize);
@@ -428,7 +431,7 @@ namespace SCESS {
         } else
             threadWorker(parentThread,
                          yoshIdxMap,
-                         molecule,
+                         basisSet,
                          integralResultMaps[0],
                          0,
                          yoshIdxMap.size());
@@ -437,10 +440,10 @@ namespace SCESS {
             if (parentThread->ShouldStop())
                 return {};
 
-        TEITensor teiTensor((Eigen::Index) molecule.GetNoOrbitals(),
-                            (Eigen::Index) molecule.GetNoOrbitals(),
-                            (Eigen::Index) molecule.GetNoOrbitals(),
-                            (Eigen::Index) molecule.GetNoOrbitals());
+        TEITensor teiTensor((Eigen::Index) basisSet.GetNoCGFs(),
+                            (Eigen::Index) basisSet.GetNoCGFs(),
+                            (Eigen::Index) basisSet.GetNoCGFs(),
+                            (Eigen::Index) basisSet.GetNoCGFs());
 
         for (auto &[yoshIdx, indices]: yoshIdxMap) {
             double integralResult = [&yoshIdx, &integralResultMaps, NUM_THREADS]() {
