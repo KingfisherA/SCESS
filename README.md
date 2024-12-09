@@ -30,7 +30,7 @@ This is a basic implementation of different *ab-initio* quantum chemistry theori
 Release binaries are available for testing from the releases GitHub section.
 
 # Build Instructions
-* Currently only supports Linux build systems *
+*Currently only supports Linux build systems*
 1. Clone the github repository *recursively* to get a copy of the submodules with the source: `git clone --recursive -j8 git@github.com:KingfisherA/SCESS.git`
 2. Install the necessary dependency packages. This can be achieved by running `sudo Scripts\Get_Packages.sh`
 3. Make both `Scripts\Build.sh` and `Libraries\Build_Libraries.sh` executable i.e. `chmod +x .\Scripts\Build.sh` and `chmod +x .\Libraries\Build_Libraries.sh`
