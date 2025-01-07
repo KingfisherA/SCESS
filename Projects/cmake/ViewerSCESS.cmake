@@ -1,76 +1,73 @@
-﻿add_executable("ViewerSCESS"
-    "src/Resources/AssetFolder.cpp"
-    "src/Resources/Resources.h"
-    "src/Resources/ShaderSources.cpp"
-    "src/Utilities/Assets.h"
-    "src/Utilities/Intrinsics.h"
-    "src/Utilities/Utilities.cpp"
-    "src/Utilities/Utilities.h"
-      "src/Viewer/Application/Application.cpp"
-      "src/Viewer/Application/Application.h"
-      "src/Viewer/GUI/AtomDraw.cpp"
-      "src/Viewer/GUI/AtomDraw.h"
-      "src/Viewer/GUI/CalculationLayer.cpp"
-      "src/Viewer/GUI/CalculationLayer.h"
-      "src/Viewer/GUI/ImSpinner.h"
-      "src/Viewer/Isosurfaces/IsosurfaceConstants.cpp"
-      "src/Viewer/Isosurfaces/Isosurfaces.cpp"
-      "src/Viewer/Isosurfaces/Isosurfaces.h"
+﻿#Project for defining the OpenGL GUI app for SCESS
+add_executable("ViewerSCESS"
+  "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
+  "${SCESS_SRC_DIR}/Resources/Resources.h"
+  "${SCESS_SRC_DIR}/Resources/ShaderSources.cpp"
+  "${SCESS_SRC_DIR}/Utilities/Assets.h"
+  "${SCESS_SRC_DIR}/Utilities/Intrinsics.h"
+  "${SCESS_SRC_DIR}/Utilities/Utilities.cpp"
+  "${SCESS_SRC_DIR}/Utilities/Utilities.h"
+  "${SCESS_SRC_DIR}/Viewer/Application/Application.cpp"
+  "${SCESS_SRC_DIR}/Viewer/Application/Application.h"
+  "${SCESS_SRC_DIR}/Viewer/GUI/AtomDraw.cpp"
+  "${SCESS_SRC_DIR}/Viewer/GUI/AtomDraw.h"
+  "${SCESS_SRC_DIR}/Viewer/GUI/CalculationLayer.cpp"
+  "${SCESS_SRC_DIR}/Viewer/GUI/CalculationLayer.h"
+  "${SCESS_SRC_DIR}/Viewer/GUI/ImSpinner.h"
+  "${SCESS_SRC_DIR}/Viewer/Isosurfaces/IsosurfaceConstants.cpp"
+  "${SCESS_SRC_DIR}/Viewer/Isosurfaces/Isosurfaces.cpp"
+  "${SCESS_SRC_DIR}/Viewer/Isosurfaces/Isosurfaces.h"
 )
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  add_dependencies("ViewerSCESS"
-    "QuantumSCESS"
-  )
-  set_target_properties("ViewerSCESS" PROPERTIES
-    OUTPUT_NAME "ViewerSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-  )
-endif()
-target_include_directories("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/src>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include/ImGui>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/nfd/src/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/ImPlot>
-)
-target_compile_definitions("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Debug>:OS_LINUX>
-  $<$<CONFIG:Debug>:CONFIG_DEBUG>
-  $<$<CONFIG:Debug>:_DEBUG>
-)
-target_link_directories("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/nfd/build/lib/Release/x64>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/ImPlot/bin/linux/Release-x64>
-)
-target_link_libraries("ViewerSCESS"
-  $<$<CONFIG:Debug>:QuantumSCESS>
-  $<$<CONFIG:Debug>:GraphicsEngine>
-  $<$<CONFIG:Debug>:ImPlot.a>
-  $<$<CONFIG:Debug>:xc.a>
-  $<$<CONFIG:Debug>:nfd.a>
-  $<$<CONFIG:Debug>:gtk-3>
-  $<$<CONFIG:Debug>:gdk-3>
-  $<$<CONFIG:Debug>:glib-2.0>
+
+add_subdirectory(${SCESS_LIB_DIR}/ImPlot_Build)
+
+add_dependencies("ViewerSCESS"
+   "QuantumSCESS"
+   "ImPlot"
 )
 target_compile_options("ViewerSCESS" PRIVATE
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-m64>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-O0>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-g>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-m64>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-O0>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-g>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-std=c++20>
+  -m64
+  -std=c++20
 )
+
+find_package (PkgConfig REQUIRED)
+pkg_check_modules (GTK3 REQUIRED gtk+-3.0)
+find_library(LIB_nfd nfd REQUIRED
+        PATHS "${SCESS_LIB_DIR}/nfd/build"
+        PATH_SUFFIXES "lib/Release/x64")
+
+target_include_directories("ViewerSCESS" PRIVATE
+  ${SCESS_SRC_DIR}
+  ${SCESS_LIB_DIR}/ImPlot
+  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include
+  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include/ImGui
+  ${SCESS_LIB_DIR}/cppitertools
+  ${SCESS_LIB_DIR}/JSON/include
+  ${SCESS_LIB_DIR}/Eigen
+  ${SCESS_LIB_DIR}/nfd/src/include
+  ${GTK3_INCLUDE_DIRS}
+)
+target_link_directories("ViewerSCESS" PRIVATE
+        ${GTK3_LIBRARY_DIRS})
+target_link_libraries("ViewerSCESS" PRIVATE
+  QuantumSCESS
+  ${LIB_GraphicsEngine}
+  ImPlot
+  ${LIB_nfd}
+  Boost::filesystem
+  Libint2::libint2
+  Libxc::xc
+  ${GTK3_LIBRARIES}
+)
+
+target_compile_definitions("ViewerSCESS" PRIVATE
+        OS_LINUX
+        $<$<CONFIG:DEBUG>:CONFIG_DEBUG>
+        $<$<CONFIG:DEBUG>:_DEBUG>
+        $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
+)
+target_precompile_headers("ViewerSCESS" PUBLIC ./src/pch.h)
+
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("ViewerSCESS" PROPERTIES
     CXX_STANDARD 20
@@ -78,64 +75,18 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
     CXX_EXTENSIONS NO
     POSITION_INDEPENDENT_CODE False
     INTERPROCEDURAL_OPTIMIZATION False
-  )
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-target_precompile_headers("ViewerSCESS" PUBLIC ./src/pch.h)
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-  add_dependencies("ViewerSCESS"
-    "QuantumSCESS"
-  )
-  set_target_properties("ViewerSCESS" PROPERTIES
+    INTERFACE_LINK_LIBRARIES ""
     OUTPUT_NAME "ViewerSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
   )
+  target_compile_options("ViewerSCESS" PRIVATE
+    -O0
+    -g
+  ) 
 endif()
-target_include_directories("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/src>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include/ImGui>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/nfd/src/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/ImPlot>
-)
-target_compile_definitions("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Release>:OS_LINUX>
-  $<$<CONFIG:Release>:CONFIG_RELEASE>
-)
-target_link_directories("ViewerSCESS" PRIVATE
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/nfd/build/lib/Release/x64>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/ImPlot/bin/linux/Release-x64>
-)
-target_link_libraries("ViewerSCESS"
-  $<$<CONFIG:Release>:QuantumSCESS>
-  $<$<CONFIG:Release>:GraphicsEngine>
-  $<$<CONFIG:Release>:ImPlot.a>
-  $<$<CONFIG:Release>:xc.a>
-  $<$<CONFIG:Release>:nfd.a>
-  $<$<CONFIG:Release>:gtk-3>
-  $<$<CONFIG:Release>:gdk-3>
-  $<$<CONFIG:Release>:glib-2.0>
-)
-target_compile_options("ViewerSCESS" PRIVATE
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-m64>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-O3>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-mavx2>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-m64>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-O3>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-mavx2>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-std=c++20>
-)
+
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("ViewerSCESS" PROPERTIES
     CXX_STANDARD 20
@@ -143,8 +94,13 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
     CXX_EXTENSIONS NO
     POSITION_INDEPENDENT_CODE False
     INTERPROCEDURAL_OPTIMIZATION False
+    OUTPUT_NAME "ViewerSCESS"
+    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
   )
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-target_precompile_headers("ViewerSCESS" PUBLIC ./src/pch.h)
+  target_compile_options("ViewerSCESS" PRIVATE
+    -O2
+    -mavx2
+  ) 
 endif()

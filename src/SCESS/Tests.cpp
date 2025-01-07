@@ -13,222 +13,174 @@
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Quantum/Basis/BasisSet.h"
-
-#include<libint2.h>
-
-#include "Quantum/F12/F12.h"
+#include "Quantum/F12/CCSD_F12.h"
 
 namespace SCESS::Tests {
-    // void TestDFT() {
-    //     std::cout << "--- Performing DFT Calculation on water ---\n";
-    //
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //
-    //     Molecule waterMolecule = GenerateWaterMolecule();
-    //     waterMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     uRef<KSWavefunction> ksWavefunction = DensityFunctional::KohnShamDFT(waterMolecule, MolecularGrid::MEDIUM_RES);
-    //
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestCoupledCluster() {
-    //     std::cout << "---Performing CCSD Calculation on Hydrogen---\n";
-    //
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //
-    //     Molecule hydrogenMolecule = GenerateHydrogenMolecule();
-    //     hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     std::stringstream ss;
-    //     uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-    //                                                        nullptr,
-    //                                                        nullptr,
-    //                                                        1e-05,
-    //                                                        100,
-    //                                                        nullptr,
-    //                                                        &ss,
-    //                                                        BASIS_SET_NAME);
-    //     std::cout << ss.str();
-    //     ss.clear();
-    //     ss.str("");
-    //
-    //     uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD(*rhfResult, nullptr, &ss);
-    //
-    //     std::cout << ss.str() << '\n';
-    //
-    //     Utilities::PrintTensor(ccsd->t1Amps);
-    //     Utilities::PrintTensor(ccsd->t2Amps);
-    //
-    //     std::cout << "\n\nE(CCSD Correlation) = " << ccsd->ccsdCorrelationEnergy << '\n';
-    //     std::cout << "E(Total) = " << ccsd->ccsdCorrelationEnergy + rhfResult->Energy << '\n';
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestFullCI() {
-    //     std::cout << "---Performing Hartree Fock Calculation on Hydrogen ---\n";
-    //
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //
-    //     Molecule hydrogenMolecule = GenerateHydrogenMolecule();
-    //     hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     std::stringstream ss;
-    //     uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-    //                                                        nullptr,
-    //                                                        nullptr,
-    //                                                        1e-05,
-    //                                                        100,
-    //                                                        nullptr,
-    //                                                        &ss,
-    //                                                        BASIS_SET_NAME);
-    //     HartreeFock::MP2ClosedShell(*rhfResult, nullptr, &ss);
-    //
-    //     std::cout << ss.str();
-    //     ss.clear();
-    //     ss.str("");
-    //
-    //
-    //     uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
-    //         *rhfResult,
-    //         hydrogenMolecule.CalculateNuclearRepulsion(),
-    //         nullptr,
-    //         &ss);
-    //     std::cout << ss.str();
-    //     ss.clear();
-    //     ss.str("");
-    //
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestFCIQMC() {
-    //     std::cout << "Performing FCIQMC calculation on hydrogen diatomic\n";
-    //
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //     Molecule hydrogenMolecule = GenerateHydrogenMolecule();
-    //     hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     std::stringstream ss;
-    //     uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-    //                                                        nullptr,
-    //                                                        nullptr,
-    //                                                        1e-05,
-    //                                                        100,
-    //                                                        nullptr,
-    //                                                        &ss,
-    //                                                        BASIS_SET_NAME);
-    //
-    //     std::cout << ss.str() << '\n';
-    //
-    //     double energy = QuantumMonteCarlo::FCIQMC(*rhfResult,
-    //                                               hydrogenMolecule.CalculateNuclearRepulsion(),
-    //                                               nullptr,
-    //                                               &ss);
-    //
-    //
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestCCQMC() {
-    //     std::cout << "Performing CCQMC calculation on hydrogen diatomic\n";
-    //
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //     Molecule hydrogenMolecule = GenerateHydrogenMolecule();
-    //     hydrogenMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     std::stringstream ss;
-    //     uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-    //                                                        nullptr,
-    //                                                        nullptr,
-    //                                                        1e-08,
-    //                                                        100,
-    //                                                        nullptr,
-    //                                                        &ss,
-    //                                                        BASIS_SET_NAME);
-    //
-    //     std::cout << ss.str() << '\n';
-    //
-    //     double energy = QuantumMonteCarlo::CCQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion());
-    //
-    //     std::cout << "Final CCQMC energy: " << energy << " hartrees\n";
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestHelium() {
-    //     constexpr const char *BASIS_SET_NAME = "def2-TZVP";
-    //     std::cout << "Performing calculation on helium in a" << BASIS_SET_NAME << " basis set\n";
-    //
-    //     Molecule heliumMolecule;
-    //     heliumMolecule.AddAtom(Atom("He", 2, {0, 0, 0}));
-    //     heliumMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     std::stringstream ss;
-    //     uRef<RHFWavefunction> rhfWfn = HartreeFock::RHF(heliumMolecule,
-    //                                                     nullptr,
-    //                                                     nullptr,
-    //                                                     1e-08,
-    //                                                     100,
-    //                                                     nullptr,
-    //                                                     &ss,
-    //                                                     BASIS_SET_NAME);
-    //
-    //     std::cout << ss.str() << '\n';
-    //     ss.str("");
-    //     ss.clear();
-    //
-    //     auto ciWfn = ConfigurationInteraction::FCI(*rhfWfn, 0.0, nullptr, &ss);
-    //
-    //     std::cout << ss.str() << '\n';
-    //
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
-    //
-    // void TestRepulsionIntegrals() {
-    //     constexpr const char *BASIS_SET_NAME = "sto-3g";
-    //     Molecule waterMolecule = GenerateWaterMolecule();
-    //     waterMolecule.MakeOrbitals(BASIS_SET_NAME);
-    //
-    //     libint2::BasisSet basisSet(BASIS_SET_NAME, waterMolecule.GetAtomsLibInt());
-    //
-    //     TEITensor eriSCESS = Integrals::TwoElectronRepulsionTensorMultithread(waterMolecule);
-    //     TEITensor eriLibInt = Integrals::LibInt::TwoElectronRepulsionTensor(basisSet);
-    //
-    //     std::cout << "SCESS (ij | 1/r12 | kl) integral tensor:\n";
-    //     Utilities::PrintTensor(eriSCESS);
-    //
-    //     std::cout << "LibInt (ij | 1/r12 | kl) integral tensor:\n";
-    //     Utilities::PrintTensor(eriLibInt);
-    //
-    //     if (eriSCESS.size() == eriLibInt.size()) {
-    //         auto compareDouble = [](double value1, double value2, uint8_t precision)-> bool {
-    //             return std::abs(value1 - value2) < std::pow(10, -precision);
-    //         };
-    //
-    //         constexpr uint8_t PRECISION = 4;
-    //         bool equal = true;
-    //         for (size_t i = 0; i < eriSCESS.size(); i++)
-    //             if (compareDouble(eriSCESS.data()[i], eriLibInt.data()[i], PRECISION)) {
-    //                 equal = false;
-    //                 break;
-    //             }
-    //
-    //         if (equal)
-    //             std::cout << "Integral tensors are the same to " << PRECISION <<
-    //                     " decimal places. Integrals calculated correctly.\n";
-    //         else
-    //             std::cout << "Integral tensors are not the same. There must be an error in the calculation code.\n";
-    //     } else {
-    //         std::cout << "ERI Tensors are not the same size. Integral comparison failed\n";
-    //     }
-    //     std::cout << "Press any key to continue..\n";
-    //     std::cin.get();
-    // }
+    void TestDFT() {
+        std::cout << "--- Performing DFT Calculation on water ---\n";
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+
+        Molecule waterMolecule = Molecule::GenerateWaterMolecule();
+        BasisSet basisSet(BASIS_SET_NAME, waterMolecule);
+
+        uRef<KSWavefunction> ksWavefunction = DensityFunctional::KohnShamDFT(waterMolecule, basisSet,
+                                                                             MolecularGrid::MEDIUM_RES);
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestCoupledCluster() {
+        std::cout << "---Performing CCSD Calculation on Hydrogen---\n";
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+        BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
+
+        std::stringstream ss;
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           basisSet,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
+                                                           BASIS_SET_NAME);
+        std::cout << ss.str();
+        ss.clear();
+        ss.str("");
+
+        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD(*rhfResult, nullptr, &ss);
+
+        std::cout << ss.str() << '\n';
+
+        Utilities::PrintTensor(ccsd->t1Amps);
+        Utilities::PrintTensor(ccsd->t2Amps);
+
+        std::cout << "\n\nE(CCSD Correlation) = " << ccsd->ccsdCorrelationEnergy << '\n';
+        std::cout << "E(Total) = " << ccsd->ccsdCorrelationEnergy + rhfResult->Energy << '\n';
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestFullCI() {
+        std::cout << "---Performing Hartree Fock Calculation on Hydrogen ---\n";
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+        BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
+
+        std::stringstream ss;
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           basisSet,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
+                                                           BASIS_SET_NAME);
+        HartreeFock::MP2ClosedShell(*rhfResult, nullptr, &ss);
+
+        std::cout << ss.str();
+        ss.clear();
+        ss.str("");
+
+
+        uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
+            *rhfResult,
+            hydrogenMolecule.CalculateNuclearRepulsion(),
+            nullptr,
+            &ss);
+        std::cout << ss.str();
+        ss.clear();
+        ss.str("");
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestFCIQMC() {
+        std::cout << "Performing FCIQMC calculation on hydrogen diatomic\n";
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+        BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
+
+        std::stringstream ss;
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           basisSet,
+                                                           1e-05,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
+                                                           BASIS_SET_NAME);
+
+        std::cout << ss.str() << '\n';
+
+        double energy = QuantumMonteCarlo::FCIQMC(*rhfResult,
+                                                  hydrogenMolecule.CalculateNuclearRepulsion(),
+                                                  nullptr,
+                                                  &ss);
+
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestCCQMC() {
+        std::cout << "Performing CCQMC calculation on hydrogen diatomic\n";
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+        BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
+
+        std::stringstream ss;
+        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
+                                                           basisSet,
+                                                           1e-08,
+                                                           100,
+                                                           nullptr,
+                                                           &ss,
+                                                           BASIS_SET_NAME);
+
+        std::cout << ss.str() << '\n';
+
+        double energy = QuantumMonteCarlo::CCQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion());
+
+        std::cout << "Final CCQMC energy: " << energy << " hartrees\n";
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestHelium() {
+        constexpr const char *BASIS_SET_NAME = "def2-TZVP";
+        std::cout << "Performing calculation on helium in a" << BASIS_SET_NAME << " basis set\n";
+
+        Molecule heliumMolecule;
+        heliumMolecule.AddAtom(Atom("He", 2, {0, 0, 0}));
+        BasisSet basisSet(BASIS_SET_NAME, heliumMolecule);
+
+        std::stringstream ss;
+        uRef<RHFWavefunction> rhfWfn = HartreeFock::RHF(heliumMolecule,
+                                                        basisSet,
+                                                        1e-08,
+                                                        100,
+                                                        nullptr,
+                                                        &ss,
+                                                        BASIS_SET_NAME);
+
+        std::cout << ss.str() << '\n';
+        ss.str("");
+        ss.clear();
+
+        auto ciWfn = ConfigurationInteraction::FCI(*rhfWfn, 0.0, nullptr, &ss);
+
+        std::cout << ss.str() << '\n';
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
 
     void TestF12Integrals() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
@@ -282,6 +234,27 @@ namespace SCESS::Tests {
         std::cout << "      <ij | f(12)/r12 | kl>\n";
         std::cout << "------------------------------------\n";
         Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion));
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestCCSD_F12() {
+
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+
+        auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
+
+        F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
+        ConfigIntegrals configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
+
+        uRef<UHFWavefunction> uhfWfn;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn);
+
+        double ccsdF12Energy = F12::CCSD_F12(*uhfWfn, f12Ints);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

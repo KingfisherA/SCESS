@@ -58,6 +58,7 @@ namespace SCESS::Integrals {
          * @return Two-electron integral tensor with antisymmetric integrals (in physicists' notation)
          */
         TEITensor AntisymmetriseTEI(const TEITensor &tei);
+
         /**
          * Transforms a molecular two electron integral tensor (in chemist's notation) into a tensor of antisymmetric
          * two-electron integrals with the spin functions integrated out.
@@ -73,5 +74,6 @@ namespace SCESS::Integrals {
          * @return The TEI tensor in physicists' notation
          */
         TEITensor ConvertChemistsToPhysicists(const TEITensor &tei);
+
     }
 };

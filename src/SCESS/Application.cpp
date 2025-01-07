@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
     Integrals::LibInt::InitLibInt();
 
     Tests::TestF12Integrals();
+    //Tests::TestCCSD_F12();
 
     Integrals::LibInt::CloseLibInt();
 

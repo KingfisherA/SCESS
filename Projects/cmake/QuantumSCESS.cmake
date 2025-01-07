@@ -1,103 +1,92 @@
-﻿add_library("QuantumSCESS" SHARED
-      "src/Quantum/Basis/BasisSet.cpp"
-      "src/Quantum/Basis/BasisSet.h"
-      "src/Quantum/Basis/Gaussian.cpp"
-      "src/Quantum/Basis/Gaussian.h"
-      "src/Quantum/CC/CCSD-DIIS.cpp"
-      "src/Quantum/CC/CCSD.cpp"
-      "src/Quantum/CC/CCSD_T.cpp"
-      "src/Quantum/CC/CoupledCluster.h"
-      "src/Quantum/CI/ConfigurationInteraction.h"
-      "src/Quantum/CI/FullCI.cpp"
-      "src/Quantum/DFT/DensityFunctional.cpp"
-      "src/Quantum/DFT/DensityFunctional.h"
-      "src/Quantum/DFT/XCFunctionals.cpp"
-      "src/Quantum/DFT/XCFunctionals.h"
-      "src/Quantum/F12/F12.h"
-      "src/Quantum/F12/F12_MP2.cpp"
-      "src/Quantum/HF/HartreeFock.h"
-      "src/Quantum/HF/RestrictedHF.cpp"
-      "src/Quantum/HF/UnrestrictedHF.cpp"
-        "src/Quantum/Integrals/Grid/AtomicGrid.cpp"
-        "src/Quantum/Integrals/Grid/AtomicGrid.h"
-        "src/Quantum/Integrals/Grid/GridPoint.cpp"
-        "src/Quantum/Integrals/Grid/GridPoint.h"
-        "src/Quantum/Integrals/Grid/MolecularGrid.cpp"
-        "src/Quantum/Integrals/Grid/MolecularGrid.h"
-        "src/Quantum/Integrals/Grid/Quadrature.cpp"
-        "src/Quantum/Integrals/Grid/Quadrature.h"
-      "src/Quantum/Integrals/IntegralTransforms.cpp"
-      "src/Quantum/Integrals/IntegralTransforms.h"
-      "src/Quantum/Integrals/Integrals.cpp"
-      "src/Quantum/Integrals/Integrals.h"
-      "src/Quantum/Integrals/IntegralsF12.h"
-      "src/Quantum/Integrals/IntegralsLibInt.cpp"
-      "src/Quantum/Integrals/IntegralsLibInt.h"
-    "src/Quantum/Molecule.cpp"
-    "src/Quantum/Molecule.h"
-    "src/Quantum/PeriodicTable.cpp"
-    "src/Quantum/PeriodicTable.h"
-      "src/Quantum/QMC/CCQMC.cpp"
-      "src/Quantum/QMC/FCIQMC.cpp"
-      "src/Quantum/QMC/QMC.h"
-    "src/Resources/AssetFolder.cpp"
-    "src/Resources/Resources.h"
-    "src/Resources/ShaderSources.cpp"
-    "src/Utilities/Assets.h"
-    "src/Utilities/Intrinsics.h"
-    "src/Utilities/Utilities.cpp"
-    "src/Utilities/Utilities.h"
+﻿# Project defining the shared library for the quantum calculation code for SCESS 
+
+add_library("QuantumSCESS" SHARED
+  "${SCESS_SRC_DIR}/Quantum/Basis/BasisSet.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Basis/BasisSet.h"
+  "${SCESS_SRC_DIR}/Quantum/Basis/Gaussian.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Basis/Gaussian.h"
+  "${SCESS_SRC_DIR}/Quantum/CC/CCSD-DIIS.cpp"
+  "${SCESS_SRC_DIR}/Quantum/CC/CCSD.cpp"
+  "${SCESS_SRC_DIR}/Quantum/CC/CCSD_T.cpp"
+  "${SCESS_SRC_DIR}/Quantum/CC/CoupledCluster.h"
+  "${SCESS_SRC_DIR}/Quantum/CI/ConfigurationInteraction.h"
+  "${SCESS_SRC_DIR}/Quantum/CI/FullCI.cpp"
+  "${SCESS_SRC_DIR}/Quantum/DFT/DensityFunctional.cpp"
+  "${SCESS_SRC_DIR}/Quantum/DFT/DensityFunctional.h"
+  "${SCESS_SRC_DIR}/Quantum/DFT/XCFunctionals.cpp"
+  "${SCESS_SRC_DIR}/Quantum/DFT/XCFunctionals.h"
+  "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12.cpp"
+  "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12.h"
+  "${SCESS_SRC_DIR}/Quantum/HF/HartreeFock.h"
+  "${SCESS_SRC_DIR}/Quantum/HF/RestrictedHF.cpp"
+  "${SCESS_SRC_DIR}/Quantum/HF/UnrestrictedHF.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/AtomicGrid.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/AtomicGrid.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/GridPoint.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/GridPoint.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/MolecularGrid.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/MolecularGrid.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsF12.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsLibInt.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsLibInt.h"
+  "${SCESS_SRC_DIR}/Quantum/Molecule.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Molecule.h"
+  "${SCESS_SRC_DIR}/Quantum/PeriodicTable.cpp"
+  "${SCESS_SRC_DIR}/Quantum/PeriodicTable.h"
+  "${SCESS_SRC_DIR}/Quantum/QMC/CCQMC.cpp"
+  "${SCESS_SRC_DIR}/Quantum/QMC/FCIQMC.cpp"
+  "${SCESS_SRC_DIR}/Quantum/QMC/QMC.h"
+  "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
+  "${SCESS_SRC_DIR}/Resources/Resources.h"
+  "${SCESS_SRC_DIR}/Resources/ShaderSources.cpp"
+  "${SCESS_SRC_DIR}/Utilities/Assets.h"
+  "${SCESS_SRC_DIR}/Utilities/Intrinsics.h"
+  "${SCESS_SRC_DIR}/Utilities/Utilities.cpp"
+  "${SCESS_SRC_DIR}/Utilities/Utilities.h"
 )
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  set_target_properties("QuantumSCESS" PROPERTIES
-    OUTPUT_NAME "QuantumSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Debug-x64"
-  )
-endif()
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+find_library(LIB_LAPACKE lapacke REQUIRED)
+
 target_include_directories("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/src>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
+  ${SCESS_SRC_DIR}
+  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include
+  ${SCESS_LIB_DIR}/cppitertools
+  ${SCESS_LIB_DIR}/JSON/include
+  ${SCESS_LIB_DIR}/Eigen
+)
+
+target_link_libraries("QuantumSCESS" PRIVATE
+  LAPACK::LAPACK
+  ${LIB_LAPACKE}
+  BLAS::BLAS
+  Boost::filesystem
+  ${LIB_GraphicsEngine}
+  Libint2::libint2
+  Libxc::xc
 )
 target_compile_definitions("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Debug>:OS_LINUX>
-  $<$<CONFIG:Debug>:EIGEN_USE_BLAS>
-  $<$<CONFIG:Debug>:EIGEN_USE_LAPACKE>
-  $<$<CONFIG:Debug>:CONFIG_DEBUG>
-  $<$<CONFIG:Debug>:_DEBUG>
+  OS_LINUX
+  EIGEN_USE_BLAS
+  EIGEN_USE_LAPACKE
+  $<$<CONFIG:DEBUG>:CONFIG_DEBUG>
+  $<$<CONFIG:DEBUG>:_DEBUG>
+  $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
-target_link_directories("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2>
-  $<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
-)
-target_link_libraries("QuantumSCESS"
-  $<$<CONFIG:Debug>:lapack>
-  $<$<CONFIG:Debug>:lapacke>
-  $<$<CONFIG:Debug>:blas>
-  $<$<CONFIG:Debug>:boost_filesystem>
-  $<$<CONFIG:Debug>:GraphicsEngine>
-  $<$<CONFIG:Debug>:libint2.a>
-  $<$<CONFIG:Debug>:libxc.a>
-)
+target_precompile_headers("QuantumSCESS" PUBLIC ./src/pch.h)
 target_compile_options("QuantumSCESS" PRIVATE
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-m64>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-O0>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-fPIC>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-g>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-m64>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-O0>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-fPIC>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-g>
-  $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CXX>>:-std=c++20>
+    -m64
+    -fPIC
+    -std=c++20
 )
+
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("QuantumSCESS" PROPERTIES
     CXX_STANDARD 20
@@ -105,60 +94,19 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
     CXX_EXTENSIONS NO
     POSITION_INDEPENDENT_CODE True
     INTERPROCEDURAL_OPTIMIZATION False
-  )
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-target_precompile_headers("QuantumSCESS" PUBLIC ./src/pch.h)
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-  set_target_properties("QuantumSCESS" PROPERTIES
     OUTPUT_NAME "QuantumSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/linux/Release-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+  )
+
+  target_compile_options("QuantumSCESS" PRIVATE
+    -g
+    -O0
   )
 endif()
-target_include_directories("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/src>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/glm>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cppitertools>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JSON/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Eigen>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2/include>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib/include>
-)
-target_compile_definitions("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Release>:OS_LINUX>
-  $<$<CONFIG:Release>:EIGEN_USE_BLAS>
-  $<$<CONFIG:Release>:EIGEN_USE_LAPACKE>
-  $<$<CONFIG:Release>:CONFIG_RELEASE>
-)
-target_link_directories("QuantumSCESS" PRIVATE
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/GraphicsEngine-1.0.0>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibInt2>
-  $<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Libraries/LibXC/lib>
-)
-target_link_libraries("QuantumSCESS"
-  $<$<CONFIG:Release>:lapack>
-  $<$<CONFIG:Release>:lapacke>
-  $<$<CONFIG:Release>:blas>
-  $<$<CONFIG:Release>:boost_filesystem>
-  $<$<CONFIG:Release>:GraphicsEngine>
-  $<$<CONFIG:Release>:libint2.a>
-  $<$<CONFIG:Release>:libxc.a>
-)
-target_compile_options("QuantumSCESS" PRIVATE
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-m64>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-O3>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-fPIC>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:C>>:-mavx2>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-m64>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-O3>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-fPIC>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-mavx2>
-  $<$<AND:$<CONFIG:Release>,$<COMPILE_LANGUAGE:CXX>>:-std=c++20>
-)
+
+
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("QuantumSCESS" PROPERTIES
     CXX_STANDARD 20
@@ -166,8 +114,15 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
     CXX_EXTENSIONS NO
     POSITION_INDEPENDENT_CODE True
     INTERPROCEDURAL_OPTIMIZATION False
+    OUTPUT_NAME "QuantumSCESS"
+    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
+    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
+    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
+  )
+
+  target_compile_options("QuantumSCESS" PRIVATE
+      -mavx2
+      -O2
   )
 endif()
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-target_precompile_headers("QuantumSCESS" PUBLIC ./src/pch.h)
-endif()
+

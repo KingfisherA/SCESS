@@ -1,30 +1,37 @@
-﻿cmake_minimum_required(VERSION 3.16)
+﻿# CMake Build Script for the SCESS project
+# Includes the projectes for the quantum shared libraries, the GUI and the command line executable of SCESS 
 
-set(PREMAKE_BUILD_TYPES "Debug" "Release")
-get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if(multi_config)
-  set(CMAKE_CONFIGURATION_TYPES "${PREMAKE_BUILD_TYPES}" CACHE STRING "list of supported configuration types" FORCE)
-else()
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build Type of the project.")
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${PREMAKE_BUILD_TYPES}")
-  if(NOT CMAKE_BUILD_TYPE IN_LIST PREMAKE_BUILD_TYPES)
-    message(FATAL_ERROR
-      "Invalid build type '${CMAKE_BUILD_TYPE}'.
-      CMAKE_BUILD_TYPE must be any one of the possible values:
-      ${PREMAKE_BUILD_TYPES}"
-    )
-  endif()
+cmake_minimum_required(VERSION 3.16)
+
+set(ALLOWED_BUILD_TYPES "Debug" "Release")
+if(NOT CMAKE_BUILD_TYPE IN_LIST ALLOWED_BUILD_TYPES)
+  message(FATAL_ERROR
+    "Invalid build type '${CMAKE_BUILD_TYPE}'.
+    CMAKE_BUILD_TYPE must be any one of the possible values:
+    ${ALLOWED_BUILD_TYPES}"
+  )
 endif()
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "")
-set(CMAKE_C_FLAGS "")
-set(CMAKE_CXX_FLAGS "")
-set(CMAKE_C_FLAGS_DEBUG "")
-set(CMAKE_CXX_FLAGS_DEBUG "")
-set(CMAKE_C_FLAGS_RELEASE "")
-set(CMAKE_CXX_FLAGS_RELEASE "")
+if(NOT CMAKE_SYSTEM_NAME)
+  set(CMAKE_SYSTEM_NAME "Linux")
+endif()
 
-project("SCESS")
+get_filename_component(SCESS_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
+
+set(SCESS_PLATFORM ${CMAKE_SYSTEM_NAME})
+string(TOLOWER ${SCESS_PLATFORM} SCESS_PLATFORM)
+set(SCESS_SRC_DIR ${SCESS_DIR}/src)
+set(SCESS_LIB_DIR ${SCESS_DIR}/Libraries)
+set(SCESS_BIN_DIR ${SCESS_DIR}/bin/${SCESS_PLATFORM})
+
+project("SCESS" LANGUAGES CXX)
+
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
+find_package(Libxc REQUIRED)
+find_package(libint2 REQUIRED)
+find_library(LIB_GraphicsEngine GraphicsEngine REQUIRED
+  PATHS "${SCESS_LIB_DIR}/GraphicsEngine-1.0.0")
+
 include(Projects/cmake/QuantumSCESS.cmake)
 include(Projects/cmake/SCESS.cmake)
 include(Projects/cmake/ViewerSCESS.cmake)

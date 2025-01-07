@@ -53,6 +53,7 @@ Release binaries are available for testing from the releases GitHub section.
 - LAPACKE
 - Boost
 - libgtk-3
+- libglew-dev
 
 ## Code Dependencies
 These are automatically included and compiled in the project:
