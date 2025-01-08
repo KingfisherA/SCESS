@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     //Initilise libint2
     Integrals::LibInt::InitLibInt();
 
-    if (!Res::AssetsFolder::Get().Init() || !app.Init()) {
+    if (!Res::AssetsFolder::Get().Init() || !app.Init(GEng::GraphicsAPI::OpenGL, 4, 6)) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
 
@@ -93,9 +93,9 @@ namespace SCESS {
         this->mRenderViewport = true;
         this->mViewportName = "Molecule View";
 
-        float dpiFactor = m_Window->GetContentScaling().x;
-        glfwSetWindowSize((GLFWwindow *) m_Window->GetAPIDisplay(), int((float) m_Window->GetWidth() * dpiFactor),
-                          int((float) m_Window->GetHeight() * dpiFactor));
+        float dpiFactor = mWindow->GetContentScaling().x;
+        mWindow->SetSize(size_t((float) mWindow->GetWidth() * dpiFactor),
+                         size_t((float) mWindow->GetHeight() * dpiFactor));
 
         GPUContext *ctx = GPUContext::Get();
         ctx->SetDepthTest(false);
@@ -126,12 +126,12 @@ namespace SCESS {
     }
 
     void Application::OnRender() {
-        mCam.UpdateCamera((float) m_DeltaTime * 0.1f);
+        mCam.UpdateCamera((float) mDeltaTime * 0.1f);
 
         mViewportFramebuffer->Bind();
         mViewportFramebuffer->Clear({glm::vec3(0.01f), 1.0f});
 
-        for (Layer *layer: m_LayerStack)
+        for (Layer *layer: mLayerStack)
             layer->OnUpdate(mViewportFramebuffer, mCam, mProjectionMatrix, {NEAR_PLANE, FAR_PLANE});
     }
 
@@ -156,12 +156,12 @@ namespace SCESS {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, 0, ImVec2(0.5f, 0.5f));
 
-        float dpiFactor = m_Window->GetContentScaling().x;
+        float dpiFactor = mWindow->GetContentScaling().x;
         ImGui::SetNextWindowSize({600.0f * dpiFactor, 600.0f * dpiFactor});
         if (ImGui::BeginPopup("splashScreenPopup")) {
             float imgWidth = 350.0f * dpiFactor;
             ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
-            ImGui::Image((ImTextureID) mAppIcon->GetRendererID(), {
+            ImGui::Image((ImTextureID) (intptr_t) mAppIcon->GetRendererID(), {
                              (float) imgWidth,
                              (float) imgWidth
                          });
@@ -228,7 +228,7 @@ namespace SCESS {
             static int selectedItem = 0;
             ImGui::Combo("Render Style##combo", &selectedItem, items, 2);
 
-            for (Layer *layer: m_LayerStack)
+            for (Layer *layer: mLayerStack)
                 layer->SetRenderStyle((GPUContext::PolygonMode) selectedItem);
 
             ImGui::Unindent();
@@ -244,9 +244,9 @@ namespace SCESS {
         }
 
         if (ImGui::CollapsingHeader("Adaptor Information", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Text("Renderer API: %s", m_VersionStr.c_str());
-            ImGui::Text("Vendor: %s", m_VendorStr.c_str());
-            ImGui::Text("Shading Language Version: %s", m_ShadingLanguageStr.c_str());
+            ImGui::Text("Renderer API: %s", mVersionStr.c_str());
+            ImGui::Text("Vendor: %s", mVendorStr.c_str());
+            ImGui::Text("Shading Language Version: %s", mShadingLanguageStr.c_str());
         }
 
         if (ImGui::CollapsingHeader("Frame Information", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -270,9 +270,9 @@ namespace SCESS {
     bool Application::OnMouseMove(MouseMoveEvent &e) {
         GraphicsApp::OnMouseMove(e);
         if (mIsViewportFocused) {
-            mDeltaMousePos /= glm::vec2(m_Window->GetWidth(), m_Window->GetHeight());
-            mCam.UpdateMovement(mDeltaMousePos, m_MouseButtonDown, m_KeyDown,
-                                m_KeyMods);
+            mDeltaMousePos /= glm::vec2(mWindow->GetWidth(), mWindow->GetHeight());
+            mCam.UpdateMovement(mDeltaMousePos, mMouseButtonDown, mKeyDown,
+                                mKeyMods);
         }
         return true;
     }

@@ -16,6 +16,11 @@ if(NOT CMAKE_SYSTEM_NAME)
   set(CMAKE_SYSTEM_NAME "Linux")
 endif()
 
+if(NOT SCESS_GENG_DIR)
+    get_filename_component(SCESS_GENG_DIR "../GraphicsEngine" ABSOLUTE)
+    message(NOTICE "Graphics Engine directory not set. Setting to default: \"../GraphicsEngine\"")
+endif()
+
 get_filename_component(SCESS_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 
 set(SCESS_PLATFORM ${CMAKE_SYSTEM_NAME})
@@ -29,8 +34,14 @@ project("SCESS" LANGUAGES CXX)
 find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 find_package(Libxc REQUIRED)
 find_package(libint2 REQUIRED)
-find_library(LIB_GraphicsEngine GraphicsEngine REQUIRED
-  PATHS "${SCESS_LIB_DIR}/GraphicsEngine-1.0.0")
+find_library(GENG_LIBRARIES GraphicsEngine REQUIRED
+  PATHS "${SCESS_GENG_DIR}/bin"
+  PATH_SUFFIXES "linux/Release-x64")
+
+if(NOT GENG_LIBRARIES STREQUAL "GENG_LIBRARIES-NOTFOUND")
+    set(IMGUI_INCLUDE_DIRS ${SCESS_GENG_DIR}/include/ImGui)
+    set(GENG_INCLUDE_DIRS ${SCESS_GENG_DIR}/include)
+endif()
 
 include(Projects/cmake/QuantumSCESS.cmake)
 include(Projects/cmake/SCESS.cmake)

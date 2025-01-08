@@ -16,13 +16,11 @@ else()
   endif()
 endif()
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "")
-set(CMAKE_C_FLAGS "")
-set(CMAKE_CXX_FLAGS "")
-set(CMAKE_C_FLAGS_DEBUG "")
-set(CMAKE_CXX_FLAGS_DEBUG "")
-set(CMAKE_C_FLAGS_RELEASE "")
-set(CMAKE_CXX_FLAGS_RELEASE "")
+if(NOT IMGUI_INCLUDE_DIRS)
+    message(FATAL_ERROR "ImGui include directory is not set. This is required for ImPlot to build.")
+endif()
+
+get_filename_component(IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ImPlot" ABSOLUTE)
 
 project("ImPlot")
 include(ImPlot.cmake)

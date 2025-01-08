@@ -13,7 +13,8 @@ target_compile_options("SCESS" PRIVATE
 )
 target_include_directories("SCESS" PRIVATE
   ${SCESS_SRC_DIR}
-  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include
+  ${GENG_INCLUDE_DIRS}
+  ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
   ${SCESS_LIB_DIR}/Eigen
@@ -26,7 +27,7 @@ target_compile_definitions("SCESS" PRIVATE
 )
 target_link_libraries("SCESS" PRIVATE
   QuantumSCESS
-  ${LIB_GraphicsEngine}
+  ${GENG_LIBRARIES}
   Libint2::libint2
 )
 target_precompile_headers("SCESS" PUBLIC ./src/pch.h)

@@ -39,8 +39,8 @@ find_library(LIB_nfd nfd REQUIRED
 target_include_directories("ViewerSCESS" PRIVATE
   ${SCESS_SRC_DIR}
   ${SCESS_LIB_DIR}/ImPlot
-  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include
-  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include/ImGui
+  ${GENG_INCLUDE_DIRS}
+  ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
   ${SCESS_LIB_DIR}/Eigen
@@ -51,7 +51,7 @@ target_link_directories("ViewerSCESS" PRIVATE
         ${GTK3_LIBRARY_DIRS})
 target_link_libraries("ViewerSCESS" PRIVATE
   QuantumSCESS
-  ${LIB_GraphicsEngine}
+  ${GENG_LIBRARIES}
   ImPlot
   ${LIB_nfd}
   Boost::filesystem

@@ -57,7 +57,8 @@ find_library(LIB_LAPACKE lapacke REQUIRED)
 
 target_include_directories("QuantumSCESS" PRIVATE
   ${SCESS_SRC_DIR}
-  ${SCESS_LIB_DIR}/GraphicsEngine-1.0.0/include
+  ${GENG_INCLUDE_DIRS}
+  ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
   ${SCESS_LIB_DIR}/Eigen
@@ -68,7 +69,7 @@ target_link_libraries("QuantumSCESS" PRIVATE
   ${LIB_LAPACKE}
   BLAS::BLAS
   Boost::filesystem
-  ${LIB_GraphicsEngine}
+  ${GENG_LIBRARIES}
   Libint2::libint2
   Libxc::xc
 )
