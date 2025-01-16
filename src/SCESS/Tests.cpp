@@ -13,7 +13,7 @@
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Quantum/Basis/BasisSet.h"
-#include "Quantum/F12/CCSD_F12.h"
+#include "Quantum/F12/F12.h"
 
 namespace SCESS::Tests {
     void TestDFT() {
@@ -190,7 +190,7 @@ namespace SCESS::Tests {
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        ConfigIntegrals configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
         uRef<UHFWavefunction> hfWfn;
@@ -240,6 +240,33 @@ namespace SCESS::Tests {
     }
 
     void TestCCSD_F12() {
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+
+        auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
+
+        F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
+        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
+
+        uRef<UHFWavefunction> uhfWfn;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn);
+
+        double ccsdF12Energy = F12::CCSD::CCSD_F12(*uhfWfn, f12Ints);
+
+        std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestMP2_F12() {
+        // Integrals::F12::F12Integrals f12Ints = Integrals::F12::ImportF12IntegralsMRCC(
+        //     Res::AssetsFolder::Get().GetAssetsPathStr() + "/F12 Data/MRCC_F12_Ints.txt", 12);
+        //
+        // Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+        // BasisSet basisSet("sto-3g", hydrogenMolecule);
+        //
+        // uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(hydrogenMolecule, basisSet, 1E-10);
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -248,13 +275,13 @@ namespace SCESS::Tests {
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        ConfigIntegrals configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
         uRef<UHFWavefunction> uhfWfn;
         Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn);
 
-        double ccsdF12Energy = F12::CCSD_F12(*uhfWfn, f12Ints);
+        double f12MP2Energy = F12::MP2::MP2_F12(*uhfWfn, configInts, f12Ints);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

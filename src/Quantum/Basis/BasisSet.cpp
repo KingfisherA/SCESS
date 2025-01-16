@@ -1,6 +1,6 @@
 #include<pch.h>
 
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2/basis.h>
 

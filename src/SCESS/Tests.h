@@ -9,4 +9,5 @@ namespace SCESS::Tests {
     void TestHelium();
     void TestF12Integrals();
     void TestCCSD_F12();
+    void TestMP2_F12();
 }

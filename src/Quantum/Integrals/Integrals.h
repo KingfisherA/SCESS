@@ -18,35 +18,35 @@ namespace SCESS {
     //Note that the tei is in chemists’ notation
     using TEITensor = Eigen::Tensor<double, 4>;
 
-    struct ConfigIntegrals {
-        ConfigIntegrals() = default;
-
-        ConfigIntegrals(const Eigen::MatrixXd &S_,
-                        const Eigen::MatrixXd &T_,
-                        const Eigen::MatrixXd &V_,
-                        const TEITensor &tei_
-        ): S(S_), T(T_), V(V_), eri(tei_) {
-        }
-
-        ConfigIntegrals(const ConfigIntegrals &intIn): S(intIn.S),
-                                                       T(intIn.T),
-                                                       V(intIn.V),
-                                                       eri(intIn.eri) {
-        }
-
-        ConfigIntegrals(ConfigIntegrals &&intIn) noexcept: S(std::move(intIn.S)),
-                                                           T(std::move(intIn.T)),
-                                                           V(std::move(intIn.V)),
-                                                           eri(std::move(intIn.eri)) {
-        }
-
-        // S = Overlap, T = Kinetic, V = Nuclear
-        Eigen::MatrixXd S, T, V;
-        //Two-electron tensor
-        TEITensor eri;
-    };
-
     namespace Integrals {
+        struct ConfigInts {
+            ConfigInts() = default;
+
+            ConfigInts(const Eigen::MatrixXd &S_,
+                            const Eigen::MatrixXd &T_,
+                            const Eigen::MatrixXd &V_,
+                            const TEITensor &tei_
+            ): S(S_), T(T_), V(V_), eri(tei_) {
+            }
+
+            ConfigInts(const ConfigInts &intIn): S(intIn.S),
+                                                           T(intIn.T),
+                                                           V(intIn.V),
+                                                           eri(intIn.eri) {
+            }
+
+            ConfigInts(ConfigInts &&intIn) noexcept: S(std::move(intIn.S)),
+                                                               T(std::move(intIn.T)),
+                                                               V(std::move(intIn.V)),
+                                                               eri(std::move(intIn.eri)) {
+            }
+
+            // S = Overlap, T = Kinetic, V = Nuclear
+            Eigen::MatrixXd S, T, V;
+            //Two-electron tensor
+            TEITensor eri;
+        };
+
         namespace Utils {
             //Helper functions
             /**
@@ -130,7 +130,7 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the integrals on
          * @return Configuration integrals
          */
-        ConfigIntegrals CalculateConfiguration(const BasisSet &basisSet,
+        ConfigInts CalculateConfiguration(const BasisSet &basisSet,
                                                const std::vector<Atom> &atoms,
                                                const GEng::Thread *thread = nullptr);
 

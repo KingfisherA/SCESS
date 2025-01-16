@@ -1,5 +1,5 @@
 #include <pch.h>
-#include "Resources.h"
+#include "AssetFolder.h"
 #include<fstream>
 
 namespace SCESS::Res {
@@ -17,7 +17,9 @@ namespace SCESS::Res {
             std::ifstream jsonFile(settingsFile);
             try {
                 json settingsJSON = json::parse(jsonFile);
-                settingsJSON["assetsPath"].get_to(mAssetsPath);
+                std::string tempPath;
+                settingsJSON["assetsPath"].get_to(tempPath);
+                mAssetsPath = tempPath;
             } catch (const std::exception &e) {
                 std::cout << "Could not parse settings JSON. \n" << e.what() << '\n';
             }

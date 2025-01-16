@@ -1,0 +1,12 @@
+{
+  "dependencies": [
+    "blas",
+    "boost-circular-buffer",
+    "boost-filesystem",
+    "boost-locale",
+    "boost-math",
+    "glm",
+    "lapack",
+    "boost-preprocessor"
+  ]
+}

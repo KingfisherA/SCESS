@@ -5,7 +5,7 @@
 #include <optional>
 #include <iostream>
 
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
 
 namespace SCESS
 {

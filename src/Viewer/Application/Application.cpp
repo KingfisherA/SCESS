@@ -20,7 +20,7 @@
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/CC/CoupledCluster.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
 
 #pragma region Entry Point
 

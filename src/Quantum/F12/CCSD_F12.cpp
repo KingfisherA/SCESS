@@ -2,16 +2,16 @@
 #include<unsupported/Eigen/CXX11/Tensor>
 #include<Eigen/Core>
 
-#include "CCSD_F12.h"
+#include "F12.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 #include "Quantum/HF/HartreeFock.h"
 
-namespace SCESS {
+namespace SCESS::F12 {
     using namespace Eigen;
 
-    double F12::CCSD_F12(const UHFWavefunction &refWfn,
+    double CCSD::CCSD_F12(const UHFWavefunction &refWfn,
                          Integrals::F12::F12Integrals &f12Ints) {
         f12Ints.eri = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.eri);
         f12Ints.f12 = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.f12);

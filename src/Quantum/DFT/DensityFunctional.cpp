@@ -30,7 +30,7 @@ namespace SCESS {
         }
 
         constexpr double ALPHA = 0.9;
-        const ConfigIntegrals &mints = Integrals::CalculateConfiguration(basis, mol.GetAtoms(), thread);
+        const Integrals::ConfigInts &mints = Integrals::CalculateConfiguration(basis, mol.GetAtoms(), thread);
 
         if (thread)
             if (thread->ShouldStop())

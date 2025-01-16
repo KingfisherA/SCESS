@@ -2,13 +2,15 @@
 
 #include<libint2/atom.h>
 
-namespace SCESS {
-    class F12BasisSet;
-}
 
 //Evaluate integrals with f(12) correlation kernels
 namespace SCESS {
     using TEITensor = Eigen::Tensor<double, 4>;
+    class F12BasisSet;
+
+    namespace Integrals {
+        struct ConfigInts;
+    }
 
     namespace Integrals::F12 {
         using LibIntCGF = std::vector<std::pair<double, double> >;
@@ -28,7 +30,7 @@ namespace SCESS {
             TEITensor f12Repulsion;
         };
 
-        ConfigIntegrals CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms);
+        ConfigInts CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms);
 
         Eigen::MatrixXd CalculateOverlapMatrix(const F12BasisSet &basisSet);
         Eigen::MatrixXd CalculateNuclearMatrix(const F12BasisSet &basisSet, const AtomListLI &atoms);
@@ -37,6 +39,13 @@ namespace SCESS {
 
         //Chemist's notation
         F12Integrals EvaluateF12Integrals(const F12BasisSet &basisSet, double gamma = 1.0);
+        /**
+         * Import an integral file from MRCC
+         * @param fileName The file path of integral dump to read from
+         * @param nbf Number of basis set functions in the OBS and CABS
+         * @return The imported F12 integrals
+         */
+        F12Integrals ImportF12IntegralsMRCC(const std::string &fileName, uint32_t nbf);
 
         LibIntCGF CalculateSlaterContraction(double gamma = 1.0);
         LibIntCGF CalculateSlaterSquaredContraction(const LibIntCGF &slaterContraction);

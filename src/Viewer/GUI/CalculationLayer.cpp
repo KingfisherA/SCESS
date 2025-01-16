@@ -25,7 +25,8 @@
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 
 #include "Viewer/Application/Application.h"
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
+#include "Resources/ShaderSources.h"
 #include "GraphicsEngine/Resources/Resources.h"
 #include "Quantum/QMC/QMC.h"
 

@@ -255,9 +255,9 @@ namespace SCESS::Integrals {
 
 #pragma region IntegralsLibInt
 
-    ConfigIntegrals LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
+    ConfigInts LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
                                                    const AtomListLI &atoms) {
-        ConfigIntegrals mints;
+        ConfigInts mints;
 
         mints.S = CalculateOverlapMatrix(basisSet);
         mints.T = CalculateKineticMatrix(basisSet);
@@ -287,8 +287,8 @@ namespace SCESS::Integrals {
 
 #pragma region F12 Integrals
 
-    ConfigIntegrals F12::CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms) {
-        ConfigIntegrals mints;
+    ConfigInts F12::CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms) {
+        ConfigInts mints;
 
         mints.S = CalculateOverlapMatrix(basisSet);
         mints.T = CalculateKineticMatrix(basisSet);

@@ -1,5 +1,6 @@
 #include<pch.h>
-#include "Resources.h"
+#include "AssetFolder.h"
+#include "ShaderSources.h"
 
 namespace SCESS::Res {
     static const char *MOLECULE_COLOUR_DIFFUSE_GLSL = R"(#version 410

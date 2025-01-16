@@ -1,9 +1,11 @@
 #include<pch.h>
 #include <iostream>
+#include "Quantum/Integrals/IntegralsF12.h"
+
 #include "Tests.h"
 #include "Quantum/Molecule.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
 
 int main(int argc, char *argv[]) {
     using namespace SCESS;
@@ -13,7 +15,8 @@ int main(int argc, char *argv[]) {
 
     Integrals::LibInt::InitLibInt();
 
-    Tests::TestF12Integrals();
+    Tests::TestMP2_F12();
+    //Tests::TestF12Integrals();
     //Tests::TestCCSD_F12();
 
     Integrals::LibInt::CloseLibInt();

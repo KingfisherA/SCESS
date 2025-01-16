@@ -18,7 +18,7 @@ namespace SCESS {
 
 #pragma region Helper Functions
 
-    ConfigIntegrals Integrals::CalculateConfiguration(const BasisSet &basisSet,
+    Integrals::ConfigInts Integrals::CalculateConfiguration(const BasisSet &basisSet,
                                                       const std::vector<Atom> &atoms,
                                                       const GEng::Thread *thread) {
         Eigen::MatrixXd S =
@@ -55,7 +55,7 @@ namespace SCESS {
 
         TEITensor tei = TwoElectronRepulsionTensorMultithread(basisSet, thread);
 
-        return ConfigIntegrals{S, T, V, tei};
+        return ConfigInts{S, T, V, tei};
     }
 
 #pragma endregion

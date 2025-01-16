@@ -4,6 +4,8 @@
 #include <GraphicsEngine/Utilities/Memory.h>
 #include<unsupported/Eigen/CXX11/Tensor>
 
+
+
 namespace SCESS {
     class F12BasisSet;
     struct UHFWavefunction;
@@ -13,18 +15,12 @@ namespace SCESS::Integrals::F12 {
     struct F12Integrals;
 }
 
-namespace SCESS {
-    struct ConfigIntegrals;
-}
-
-namespace SCESS::BasisUtils {
-    class F12BasisSet;
-}
-
 namespace SCESS::Integrals {
     using TEITensor = Eigen::Tensor<double, 4>;
+    struct ConfigInts;
 
     namespace Transforms {
+
         /**
          * Transform the two-electron integrals (in chemist's notation) from the atomic orbital to the molecular orbital basis set
          * @param tei Two-electron integral tensor in atomic orbital basis (in chemist's notation)
@@ -47,7 +43,7 @@ namespace SCESS::Integrals {
          * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
          */
         void TransformF12Basis(const F12BasisSet &basisSet,
-                               ConfigIntegrals &mints,
+                               ConfigInts &mints,
                                F12::F12Integrals &f12Ints,
                                uRef<UHFWavefunction> *hfWfnOut = nullptr);
 

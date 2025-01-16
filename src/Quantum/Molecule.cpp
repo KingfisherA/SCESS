@@ -7,7 +7,7 @@
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Basis/Gaussian.h"
 #include "PeriodicTable.h"
-#include "Resources/Resources.h"
+#include "Resources/AssetFolder.h"
 
 #include "GraphicsEngine/Utilities/StringOperations.h"
 

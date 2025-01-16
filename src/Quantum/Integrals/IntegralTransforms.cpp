@@ -65,8 +65,8 @@ namespace SCESS::Integrals {
         return transformed4;
     }
 
-    void Transforms::TransformF12Basis(const   F12BasisSet &basisSet,
-                                       ConfigIntegrals &mints,
+    void Transforms::TransformF12Basis(const F12BasisSet &basisSet,
+                                       ConfigInts &mints,
                                        F12::F12Integrals &f12Ints,
                                        uRef<UHFWavefunction> *hfWfnOut) {
         using namespace Eigen;
@@ -85,7 +85,7 @@ namespace SCESS::Integrals {
         TEITensor &eri = mints.eri;
 
         uRef<UHFWavefunction> hfWfn; {
-            ConfigIntegrals hfInts;
+            ConfigInts hfInts;
             hfInts.S = S.block(0, 0, nHF, nHF);
             hfInts.T = T.block(0, 0, nHF, nHF);
             hfInts.V = V.block(0, 0, nHF, nHF);
@@ -176,7 +176,7 @@ namespace SCESS::Integrals {
             SelfAdjointEigenSolver<MatrixXd> eigenSolver2(F_Prime);
             C_CABS = X * eigenSolver2.eigenvectors().real();
         }
-        
+
         array<uint8_t, 16> combinations = {0};
 
         for (uint8_t i = 0, x = 0; i < 2; ++i)
@@ -208,6 +208,22 @@ namespace SCESS::Integrals {
                 tei.slice(startIndices, sizes) = TransformTEI(tei.slice(startIndices, sizes), A, B, C, D);
             }
         };
+
+
+        auto TransformF12Matrix = [&C_CABS, &C_HF, nHF, nCABS](MatrixXd &mat) {
+            MatrixXd hfBlock = mat.block(0, 0, nHF, nHF);
+            MatrixXd cabsBlock = mat.block(nHF, nHF, nCABS, nCABS);
+            MatrixXd hfCABSBlock = mat.block(0, nHF, nHF, nCABS);
+
+            mat.block(0, 0, nHF, nHF) = C_HF.transpose() * hfBlock * C_HF;
+            mat.block(nHF, nHF, nCABS, nCABS) = C_CABS.transpose() * cabsBlock * C_CABS;
+            mat.block(0, nHF, nHF, nCABS) = C_HF.transpose() * hfCABSBlock * C_CABS;
+            mat.block(nHF, 0, nCABS, nHF) = mat.block(0, nHF, nHF, nCABS).transpose();
+        };
+
+        TransformF12Matrix(mints.S);
+        TransformF12Matrix(mints.T);
+        TransformF12Matrix(mints.V);
 
         TransformF12Tensor(eri);
         f12Ints.eri = eri;

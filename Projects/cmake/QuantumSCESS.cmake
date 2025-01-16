@@ -16,7 +16,8 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/DFT/XCFunctionals.cpp"
   "${SCESS_SRC_DIR}/Quantum/DFT/XCFunctionals.h"
   "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12.cpp"
-  "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12.h"
+  "${SCESS_SRC_DIR}/Quantum/F12/F12.h"
+  "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/HartreeFock.h"
   "${SCESS_SRC_DIR}/Quantum/HF/RestrictedHF.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/UnrestrictedHF.cpp"
@@ -28,13 +29,14 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/MolecularGrid.h"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.h"
-  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.cpp"
-  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralImporter.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.h"
   "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsF12.h"
   "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsLibInt.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralsLibInt.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.cpp"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralTransforms.h"
   "${SCESS_SRC_DIR}/Quantum/Molecule.cpp"
   "${SCESS_SRC_DIR}/Quantum/Molecule.h"
   "${SCESS_SRC_DIR}/Quantum/PeriodicTable.cpp"
@@ -42,13 +44,32 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/QMC/CCQMC.cpp"
   "${SCESS_SRC_DIR}/Quantum/QMC/FCIQMC.cpp"
   "${SCESS_SRC_DIR}/Quantum/QMC/QMC.h"
-  "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
-  "${SCESS_SRC_DIR}/Resources/Resources.h"
-  "${SCESS_SRC_DIR}/Resources/ShaderSources.cpp"
-  "${SCESS_SRC_DIR}/Utilities/Assets.h"
-  "${SCESS_SRC_DIR}/Utilities/Intrinsics.h"
-  "${SCESS_SRC_DIR}/Utilities/Utilities.cpp"
-  "${SCESS_SRC_DIR}/Utilities/Utilities.h"
+)
+
+set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER 
+    "BasisSet.h"
+    "Gaussian.h"
+    "CoupledCluster.h"
+    "ConfigurationInteraction.h"
+    "DensityFunctional.h"
+    "XCFunctional.h"
+    "F12.h"
+    "HartreeFock.h"
+    "AtomicGrid.h"
+    "GridPoint.h"
+    "MolecularGrid.h"
+    "Quadrature.h"
+    "IntegralTransforms.h"
+    "Integrals.h"
+    "IntegralsF12.h"
+    "IntegralsLibInt.h"
+    "Molecule.h"
+    "PeriodicTable.h"   
+    "QMC.h"
+    "Resources.h"
+    "Assets.h"
+    "Intrinsics.h"
+    "Utilities.h"
 )
 
 find_package(BLAS REQUIRED)
@@ -68,62 +89,89 @@ target_link_libraries("QuantumSCESS" PRIVATE
   LAPACK::LAPACK
   ${LIB_LAPACKE}
   BLAS::BLAS
+  Boost::boost
   Boost::filesystem
+  $<TARGET_NAME_IF_EXISTS:Boost::math>
+  $<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
   ${GENG_LIBRARIES}
-  Libint2::libint2
+  $<TARGET_NAME_IF_EXISTS:Libint2::int2>
+  $<TARGET_NAME_IF_EXISTS:Libint2::libint2>
   Libxc::xc
 )
+
 target_compile_definitions("QuantumSCESS" PRIVATE
-  OS_LINUX
+  $<$<PLATFORM_ID:Linux>:OS_LINUX>
+  $<$<PLATFORM_ID:Windows>:OS_WINDOWS>
   EIGEN_USE_BLAS
   EIGEN_USE_LAPACKE
+  LIBINT2_CPLUSPLUS_STD=2020
   $<$<CONFIG:DEBUG>:CONFIG_DEBUG>
   $<$<CONFIG:DEBUG>:_DEBUG>
   $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
 target_precompile_headers("QuantumSCESS" PUBLIC ./src/pch.h)
-target_compile_options("QuantumSCESS" PRIVATE
-    -m64
-    -fPIC
-    -std=c++20
-)
+
+set(COMPILE_OPTIONS)
+if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 
+   (CMAKE_CXX_COMPILER_ID STREQUAL GNU))
+    list(APPEND COMPILE_OPTIONS
+      -m64
+      -fPIC
+      -std=c++20
+    )
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
+      list(APPEND COMPILE_OPTIONS
+        -g
+        -O0
+      )
+    elseif(CMAKE_BUILD_TYPE STREQUAL Release)
+      list(APPEND COMPILE_OPTIONS
+        -O3
+        -mavx2
+      )
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)
+  list(APPEND COMPILE_OPTIONS
+      /std:c++20
+    )
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
+      list(APPEND COMPILE_OPTIONS
+        /Zi
+        /Od
+      )
+    elseif(CMAKE_BUILD_TYPE STREQUAL Release)
+      list(APPEND COMPILE_OPTIONS /O2)
+    endif()
+endif()
+target_compile_options("QuantumSCESS" PRIVATE ${COMPILE_OPTIONS})
+
+set_target_properties("QuantumSCESS" PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+    POSITION_INDEPENDENT_CODE True
+    INTERPROCEDURAL_OPTIMIZATION False
+    MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
+    OUTPUT_NAME "QuantumSCESS")
+
+if(CMAKE_CONFIGURATION_TYPES)
+  set(DEBUG_BIN_DIR "${SCESS_BIN_DIR}")
+  set(RELEASE_BIN_DIR "${SCESS_BIN_DIR}")
+else()
+  set(DEBUG_BIN_DIR "${SCESS_BIN_DIR}/Debug")
+  set(RELEASE_BIN_DIR "${SCESS_BIN_DIR}/Release")
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("QuantumSCESS" PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    POSITION_INDEPENDENT_CODE True
-    INTERPROCEDURAL_OPTIMIZATION False
-    OUTPUT_NAME "QuantumSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Debug-x64"
+    ARCHIVE_OUTPUT_DIRECTORY "${DEBUG_BIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${DEBUG_BIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${DEBUG_BIN_DIR}"
   )
-
-  target_compile_options("QuantumSCESS" PRIVATE
-    -g
-    -O0
-  )
-endif()
-
-
-if(CMAKE_BUILD_TYPE STREQUAL Release)
+elseif(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("QuantumSCESS" PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-    POSITION_INDEPENDENT_CODE True
-    INTERPROCEDURAL_OPTIMIZATION False
-    OUTPUT_NAME "QuantumSCESS"
-    ARCHIVE_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
-    LIBRARY_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
-    RUNTIME_OUTPUT_DIRECTORY "${SCESS_BIN_DIR}/Release-x64"
-  )
-
-  target_compile_options("QuantumSCESS" PRIVATE
-      -mavx2
-      -O2
+    ARCHIVE_OUTPUT_DIRECTORY "${RELEASE_BIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${RELEASE_BIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${RELEASE_BIN_DIR}"
   )
 endif()
-

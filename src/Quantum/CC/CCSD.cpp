@@ -17,15 +17,6 @@ namespace SCESS {
     template<typename T>
     using MatrixType = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
     //
-    template<typename Scalar, typename... Dims>
-    auto MatrixToTensor(const MatrixType<Scalar> &matrix, Dims... dims) {
-        constexpr int rank = sizeof...(Dims);
-        Eigen::Tensor<double, rank> tensor(dims...);
-
-        memcpy(tensor.data(), matrix.data(), matrix.size() * sizeof(Scalar));
-
-        return tensor;
-    }
 
     uRef<CCSDWavefunction> CoupledCluster::CCSD(const RHFWavefunction &rhfResult, const GEng::Thread *thread,
                                                 std::stringstream *console) {

@@ -27,7 +27,7 @@ namespace SCESS {
 
 
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
+        Integrals::ConfigInts integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
         auto integralEndTP = high_resolution_clock::now();
 
         if (thread)
@@ -45,7 +45,7 @@ namespace SCESS {
                    basisSetName);
     }
 
-    uRef<UHFWavefunction> HartreeFock::UHF(const ConfigIntegrals &mints,
+    uRef<UHFWavefunction> HartreeFock::UHF(const Integrals::ConfigInts &mints,
                                            uint32_t alphaElectrons,
                                            uint32_t betaElectrons,
                                            double Vnn,

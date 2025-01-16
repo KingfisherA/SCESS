@@ -29,7 +29,7 @@ namespace SCESS {
 
         std::cout << "\nBeginning integral evaluation...\n";
         auto integralStartTP = high_resolution_clock::now();
-        ConfigIntegrals integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
+        Integrals::ConfigInts integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
         auto integralEndTP = high_resolution_clock::now();
 
         if (console)
@@ -47,7 +47,7 @@ namespace SCESS {
     }
 
 
-    uRef<RHFWavefunction> HartreeFock::RHF(const ConfigIntegrals &mints, uint32_t nElectronPairs, double Vnn,
+    uRef<RHFWavefunction> HartreeFock::RHF(const Integrals::ConfigInts &mints, uint32_t nElectronPairs, double Vnn,
                                            double convergeLimit, size_t scfMaxIterations, const GEng::Thread *thread,
                                            std::stringstream *console,
                                            std::string_view basisSetName) {

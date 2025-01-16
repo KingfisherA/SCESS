@@ -10,6 +10,10 @@ namespace GEng {
     class Thread;
 }
 
+namespace SCESS::Integrals {
+    struct ConfigInts;
+}
+
 namespace SCESS {
     class Molecule;
     class BasisSet;
@@ -29,7 +33,7 @@ namespace SCESS {
 
         Eigen::VectorXd Energies;
         Eigen::VectorXi Occupation;
-        std::optional<ConfigIntegrals> Integrals;
+        std::optional<Integrals::ConfigInts> Integrals;
     };
 
     class DensityFunctional {
