@@ -68,10 +68,11 @@ namespace SCESS::Integrals {
     void Transforms::TransformF12Basis(const F12BasisSet &basisSet,
                                        ConfigInts &mints,
                                        F12::F12Integrals &f12Ints,
-                                       uRef<UHFWavefunction> *hfWfnOut) {
+                                       uRef<UHFWavefunction> *hfWfnOut,
+                                       double *cabsSinglesCorrection) {
         using namespace Eigen;
 
-        const Index nHF = (Index) basisSet.GetNoHFFuncs();
+        const Index nOBS = (Index) basisSet.GetNoHFFuncs();
         const Index nCABS = (Index) basisSet.GetNoCABSFuncs();
         const Index N = (Index) basisSet.GetNumOfFuncs();
 
@@ -86,27 +87,27 @@ namespace SCESS::Integrals {
 
         uRef<UHFWavefunction> hfWfn; {
             ConfigInts hfInts;
-            hfInts.S = S.block(0, 0, nHF, nHF);
-            hfInts.T = T.block(0, 0, nHF, nHF);
-            hfInts.V = V.block(0, 0, nHF, nHF);
+            hfInts.S = S.block(0, 0, nOBS, nOBS);
+            hfInts.T = T.block(0, 0, nOBS, nOBS);
+            hfInts.V = V.block(0, 0, nOBS, nOBS);
             hfInts.eri = eri.slice(Eigen::array<Index, 4>{0, 0, 0, 0},
-                                   Eigen::array<Index, 4>{nHF, nHF, nHF, nHF});
+                                   Eigen::array<Index, 4>{nOBS, nOBS, nOBS, nOBS});
 
             hfWfn = HartreeFock::UHF(hfInts, 1, 1, Vnn,
                                      std::numeric_limits<double>::epsilon());
         }
 
         //Inverse of HF block of matrix
-        MatrixXd SInv = S.block(0, 0, nHF, nHF).inverse();
+        MatrixXd SInv = S.block(0, 0, nOBS, nOBS).inverse();
 
         //Projector Matrix
         MatrixXd P = MatrixXd::Zero(N, N);
 
         for (Index i = 0; i < N; ++i) {
             P(i, i) = 1.0;
-            for (Index mu = 0; mu < nHF; ++mu) {
+            for (Index mu = 0; mu < nOBS; ++mu) {
                 double c = 0.0;
-                for (Index nu = 0; nu < nHF; nu++)
+                for (Index nu = 0; nu < nOBS; nu++)
                     c -= SInv(mu, nu) * S(nu, i);
                 P(mu, i) = c;
             }
@@ -141,18 +142,18 @@ namespace SCESS::Integrals {
         MatrixXd F_CABS = MatrixXd::Zero(nCABS, nCABS);
         //HF Density matrix
         MatrixXd &D = hfWfn->DensityAlpha;
-        for (Index i = nHF; i < N; i++)
-            for (Index j = nHF; j < N; j++) {
+        for (Index i = nOBS; i < N; i++)
+            for (Index j = nOBS; j < N; j++) {
                 double g = 0.0;
-                for (Index mu = 0; mu < nHF; mu++)
-                    for (Index nu = 0; nu < nHF; nu++) {
+                for (Index mu = 0; mu < nOBS; mu++)
+                    for (Index nu = 0; nu < nOBS; nu++) {
                         double J = eri(i, j, mu, nu);
                         double K = eri(i, nu, mu, j);
                         g += D(mu, nu) * (2.0 * J - K);
                     }
 
-                F_CABS(i - nHF, j - nHF) =
-                        F_CABS(j - nHF, i - nHF) = T(i, j) + V(i, j) + g;
+                F_CABS(i - nOBS, j - nOBS) =
+                        F_CABS(j - nOBS, i - nOBS) = T(i, j) + V(i, j) + g;
             }
 
 
@@ -162,7 +163,7 @@ namespace SCESS::Integrals {
         MatrixXd &C_HF = hfWfn->CAlpha;
         //
         {
-            auto S_CABS = S.block(nHF, nHF, nCABS, nCABS);
+            auto S_CABS = S.block(nOBS, nOBS, nCABS, nCABS);
             SelfAdjointEigenSolver<MatrixXd> eigensolver(S_CABS);
             const VectorXd &SEigenValues = eigensolver.eigenvalues().real();
             const MatrixXd &SEigenVects = eigensolver.eigenvectors().real();
@@ -172,9 +173,40 @@ namespace SCESS::Integrals {
             MatrixXd X = SEigenVects * SValsInvSqrt * SEigenVects.transpose();
             X = (X + X.transpose()) * 0.5;
 
-            auto F_Prime = X.transpose() * F_CABS * X;
-            SelfAdjointEigenSolver<MatrixXd> eigenSolver2(F_Prime);
+            auto F_CABS_Prime = X.transpose() * F_CABS * X;
+            SelfAdjointEigenSolver<MatrixXd> eigenSolver2(F_CABS_Prime);
             C_CABS = X * eigenSolver2.eigenvectors().real();
+
+            if (cabsSinglesCorrection) {
+                //Build combined Fock matrix
+                MatrixXd F = MatrixXd::Zero(nOBS + nCABS, nOBS + nCABS);
+                for (Index p = 0; p < F.rows(); p++)
+                    for (Index q = p; q < F.cols(); q++) {
+                        double g = 0.0;
+                        for (Index mu = 0; mu < nOBS; mu++)
+                            for (Index nu = 0; nu < nOBS; nu++) {
+                                double J = eri(p, q, mu, nu);
+                                double K = eri(p, nu, mu, q);
+                                g += D(mu, nu) * (2.0 * J - K);
+                            }
+
+                        F(p, q) =
+                                F(q, p) = T(p, q) + V(p, q) + g;
+                    }
+
+                GeneralizedSelfAdjointEigenSolver<MatrixXd> eigenSolver3(F, S);
+                VectorXd epsilon = eigenSolver3.eigenvalues().real();
+                MatrixXd F_Eigenvectors = eigenSolver3.eigenvectors().real();
+                F = F_Eigenvectors.transpose() * F * F_Eigenvectors;
+
+                (*cabsSinglesCorrection) = 0.0;
+                for (Index x = nOBS; x < nCABS + nOBS; x++)
+                    for (Index i = 0; i < nOBS; i++) {
+                        double F_ix = F(i, x);
+                        double D_xi = epsilon(x) - epsilon(i);
+                        (*cabsSinglesCorrection) -= abs(F_ix * F_ix) / D_xi;
+                    }
+            }
         }
 
         array<uint8_t, 16> combinations = {0};
@@ -185,18 +217,18 @@ namespace SCESS::Integrals {
                     for (uint8_t l = 0; l < 2; ++l, ++x)
                         combinations[x] |= (i << 0) | (j << 1) | (k << 2) | (l << 3);
 
-        auto TransformF12Tensor = [&C_CABS, &C_HF, nHF, nCABS, &combinations](TEITensor &tei) {
+        auto TransformF12Tensor = [&C_CABS, &C_HF, nOBS, nCABS, &combinations](TEITensor &tei) {
             for (auto comb: combinations) {
                 array<Index, 4> startIndices = {0};
                 array<Index, 4> sizes = {0};
 
                 for (uint8_t j = 0; j < 4; ++j)
                     if (comb & (0x1 << j)) {
-                        startIndices[j] = nHF;
+                        startIndices[j] = nOBS;
                         sizes[j] = nCABS;
                     } else {
                         startIndices[j] = 0;
-                        sizes[j] = nHF;
+                        sizes[j] = nOBS;
                     }
 
 
@@ -210,15 +242,15 @@ namespace SCESS::Integrals {
         };
 
 
-        auto TransformF12Matrix = [&C_CABS, &C_HF, nHF, nCABS](MatrixXd &mat) {
-            MatrixXd hfBlock = mat.block(0, 0, nHF, nHF);
-            MatrixXd cabsBlock = mat.block(nHF, nHF, nCABS, nCABS);
-            MatrixXd hfCABSBlock = mat.block(0, nHF, nHF, nCABS);
+        auto TransformF12Matrix = [&C_CABS, &C_HF, nOBS, nCABS](MatrixXd &mat) {
+            MatrixXd hfBlock = mat.block(0, 0, nOBS, nOBS);
+            MatrixXd cabsBlock = mat.block(nOBS, nOBS, nCABS, nCABS);
+            MatrixXd hfCABSBlock = mat.block(0, nOBS, nOBS, nCABS);
 
-            mat.block(0, 0, nHF, nHF) = C_HF.transpose() * hfBlock * C_HF;
-            mat.block(nHF, nHF, nCABS, nCABS) = C_CABS.transpose() * cabsBlock * C_CABS;
-            mat.block(0, nHF, nHF, nCABS) = C_HF.transpose() * hfCABSBlock * C_CABS;
-            mat.block(nHF, 0, nCABS, nHF) = mat.block(0, nHF, nHF, nCABS).transpose();
+            mat.block(0, 0, nOBS, nOBS) = C_HF.transpose() * hfBlock * C_HF;
+            mat.block(nOBS, nOBS, nCABS, nCABS) = C_CABS.transpose() * cabsBlock * C_CABS;
+            mat.block(0, nOBS, nOBS, nCABS) = C_HF.transpose() * hfCABSBlock * C_CABS;
+            mat.block(nOBS, 0, nCABS, nOBS) = mat.block(0, nOBS, nOBS, nCABS).transpose();
         };
 
         TransformF12Matrix(mints.S);

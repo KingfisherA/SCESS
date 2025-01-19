@@ -25,10 +25,17 @@ namespace SCESS::Integrals {
         if (!file.is_open())
             throw std::runtime_error("Cannot open file");
 
-        std::vector<std::pair<Eigen::Vector4i, double> > eriInts, f12Ints, f12SqInts, f12DelSqInts, f12RepulsionInts;
+
+        array<Index, 4> dimensions{nbf, nbf, nbf, nbf};
+        F12Integrals returnInts;
+        returnInts.eri = Eigen::Tensor<double, 4>(dimensions);
+        returnInts.f12 = Eigen::Tensor<double, 4>(dimensions);
+        returnInts.f12Sq = Eigen::Tensor<double, 4>(dimensions);
+        returnInts.f12DelSq = Eigen::Tensor<double, 4>(dimensions);
+        returnInts.f12Repulsion = Eigen::Tensor<double, 4>(dimensions);
 
         std::string line;
-        std::string intType = "";
+        std::string intType;
         while (std::getline(file, line)) {
             if ((line.find("vint") != std::string::npos) ||
                 (line.find("f12int") != std::string::npos) ||
@@ -40,7 +47,7 @@ namespace SCESS::Integrals {
                 continue;
             }
 
-            if (intType != "") {
+            if (!intType.empty()) {
                 //Remove whitespace from the start and the end
                 boost::trim(line);
 
@@ -51,59 +58,27 @@ namespace SCESS::Integrals {
                 auto tokens = GEng::StringOperations::Split(line, ' ');
 
                 double integralVal = std::stod(tokens[0]);
-                Eigen::Vector4i orbIndices;
-                orbIndices.x() = std::stoi(tokens[1]);
-                orbIndices.y() = std::stoi(tokens[2]);
-                orbIndices.z() = std::stoi(tokens[3]);
-                orbIndices.w() = std::stoi(tokens[4]);
+                array<Index, 4> orbIndices = {
+                    std::stoi(tokens[1]),
+                    std::stoi(tokens[2]),
+                    std::stoi(tokens[3]),
+                    std::stoi(tokens[4])
+                };
 
                 if (intType == "vint") {
-                    eriInts.emplace_back(orbIndices, integralVal);
+                    returnInts.eri(orbIndices) = integralVal;
                 } else if (intType == "f12int") {
-                    f12Ints.emplace_back(orbIndices, integralVal);
+                    returnInts.f12(orbIndices) = integralVal;
                 } else if (intType == "f122int") {
-                    f12SqInts.emplace_back(orbIndices, integralVal);
+                    returnInts.f12Sq(orbIndices) = integralVal;
                 } else if (intType == "delf122int") {
-                    f12DelSqInts.emplace_back(orbIndices, integralVal);
+                    returnInts.f12DelSq(orbIndices) = integralVal;
                 } else if (intType == "f12r12int") {
-                    f12RepulsionInts.emplace_back(orbIndices, integralVal);
+                    returnInts.f12Repulsion(orbIndices) = integralVal;
                 }
             }
         }
         file.close();
-
-        Eigen::array<Eigen::Index, 4> dimensions{nbf, nbf, nbf, nbf};
-        F12Integrals returnInts;
-        returnInts.eri = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12 = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12Sq = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12DelSq = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12Repulsion = Eigen::Tensor<double, 4>(dimensions);
-
-        for (const auto& ele : eriInts) {
-            const Vector4i& orbIndices = ele.first;
-            returnInts.eri(orbIndices.x(), orbIndices.y(), orbIndices.z(), orbIndices.w()) = ele.second;
-        }
-
-        for (const auto& ele : f12Ints) {
-            const Vector4i& orbIndices = ele.first;
-            returnInts.f12(orbIndices.x(), orbIndices.y(), orbIndices.z(), orbIndices.w()) = ele.second;
-        }
-
-        for (const auto& ele : f12SqInts) {
-            const Vector4i& orbIndices = ele.first;
-            returnInts.f12Sq(orbIndices.x(), orbIndices.y(), orbIndices.z(), orbIndices.w()) = ele.second;
-        }
-
-        for (const auto& ele : f12DelSqInts) {
-            const Vector4i& orbIndices = ele.first;
-            returnInts.f12DelSq(orbIndices.x(), orbIndices.y(), orbIndices.z(), orbIndices.w()) = ele.second;
-        }
-
-        for (const auto& ele : f12RepulsionInts) {
-            const Vector4i& orbIndices = ele.first;
-            returnInts.f12Repulsion(orbIndices.x(), orbIndices.y(), orbIndices.z(), orbIndices.w()) = ele.second;
-        }
 
         return returnInts;
     }

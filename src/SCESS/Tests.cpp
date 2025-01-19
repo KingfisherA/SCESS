@@ -260,13 +260,9 @@ namespace SCESS::Tests {
     }
 
     void TestMP2_F12() {
-        // Integrals::F12::F12Integrals f12Ints = Integrals::F12::ImportF12IntegralsMRCC(
-        //     Res::AssetsFolder::Get().GetAssetsPathStr() + "/F12 Data/MRCC_F12_Ints.txt", 12);
-        //
-        // Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
-        // BasisSet basisSet("sto-3g", hydrogenMolecule);
-        //
-        // uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(hydrogenMolecule, basisSet, 1E-10);
+        Integrals::F12::F12Integrals f12IntsImported =
+                Integrals::F12::ImportF12IntegralsMRCC(
+                    Res::AssetsFolder::Get().GetAssetsPathStr() + "/F12 Data/MRCC_F12_Ints.txt", 12);
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -279,9 +275,26 @@ namespace SCESS::Tests {
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
         uRef<UHFWavefunction> uhfWfn;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn);
+        //Need to correct the reference energy with a pertubation. CABS singles.
+        //Correct the fact that there is a large basis set error in the non-correlated HF energy
+        double cabsSinglesCorrection = -0.009972302139;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn, nullptr);
 
-        double f12MP2Energy = F12::MP2::MP2_F12(*uhfWfn, configInts, f12Ints);
+        auto f12Result = F12::MP2::MP2_F12(*uhfWfn, configInts, f12IntsImported);
+
+        std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
+        std::cout << "  Molecule = Hydrogen (H2)\n";
+        //Should be -1.117505880245 hartrees
+        std::cout << "  E(HF) = " << uhfWfn->Energy << " hartrees\n";
+        //Should be -0.009972302139
+        std::cout << "  E(CABS singles correction) = " << cabsSinglesCorrection << " hartrees\n";
+        //Should be -0.012503809116
+        std::cout << "  E(MP2) = " << f12Result.mp2Energy << " hartrees\n";
+        //Should be -0.021009866243 hartrees
+        std::cout << "  E(F12 MP2) = " << f12Result.f12MP2Energy << " hartrees\n";
+        //Should be -1.160991857744 hartrees
+        std::cout << "  E(Total) = " << uhfWfn->Energy + cabsSinglesCorrection + f12Result.mp2Energy + f12Result.
+                f12MP2Energy << " hartrees\n\n";
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

@@ -30,9 +30,9 @@ namespace SCESS::F12 {
 #define Reduce3 sum<Eigen::array<Index, 3>>
 #define Reduce4 sum<Eigen::array<Index, 4>>
 
-    double MP2::MP2_F12(const UHFWavefunction &refWfn,
-                        const Integrals::ConfigInts &mints,
-                        const Integrals::F12::F12Integrals &f12Ints) {
+    MP2::MP2F12Result MP2::MP2_F12(const UHFWavefunction &refWfn,
+                                   const Integrals::ConfigInts &mints,
+                                   const Integrals::F12::F12Integrals &f12Ints) {
         //We assume that the reference wavefunction is actually a closed shell RHF hence alternating alpha and beta spins (fix this in the future :( )
         // We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
         //All calculations are done in SPIN ORBITALS so we need to integrate spin out on the fly. All EVEN indices are spin alpha and ODD are spin beta
@@ -42,13 +42,19 @@ namespace SCESS::F12 {
         const MatrixXd &VInts = mints.V;
 
         //In chemist's notation
-        TEITensor eri = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.eri);
-        TEITensor f12 = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12);
-        TEITensor f12Sq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq);
-        //F12 double commutator integrals?
-        TEITensor f12DelSq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12DelSq);
-        //Same as f12g12 integrals
-        TEITensor f12Repulsion = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion);
+        // TEITensor eri = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.eri);
+        // TEITensor f12 = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12);
+        // TEITensor f12Sq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq);
+        // //F12 double commutator integrals?
+        // TEITensor f12DelSq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12DelSq);
+        // //Same as f12g12 integrals
+        // TEITensor f12Repulsion = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion);
+
+        const TEITensor &eri = f12Ints.eri;
+        const TEITensor &f12 = f12Ints.f12;
+        const TEITensor &f12Sq = f12Ints.f12Sq;
+        const TEITensor &f12DelSq = f12Ints.f12DelSq;
+        const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
 
         //nmo = Number of Molecular Orbitals
         //nalpha = Number of alpha electrons = Number of beta electrons in closed-shell RHF = ndocc
@@ -149,7 +155,7 @@ namespace SCESS::F12 {
         F.Slice2({nOBS, nOBS}, {nCABS, nCABS}) += 2.0 * eri.Slice4({0, nOBS, 0, nOBS}, {nOcc, nCABS, nOcc, nCABS}).
                 Reduce2({0, 2});
 
-        Tensor<double, 2> K(nbf, nbf);
+        Tensor<double, 2> K(F.dimensions());
         K.setZero();
         //Exchange Fock Terms
         //iipq->pq
@@ -496,7 +502,7 @@ namespace SCESS::F12 {
                         ({{1, 3}}))
                     .Shuffle4({3, 0, 1, 2});
 
-            //-- C Matrix --
+            //-- C Tensor --
             //bx,klax->klab
             C += F.Slice2({nOcc, nOBS}, {nVirt, nCABS})
                     .Contract1(
@@ -538,9 +544,9 @@ namespace SCESS::F12 {
                 //a and b run over the virtual orbitals
                 for (Index a = nOcc; a < nVirt + nOcc; a++)
                     for (Index b = nOcc; b < nVirt + nOcc; b++) {
-                        //Note that integrals are in chemist's notation
-                        double intIJAB = eri(i, a, j, b);
-                        double intIJBA = eri(i, b, j, a);
+                        //Integrals are in physicist's notation
+                        double intIJAB = eri(i, j, a, b);
+                        double intIJBA = eri(i, j, b, a);
                         double epsilonIJAB = epsilon[a] + epsilon[b] - epsilon[i] - epsilon[j];
 
                         //MP2 formula below already integrates spin out for a closed shell
@@ -551,12 +557,14 @@ namespace SCESS::F12 {
 
 
         //Makes the V tilde intermediate integrating out spin for a closed shell reference
-        auto MakeVTildeSpin = [&eri, &nOcc,&nVirt, &V, &C, &F]
-        (MatrixXd &VAlphaAlpha, MatrixXd &VAlphaBeta, Index i, Index j) {
+        auto MakeVTildeSpin = [&eri, &nOcc,&nVirt, &V, &C, &F](MatrixXd &V_AlphaAlpha,
+                                                               MatrixXd &V_AlphaBeta,
+                                                               Index i, Index j) {
             TEITensor eri_oovv = eri.Slice4({0, 0, nOcc, nOcc},
                                             {nOcc, nOcc, nVirt, nVirt});
+            Index col = 0;
             for (Index k = 0; k < nOcc; k++)
-                for (Index l = 0; l < nOcc; l++) {
+                for (Index l = 0; l < nOcc; l++, col++) {
                     double VAlphaBeta_kl = V(k, l, i, j);
                     double VAlphaAlpha_kl = V(k, l, i, j) - V(l, k, i, j);
                     for (Index a = 0; a < nVirt; a++)
@@ -579,45 +587,91 @@ namespace SCESS::F12 {
                             }
                         }
 
-                    VAlphaBeta(0, k + l * nOcc) = VAlphaBeta_kl;
-                    if (k < l)
-                        VAlphaAlpha(0, k + l * nOcc) = VAlphaAlpha_kl;
+                    V_AlphaBeta(0, col) = VAlphaBeta_kl;
+                    V_AlphaAlpha(0, col) = VAlphaAlpha_kl;
                 }
+
+            V_AlphaBeta = V_AlphaBeta.transpose();
+            V_AlphaAlpha = V_AlphaAlpha.transpose();
         };
 
         //Makes the B tilde intermediate integrating out spin for a closed shell reference
-        auto MakeBTildeSpin = []
-        (MatrixXd &BAlphaAlpha, MatrixXd &BAlphaBeta, Index i, Index j) {
+        auto MakeBTildeSpin = [&F, &C, &X, &B, &nOcc](MatrixXd &B_AlphaAlpha,
+                                                      MatrixXd &B_AlphaBeta,
+                                                      Index i, Index j) {
+            double epsilon_ij = F(i, i) + F(j, j);
+            Index row = 0, col = 0;
+            for (Index k = 0; k < nOcc; k++)
+                for (Index l = 0; l < nOcc; l++, row++) {
+                    for (Index m = 0; m < nOcc; m++)
+                        for (Index n = 0; n < nOcc; n++, col++) {
+                            double B_AlphaBeta_klmn = B(k, l, m, n)
+                                                      - epsilon_ij * X(k, l, m, n);
+                            double B_AlphaAlpha_klmn = 0.0;
+
+                            if (k < l && m < n)
+                                B_AlphaAlpha_klmn =
+                                        B(k, l, m, n)
+                                        - B(k, l, n, m)
+                                        - epsilon_ij * X(k, l, m, n)
+                                        + epsilon_ij * X(k, l, n, m);
+
+                            for (Index a = 0; a < nVirt; a++)
+                                for (Index b = 0; b < nVirt; b++) {
+                                    double D_ijab = F(nOcc + a, nOcc + a) + F(nOcc + b, nOcc + b) - F(
+                                                        i, i) - F(j, j);
+                                    double C_klab = C(k, l, a, b);
+                                    double C_klba = C(k, l, b, a);
+                                    double C_mnab = C(m, n, a, b);
+                                    double C_mnba = C(m, n, b, a);
+
+                                    B_AlphaBeta_klmn -= C_klab * C_mnab / D_ijab;
+
+                                    if (a < b) {
+                                        //Antisymmetrise matrix elements
+                                        C_klab = C_klab - C_klba;
+                                        C_mnab = C_mnab - C_mnba;
+                                        B_AlphaAlpha_klmn -= C_klab * C_mnab / D_ijab;
+                                    }
+                                }
+
+                            B_AlphaBeta(row, col) = B_AlphaBeta_klmn;
+                            B_AlphaAlpha(row, col) = B_AlphaAlpha_klmn;
+                        }
+                }
         };
 
         //Calculate the F12 contribution to the MP2 energy
         double E_F12 = 0.0;
 
+        //Loop over pairs of electrons
         for (Index i = 0; i < nOcc; i++)
             for (Index j = 0; j < nOcc; j++) {
-                MatrixXd VAlphaAlpha, VAlphaBeta;
-                MatrixXd BAlphaAlpha, BAlphaBeta;
+                MatrixXd V_AlphaAlpha = MatrixXd::Zero(1, nOcc * nOcc);
+                MatrixXd V_AlphaBeta = MatrixXd::Zero(1, nOcc * nOcc);
+                MatrixXd B_AlphaAlpha = MatrixXd::Zero(nOcc * nOcc, nOcc * nOcc * nVirt * nVirt);
+                MatrixXd B_AlphaBeta = MatrixXd::Zero(nOcc * nOcc, nOcc * nOcc * nVirt * nVirt);
 
-                MakeVTildeSpin(VAlphaAlpha, VAlphaBeta, i, j);
-                MakeBTildeSpin(BAlphaAlpha, BAlphaBeta, i, j);
+                MakeVTildeSpin(V_AlphaAlpha, V_AlphaBeta, i, j);
+                MakeBTildeSpin(B_AlphaAlpha, B_AlphaBeta, i, j);
 
-                MatrixXd BAlphaBetaInv = BAlphaBeta.inverse();
+                MatrixXd B_AlphaBetaInv = B_AlphaBeta.inverse();
 
-                double AlphaBetaPairEnergy = -(VAlphaBeta.transpose() * BAlphaBetaInv * VAlphaBeta)(0, 0);
+                double AlphaBetaPairEnergy = -(V_AlphaBeta.transpose() * B_AlphaBetaInv * V_AlphaBeta)(0, 0);
                 double AlphaAlphaPairEnergy = 0.0;
 
                 //Given our wavefunction is alpha beta alpha beta ect. if i < j then we
                 //have two alpha or two beta spin functions so we need to have an exchange
                 //term
                 if (i < j) {
-                    MatrixXd BAlphaAlphaInv = BAlphaAlpha.inverse();
-                    AlphaAlphaPairEnergy = -(VAlphaAlpha.transpose() * BAlphaAlphaInv * VAlphaAlpha)(0, 0);
+                    MatrixXd BAlphaAlphaInv = B_AlphaAlpha.inverse();
+                    AlphaAlphaPairEnergy = -(V_AlphaAlpha.transpose() * BAlphaAlphaInv * V_AlphaAlpha)(0, 0);
                 }
 
                 E_F12 += AlphaBetaPairEnergy + 2.0 * AlphaAlphaPairEnergy;
             }
 
 
-        return E_MP2 + E_F12;
+        return {E_MP2, E_F12};
     }
 }

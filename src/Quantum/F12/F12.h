@@ -22,7 +22,13 @@ namespace SCESS {
         }
 
         namespace MP2 {
-            double MP2_F12(const UHFWavefunction &refWfn, const Integrals::ConfigInts& configIntegrals, const Integrals::F12::F12Integrals &f12Ints);
+
+            struct MP2F12Result {
+                double mp2Energy;
+                double f12MP2Energy;
+            };
+
+            MP2F12Result MP2_F12(const UHFWavefunction &refWfn, const Integrals::ConfigInts& configIntegrals, const Integrals::F12::F12Integrals &f12Ints);
         }
     }
 }

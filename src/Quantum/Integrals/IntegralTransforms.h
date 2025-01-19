@@ -41,11 +41,14 @@ namespace SCESS::Integrals {
          * - Project out linear dependence of the HF and CABS basis sets
          * - Makes CABS canonicalise the Fock operator
          * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
+         * This function also calculates the CABS single basis set error correction energy if the
+         * parameter passed to cabsSingleCorrection is not nullptr.
          */
         void TransformF12Basis(const F12BasisSet &basisSet,
                                ConfigInts &mints,
                                F12::F12Integrals &f12Ints,
-                               uRef<UHFWavefunction> *hfWfnOut = nullptr);
+                               uRef<UHFWavefunction> *hfWfnOut = nullptr,
+                               double* cabsSinglesCorrection = nullptr);
 
         /**
          * Produce a tensor with < i j || k l>=<i j | k l> - <i j | l k>
