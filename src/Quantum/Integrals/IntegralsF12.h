@@ -2,6 +2,8 @@
 
 #include<libint2/atom.h>
 
+#include "Integrals.h"
+
 
 //Evaluate integrals with f(12) correlation kernels
 namespace SCESS {
@@ -9,7 +11,7 @@ namespace SCESS {
     class F12BasisSet;
 
     namespace Integrals {
-        struct ConfigInts;
+        struct MolInts;
     }
 
     namespace Integrals::F12 {
@@ -18,8 +20,6 @@ namespace SCESS {
 
         struct F12Integrals {
         public:
-            //eri = ( ij | 1/r12 | kl )
-            TEITensor eri;
             //f12 = ( ij | f(12) | kl)
             TEITensor f12;
             //f12Sq = ( ij | f(12)^2 | kl)
@@ -30,7 +30,8 @@ namespace SCESS {
             TEITensor f12Repulsion;
         };
 
-        ConfigInts CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms);
+        MolInts EvaluateMolecularIntegrals(const F12BasisSet &basisSet, const AtomListLI &atoms);
+        MolInts ExtractHFIntegrals(const MolInts &f12MolInts, long startIdx, long hfBasisSetSize);
 
         Eigen::MatrixXd CalculateOverlapMatrix(const F12BasisSet &basisSet);
         Eigen::MatrixXd CalculateNuclearMatrix(const F12BasisSet &basisSet, const AtomListLI &atoms);
@@ -45,7 +46,7 @@ namespace SCESS {
          * @param nbf Number of basis set functions in the OBS and CABS
          * @return The imported F12 integrals
          */
-        F12Integrals ImportF12IntegralsMRCC(const std::string &fileName, uint32_t nbf);
+        void ImportF12IntegralsMRCC(const std::string &fileName, uint32_t nbf, F12Integrals &f12Ints, TEITensor &eri);
 
         LibIntCGF CalculateSlaterContraction(double gamma = 1.0);
         LibIntCGF CalculateSlaterSquaredContraction(const LibIntCGF &slaterContraction);

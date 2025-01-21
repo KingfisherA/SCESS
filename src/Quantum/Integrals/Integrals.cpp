@@ -1,7 +1,7 @@
 //Class for performing integral calculations
 //Code modified from https://github.com/ifilot/pyqint?tab=readme-ov-file
 
-#include<pch.h>
+#include<Quantum/QuantumPCH.h>
 #include<libint2.hpp>
 #include<memory_resource>
 
@@ -18,7 +18,7 @@ namespace SCESS {
 
 #pragma region Helper Functions
 
-    Integrals::ConfigInts Integrals::CalculateConfiguration(const BasisSet &basisSet,
+    Integrals::MolInts Integrals::EvaluateMolecularIntegrals(const BasisSet &basisSet,
                                                       const std::vector<Atom> &atoms,
                                                       const GEng::Thread *thread) {
         Eigen::MatrixXd S =
@@ -55,7 +55,7 @@ namespace SCESS {
 
         TEITensor tei = TwoElectronRepulsionTensorMultithread(basisSet, thread);
 
-        return ConfigInts{S, T, V, tei};
+        return MolInts{S, T, V, tei};
     }
 
 #pragma endregion

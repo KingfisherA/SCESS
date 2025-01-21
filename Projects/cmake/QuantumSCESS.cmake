@@ -44,6 +44,7 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/QMC/CCQMC.cpp"
   "${SCESS_SRC_DIR}/Quantum/QMC/FCIQMC.cpp"
   "${SCESS_SRC_DIR}/Quantum/QMC/QMC.h"
+  "${SCESS_SRC_DIR}/Quantum/TensorOperations.h"
 )
 
 set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER 
@@ -109,7 +110,8 @@ target_compile_definitions("QuantumSCESS" PRIVATE
   $<$<CONFIG:DEBUG>:_DEBUG>
   $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
-target_precompile_headers("QuantumSCESS" PUBLIC ./src/pch.h)
+
+target_precompile_headers("QuantumSCESS" PRIVATE "${SCESS_SRC_DIR}/Quantum/QuantumPCH.h")
 
 set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 

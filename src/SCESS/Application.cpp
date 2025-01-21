@@ -1,4 +1,3 @@
-#include<pch.h>
 #include <iostream>
 #include "Quantum/Integrals/IntegralsF12.h"
 

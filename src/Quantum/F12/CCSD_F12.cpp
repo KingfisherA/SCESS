@@ -1,4 +1,4 @@
-#include<pch.h>
+#include<Quantum/QuantumPCH.h>
 #include<unsupported/Eigen/CXX11/Tensor>
 #include<Eigen/Core>
 
@@ -13,7 +13,6 @@ namespace SCESS::F12 {
 
     double CCSD::CCSD_F12(const UHFWavefunction &refWfn,
                          Integrals::F12::F12Integrals &f12Ints) {
-        f12Ints.eri = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.eri);
         f12Ints.f12 = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.f12);
         f12Ints.f12Sq = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.f12Sq);
         f12Ints.f12DelSq = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(f12Ints.f12DelSq);

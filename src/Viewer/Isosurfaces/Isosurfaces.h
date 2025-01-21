@@ -6,6 +6,8 @@
 #include<condition_variable>
 #include<mutex>
 #include<memory>
+#include<vector>
+#include<functional>
 
 #include "GraphicsEngine/Utilities/Threading.h"
 

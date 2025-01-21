@@ -76,7 +76,7 @@ target_compile_definitions("ViewerSCESS" PRIVATE
         $<$<CONFIG:DEBUG>:_DEBUG>
         $<$<CONFIG:RELEASE>:CONFIG_RELEASE>)
 
-target_precompile_headers("ViewerSCESS" PUBLIC ./src/pch.h)
+#target_precompile_headers("ViewerSCESS" PUBLIC ./src/QuantumPCH.h)
 
 set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 

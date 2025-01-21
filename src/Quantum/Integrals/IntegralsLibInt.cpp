@@ -1,8 +1,9 @@
-#include <pch.h>
+#include <Quantum/QuantumPCH.h>
 #include "IntegralsLibInt.h"
 #include "Integrals.h"
 #include "IntegralsF12.h"
 #include "Quantum/Basis/BasisSet.h"
+#include "Quantum/TensorOperations.h"
 
 #include<any>
 
@@ -255,9 +256,9 @@ namespace SCESS::Integrals {
 
 #pragma region IntegralsLibInt
 
-    ConfigInts LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
-                                                   const AtomListLI &atoms) {
-        ConfigInts mints;
+    MolInts LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
+                                           const AtomListLI &atoms) {
+        MolInts mints;
 
         mints.S = CalculateOverlapMatrix(basisSet);
         mints.T = CalculateKineticMatrix(basisSet);
@@ -287,8 +288,8 @@ namespace SCESS::Integrals {
 
 #pragma region F12 Integrals
 
-    ConfigInts F12::CalculateConfiguration(const F12BasisSet &basisSet, const AtomListLI &atoms) {
-        ConfigInts mints;
+    MolInts F12::EvaluateMolecularIntegrals(const F12BasisSet &basisSet, const AtomListLI &atoms) {
+        MolInts mints;
 
         mints.S = CalculateOverlapMatrix(basisSet);
         mints.T = CalculateKineticMatrix(basisSet);
@@ -296,6 +297,16 @@ namespace SCESS::Integrals {
         mints.eri = TwoElectronRepulsionTensor(basisSet);
 
         return mints;
+    }
+
+    MolInts F12::ExtractHFIntegrals(const MolInts &f12MolInts, long startIdx, long hfBasisSetSize) {
+        MolInts hfInts;
+        hfInts.S = f12MolInts.S.block(startIdx, startIdx, hfBasisSetSize, hfBasisSetSize);
+        hfInts.T = f12MolInts.T.block(startIdx, startIdx, hfBasisSetSize, hfBasisSetSize);
+        hfInts.V = f12MolInts.V.block(startIdx, startIdx, hfBasisSetSize, hfBasisSetSize);
+        hfInts.eri = f12MolInts.eri.Slice4({startIdx, startIdx, startIdx, startIdx},
+                                           {hfBasisSetSize, hfBasisSetSize, hfBasisSetSize, hfBasisSetSize});
+        return hfInts;
     }
 
     Eigen::MatrixXd F12::CalculateOverlapMatrix(const F12BasisSet &basisSet) {
@@ -355,8 +366,8 @@ namespace SCESS::Integrals {
 
         for (uint32_t i = 0; i < slaterContraction.size(); i++)
             for (uint32_t j = 0; j < slaterContraction.size(); j++) {
-                squaredCGF[i * cgfLength + j].first = slaterContraction[i].first * slaterContraction[j].first;
-                squaredCGF[i * cgfLength + j].second = slaterContraction[i].second + slaterContraction[j].second;
+                squaredCGF[i * cgfLength + j].first = slaterContraction[i].first + slaterContraction[j].first;
+                squaredCGF[i * cgfLength + j].second = slaterContraction[i].second * slaterContraction[j].second;
             }
 
         return squaredCGF;

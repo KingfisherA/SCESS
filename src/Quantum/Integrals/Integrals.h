@@ -19,23 +19,23 @@ namespace SCESS {
     using TEITensor = Eigen::Tensor<double, 4>;
 
     namespace Integrals {
-        struct ConfigInts {
-            ConfigInts() = default;
+        struct MolInts {
+            MolInts() = default;
 
-            ConfigInts(const Eigen::MatrixXd &S_,
+            MolInts(const Eigen::MatrixXd &S_,
                             const Eigen::MatrixXd &T_,
                             const Eigen::MatrixXd &V_,
                             const TEITensor &tei_
             ): S(S_), T(T_), V(V_), eri(tei_) {
             }
 
-            ConfigInts(const ConfigInts &intIn): S(intIn.S),
+            MolInts(const MolInts &intIn): S(intIn.S),
                                                            T(intIn.T),
                                                            V(intIn.V),
                                                            eri(intIn.eri) {
             }
 
-            ConfigInts(ConfigInts &&intIn) noexcept: S(std::move(intIn.S)),
+            MolInts(MolInts &&intIn) noexcept: S(std::move(intIn.S)),
                                                                T(std::move(intIn.T)),
                                                                V(std::move(intIn.V)),
                                                                eri(std::move(intIn.eri)) {
@@ -130,7 +130,7 @@ namespace SCESS {
          * @param molecule The molecule to evaluate the integrals on
          * @return Configuration integrals
          */
-        ConfigInts CalculateConfiguration(const BasisSet &basisSet,
+        MolInts EvaluateMolecularIntegrals(const BasisSet &basisSet,
                                                const std::vector<Atom> &atoms,
                                                const GEng::Thread *thread = nullptr);
 

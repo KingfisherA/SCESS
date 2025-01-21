@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Core>
-#include<unsupported/Eigen/CXX11/Tensor>
+#include <unsupported/Eigen/CXX11/Tensor>
+#include <iostream>
 
 namespace SCESS {
     class Utilities {

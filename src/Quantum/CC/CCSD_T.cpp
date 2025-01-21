@@ -1,4 +1,4 @@
-#include <pch.h>
+#include <Quantum/QuantumPCH.h>
 
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>

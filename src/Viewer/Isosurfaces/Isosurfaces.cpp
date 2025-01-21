@@ -1,8 +1,6 @@
 //Adapted from https://github.com/nihaljn/marching-cubes
 
-#include<pch.h>
 #include "Isosurfaces.h"
-
 #include "GraphicsEngine/Utilities/Threading.h"
 
 //

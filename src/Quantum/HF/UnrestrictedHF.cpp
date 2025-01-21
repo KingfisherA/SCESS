@@ -1,4 +1,4 @@
-#include<pch.h>
+#include<Quantum/QuantumPCH.h>
 
 #include <chrono>
 #include <Eigen/Core>
@@ -27,7 +27,7 @@ namespace SCESS {
 
 
         auto integralStartTP = high_resolution_clock::now();
-        Integrals::ConfigInts integrals = Integrals::CalculateConfiguration(basis, molecule.GetAtoms(), thread);
+        Integrals::MolInts integrals = Integrals::EvaluateMolecularIntegrals(basis, molecule.GetAtoms(), thread);
         auto integralEndTP = high_resolution_clock::now();
 
         if (thread)
@@ -45,7 +45,7 @@ namespace SCESS {
                    basisSetName);
     }
 
-    uRef<UHFWavefunction> HartreeFock::UHF(const Integrals::ConfigInts &mints,
+    uRef<UHFWavefunction> HartreeFock::UHF(const Integrals::MolInts &mints,
                                            uint32_t alphaElectrons,
                                            uint32_t betaElectrons,
                                            double Vnn,

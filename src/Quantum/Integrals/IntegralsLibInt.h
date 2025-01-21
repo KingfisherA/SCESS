@@ -3,11 +3,8 @@
 #include "Resources/AssetFolder.h"
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2.hpp>
-
+#include <unsupported/Eigen/CXX11/Tensor>
 #include "Quantum/Basis/BasisSet.h"
-
-
-
 
 
 namespace SCESS {
@@ -16,7 +13,7 @@ namespace SCESS {
     }
 
     namespace Integrals {
-        struct ConfigInts;
+        struct MolInts;
     }
 
     namespace Integrals::LibInt {
@@ -26,7 +23,7 @@ namespace SCESS {
         void InitLibInt();
         void CloseLibInt();
 
-        ConfigInts CalculateConfiguration(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
+        MolInts CalculateConfiguration(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
 
         Eigen::MatrixXd CalculateOverlapMatrix(const libint2::BasisSet &basisSet);
         Eigen::MatrixXd CalculateNuclearMatrix(const libint2::BasisSet &basisSet, const AtomListLI &atoms);

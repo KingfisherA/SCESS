@@ -154,7 +154,7 @@ namespace SCESS {
                                                        const GEng::Thread *thread,
                                                        std::stringstream *console) {
         const Eigen::MatrixXd &C = rhfWavefunction.C;
-        const Integrals::ConfigInts &ints = rhfWavefunction.Integrals;
+        const Integrals::MolInts &ints = rhfWavefunction.Integrals;
 
         if (console)
             *console <<

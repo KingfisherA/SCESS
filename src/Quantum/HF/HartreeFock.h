@@ -14,7 +14,7 @@ namespace SCESS {
 }
 
 namespace SCESS::Integrals {
-    struct ConfigInts;
+    struct MolInts;
 }
 
 namespace GEng {
@@ -41,7 +41,7 @@ namespace SCESS {
                                   std::stringstream *console = nullptr,
                                   std::string_view basisSetName = "");
 
-        uRef<RHFWavefunction> RHF(const Integrals::ConfigInts &mints,
+        uRef<RHFWavefunction> RHF(const Integrals::MolInts &mints,
                                   uint32_t nElectronPairs,
                                   double Vnn,
                                   double convergeLimit = 1E-5,
@@ -68,7 +68,7 @@ namespace SCESS {
                                   std::stringstream *console = nullptr,
                                   std::string_view basisSetName = "");
 
-        uRef<UHFWavefunction> UHF(const Integrals::ConfigInts &mints,
+        uRef<UHFWavefunction> UHF(const Integrals::MolInts &mints,
                                   uint32_t alphaElectrons,
                                   uint32_t betaElectrons,
                                   double Vnn,
@@ -147,7 +147,7 @@ namespace SCESS {
         }
 
         HFWavefunction(const double energyIn,
-                       const Integrals::ConfigInts &integrals) : Energy(energyIn), Integrals(integrals) {
+                       const Integrals::MolInts &integrals) : Energy(energyIn), Integrals(integrals) {
         }
 
         HFWavefunction(const HFWavefunction &res) = default;
@@ -156,7 +156,7 @@ namespace SCESS {
 
 
         const double Energy;
-        const Integrals::ConfigInts Integrals;
+        const Integrals::MolInts Integrals;
     };
 
     struct RHFWavefunction : public HFWavefunction {
@@ -170,7 +170,7 @@ namespace SCESS {
             const Eigen::MatrixXd &Coeffs,
             const Eigen::VectorXd &Energies,
             const Eigen::VectorXi &Occupation,
-            const Integrals::ConfigInts &integrals,
+            const Integrals::MolInts &integrals,
             const double Energy) : Fock(Fock), Hcore(Hcore),
                                    Density(Density), C(Coeffs), Energies(Energies), Occupation(Occupation),
                                    HFWavefunction(Energy, integrals) {
@@ -201,7 +201,7 @@ namespace SCESS {
             const Eigen::VectorXd &EnergiesBeta,
             const Eigen::VectorXi &OccupationAlpha,
             const Eigen::VectorXi &OccupationBeta,
-            const Integrals::ConfigInts &integrals,
+            const Integrals::MolInts &integrals,
             const double Energy) : FockAlpha(FockAlpha), FockBeta(FockBeta), Hcore(Hcore),
                                    DensityAlpha(DensityAlpha), DensityBeta(DensityBeta), CAlpha(CoeffsAlpha),
                                    CBeta(CoeffsBeta), EnergiesAlpha(EnergiesAlpha), EnergiesBeta(EnergiesBeta),

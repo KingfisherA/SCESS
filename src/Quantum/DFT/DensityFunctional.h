@@ -11,7 +11,7 @@ namespace GEng {
 }
 
 namespace SCESS::Integrals {
-    struct ConfigInts;
+    struct MolInts;
 }
 
 namespace SCESS {
@@ -33,7 +33,7 @@ namespace SCESS {
 
         Eigen::VectorXd Energies;
         Eigen::VectorXi Occupation;
-        std::optional<Integrals::ConfigInts> Integrals;
+        std::optional<Integrals::MolInts> Integrals;
     };
 
     class DensityFunctional {

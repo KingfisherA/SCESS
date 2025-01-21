@@ -32,7 +32,8 @@ target_link_libraries("SCESS" PRIVATE
   $<TARGET_NAME_IF_EXISTS:Libint2::int2>
   $<TARGET_NAME_IF_EXISTS:Libint2::libint2>
 )
-target_precompile_headers("SCESS" PUBLIC ./src/pch.h)
+
+#target_precompile_headers("SCESS" PUBLIC ./src/pch.h)
 
 set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 

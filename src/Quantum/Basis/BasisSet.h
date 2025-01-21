@@ -2,6 +2,7 @@
 
 #include<string_view>
 #include<vector>
+#include<unordered_set>
 #include<nlohmann/json.hpp>
 
 #include "Quantum/Basis/Gaussian.h"

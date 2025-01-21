@@ -1,7 +1,7 @@
 //Derived from DFTCXX
 //https://github.com/ifilot/dftcxx.git
 
-#include<pch.h>
+#include<Quantum/QuantumPCH.h>
 #include "Quadrature.h"
 
 namespace SCESS {

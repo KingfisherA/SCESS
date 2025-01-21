@@ -1,8 +1,5 @@
-//
-// Created by charlie on 30/09/24.
-//
-#include <pch.h>
-#include<iostream>
+#include <Quantum/QuantumPCH.h>
+#include <iostream>
 
 #include "GraphicsEngine/Utilities/Threading.h"
 

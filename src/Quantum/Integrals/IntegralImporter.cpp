@@ -15,7 +15,7 @@
 namespace SCESS::Integrals {
     using namespace Eigen;
 
-    F12::F12Integrals F12::ImportF12IntegralsMRCC(const std::string &fileName, uint32_t nbf) {
+    void F12::ImportF12IntegralsMRCC(const std::string &fileName, uint32_t nbf, F12Integrals& f12Ints, TEITensor& eri) {
         if (!std::filesystem::exists(fileName)) {
             throw std::runtime_error("Cannot import a F12 integral file; The file does not exist");
         }
@@ -27,12 +27,11 @@ namespace SCESS::Integrals {
 
 
         array<Index, 4> dimensions{nbf, nbf, nbf, nbf};
-        F12Integrals returnInts;
-        returnInts.eri = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12 = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12Sq = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12DelSq = Eigen::Tensor<double, 4>(dimensions);
-        returnInts.f12Repulsion = Eigen::Tensor<double, 4>(dimensions);
+        eri = Eigen::Tensor<double, 4>(dimensions);
+        f12Ints.f12 = Eigen::Tensor<double, 4>(dimensions);
+        f12Ints.f12Sq = Eigen::Tensor<double, 4>(dimensions);
+        f12Ints.f12DelSq = Eigen::Tensor<double, 4>(dimensions);
+        f12Ints.f12Repulsion = Eigen::Tensor<double, 4>(dimensions);
 
         std::string line;
         std::string intType;
@@ -66,20 +65,19 @@ namespace SCESS::Integrals {
                 };
 
                 if (intType == "vint") {
-                    returnInts.eri(orbIndices) = integralVal;
+                    eri(orbIndices) = integralVal;
                 } else if (intType == "f12int") {
-                    returnInts.f12(orbIndices) = integralVal;
+                    f12Ints.f12(orbIndices) = integralVal;
                 } else if (intType == "f122int") {
-                    returnInts.f12Sq(orbIndices) = integralVal;
+                    f12Ints.f12Sq(orbIndices) = integralVal;
                 } else if (intType == "delf122int") {
-                    returnInts.f12DelSq(orbIndices) = integralVal;
+                    f12Ints.f12DelSq(orbIndices) = integralVal;
                 } else if (intType == "f12r12int") {
-                    returnInts.f12Repulsion(orbIndices) = integralVal;
+                    f12Ints.f12Repulsion(orbIndices) = integralVal;
                 }
             }
         }
         file.close();
 
-        return returnInts;
     }
 }

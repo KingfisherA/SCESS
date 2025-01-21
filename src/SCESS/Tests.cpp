@@ -190,11 +190,19 @@ namespace SCESS::Tests {
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> hfWfn;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &hfWfn);
+        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(configInts,
+                                                        1,
+                                                        1,
+                                                        hydrogenMolecule.CalculateNuclearRepulsion(),
+                                                        std::numeric_limits<double>::epsilon());
+        Integrals::Transforms::TransformF12Basis(f12BasisSet,
+                                                 uhfWfn->DensityAlpha,
+                                                 uhfWfn->CAlpha,
+                                                 configInts,
+                                                 f12Ints);
 
         std::cout << std::setprecision(15);
 
@@ -213,7 +221,7 @@ namespace SCESS::Tests {
         std::cout << "------------------------------------\n";
         std::cout << "      <ij | 1/r12 | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.eri));
+        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(configInts.eri));
 
         std::cout << "\n\n------------------------------------\n";
         std::cout << "      <ij | f(12) | kl>\n";
@@ -247,11 +255,20 @@ namespace SCESS::Tests {
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn);
+        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(configInts,
+                                                        1,
+                                                        1,
+                                                        hydrogenMolecule.CalculateNuclearRepulsion(),
+                                                        std::numeric_limits<double>::epsilon());
+        double ECABSSingles = -0.009972302139;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet,
+                                                 uhfWfn->DensityAlpha,
+                                                 uhfWfn->CAlpha,
+                                                 configInts,
+                                                 f12Ints);
 
         double ccsdF12Energy = F12::CCSD::CCSD_F12(*uhfWfn, f12Ints);
 
@@ -260,9 +277,13 @@ namespace SCESS::Tests {
     }
 
     void TestMP2_F12() {
-        Integrals::F12::F12Integrals f12IntsImported =
-                Integrals::F12::ImportF12IntegralsMRCC(
-                    Res::AssetsFolder::Get().GetAssetsPathStr() + "/F12 Data/MRCC_F12_Ints.txt", 12);
+        // Integrals::F12::F12Integrals f12IntsImported;
+        // TEITensor eriImported;
+        // Integrals::F12::ImportF12IntegralsMRCC(
+        //     Res::AssetsFolder::Get().GetAssetsPathStr() + "/F12 Data/MRCC_F12_Ints.txt",
+        //     12,
+        //     f12IntsImported,
+        //     eriImported);
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -271,30 +292,46 @@ namespace SCESS::Tests {
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        Integrals::ConfigInts configInts = Integrals::F12::CalculateConfiguration(f12BasisSet, h2Atoms);
+        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn;
-        //Need to correct the reference energy with a pertubation. CABS singles.
+        uRef<UHFWavefunction> uhfWfn =
+                HartreeFock::UHF(
+                    Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+                    1,
+                    1,
+                    hydrogenMolecule.CalculateNuclearRepulsion(),
+                    std::numeric_limits<double>::epsilon());
+        //Need to correct the reference energy with a perturbation. CABS singles.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double cabsSinglesCorrection = -0.009972302139;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet, configInts, f12Ints, &uhfWfn, nullptr);
+        double ECABSSingles = -0.009972302139;
+        Eigen::MatrixXd F;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet,
+                                                 uhfWfn->DensityAlpha,
+                                                 uhfWfn->CAlpha,
+                                                 configInts,
+                                                 f12Ints,
+                                                 &F);
 
-        auto f12Result = F12::MP2::MP2_F12(*uhfWfn, configInts, f12IntsImported);
+        //configInts.eri = eriImported;
+        auto f12Result = F12::MP2::MP2_F12(*uhfWfn, configInts, f12Ints);
 
         std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
         std::cout << "  Molecule = Hydrogen (H2)\n";
         //Should be -1.117505880245 hartrees
         std::cout << "  E(HF) = " << uhfWfn->Energy << " hartrees\n";
-        //Should be -0.009972302139
-        std::cout << "  E(CABS singles correction) = " << cabsSinglesCorrection << " hartrees\n";
-        //Should be -0.012503809116
-        std::cout << "  E(MP2) = " << f12Result.mp2Energy << " hartrees\n";
+        //Should be -0.009972302139 hartrees
+        std::cout << "  E(CABS singles correction) = " << ECABSSingles << " hartrees\n";
+        //Should be -0.012503809116 hartrees
+        std::cout << "  E(MP2) = " << f12Result.E_MP2 << " hartrees\n";
         //Should be -0.021009866243 hartrees
-        std::cout << "  E(F12 MP2) = " << f12Result.f12MP2Energy << " hartrees\n";
+        std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
         //Should be -1.160991857744 hartrees
-        std::cout << "  E(Total) = " << uhfWfn->Energy + cabsSinglesCorrection + f12Result.mp2Energy + f12Result.
-                f12MP2Energy << " hartrees\n\n";
+        std::cout << "  E(Total) = " <<
+                uhfWfn->Energy +
+                ECABSSingles +
+                f12Result.E_MP2 +
+                f12Result.E_F12_MP2 << " hartrees\n\n";
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();

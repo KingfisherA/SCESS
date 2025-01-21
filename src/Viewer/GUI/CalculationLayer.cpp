@@ -1,4 +1,3 @@
-#include <pch.h>
 #include "CalculationLayer.h"
 
 #include <ImGui/imgui.h>

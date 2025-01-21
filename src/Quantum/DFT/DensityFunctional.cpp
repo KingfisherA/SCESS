@@ -1,4 +1,4 @@
-#include <pch.h>
+#include <Quantum/QuantumPCH.h>
 #include<iostream>
 #include <GraphicsEngine/Utilities/Threading.h>
 
@@ -30,7 +30,7 @@ namespace SCESS {
         }
 
         constexpr double ALPHA = 0.9;
-        const Integrals::ConfigInts &mints = Integrals::CalculateConfiguration(basis, mol.GetAtoms(), thread);
+        const Integrals::MolInts &mints = Integrals::EvaluateMolecularIntegrals(basis, mol.GetAtoms(), thread);
 
         if (thread)
             if (thread->ShouldStop())

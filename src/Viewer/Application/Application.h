@@ -1,6 +1,6 @@
 #pragma once
 
-#include<pch.h>
+#include<Quantum/QuantumPCH.h>
 
 #include "GraphicsEngine/Application/GraphicsApp.h"
 #include"GraphicsEngine/Utilities/Memory.h"

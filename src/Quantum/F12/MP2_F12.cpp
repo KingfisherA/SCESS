@@ -1,5 +1,7 @@
+#include<Quantum/QuantumPCH.h>
 #include "F12.h"
 
+#include "Quantum/TensorOperations.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
@@ -14,35 +16,18 @@ namespace SCESS::F12 {
         return tensor;
     }
 
-#define Slice2 slice<Eigen::array<Index, 2>, Eigen::array<Index, 2>>
-#define Slice4 slice<Eigen::array<Index, 4>, Eigen::array<Index, 4>>
-
-#define Shuffle2 shuffle<Eigen::array<Index, 2>>
-#define Shuffle4 shuffle<Eigen::array<Index, 4>>
-
-#define Contract1(other, dimensions) contract(other, Eigen::array<Eigen::IndexPair<Eigen::Index>,1>dimensions)
-#define Contract2(other, dimensions) contract(other, Eigen::array<Eigen::IndexPair<Eigen::Index>,2>dimensions)
-#define Contract3(other, dimensions) contract(other, Eigen::array<Eigen::IndexPair<Eigen::Index>,2>dimensions)
-#define Contract4(other, dimensions) contract(other, Eigen::array<Eigen::IndexPair<Eigen::Index>,4>dimensions)
-
-#define Reduce1 sum<Eigen::array<Index, 1>>
-#define Reduce2 sum<Eigen::array<Index, 2>>
-#define Reduce3 sum<Eigen::array<Index, 3>>
-#define Reduce4 sum<Eigen::array<Index, 4>>
-
     MP2::MP2F12Result MP2::MP2_F12(const UHFWavefunction &refWfn,
-                                   const Integrals::ConfigInts &mints,
+                                   const Integrals::MolInts &mints,
                                    const Integrals::F12::F12Integrals &f12Ints) {
         //We assume that the reference wavefunction is actually a closed shell RHF hence alternating alpha and beta spins (fix this in the future :( )
         // We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
         //All calculations are done in SPIN ORBITALS so we need to integrate spin out on the fly. All EVEN indices are spin alpha and ODD are spin beta
 
-        const MatrixXd &SInts = mints.S;
         const MatrixXd &TInts = mints.T;
         const MatrixXd &VInts = mints.V;
 
-        //In chemist's notation
-        // TEITensor eri = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.eri);
+        // //In chemist's notation
+        // TEITensor eri = Integrals::Transforms::ConvertChemistsToPhysicists(mints.eri);
         // TEITensor f12 = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12);
         // TEITensor f12Sq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq);
         // //F12 double commutator integrals?
@@ -50,7 +35,7 @@ namespace SCESS::F12 {
         // //Same as f12g12 integrals
         // TEITensor f12Repulsion = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion);
 
-        const TEITensor &eri = f12Ints.eri;
+        const TEITensor &eri = mints.eri;
         const TEITensor &f12 = f12Ints.f12;
         const TEITensor &f12Sq = f12Ints.f12Sq;
         const TEITensor &f12DelSq = f12Ints.f12DelSq;
