@@ -7,11 +7,10 @@
 
 namespace SCESS {
     class BasisSet;
+    class Molecule;
 }
 
 namespace SCESS {
-    class Molecule;
-    enum class LebedevOrder;
 
     class MolecularGrid {
     public:
@@ -40,9 +39,9 @@ namespace SCESS {
         [[nodiscard]] double GetBeckeWeight(uint32_t i, const Eigen::Vector3d &p0) const;
 
         std::vector<AtomicGrid> &GetAtomicGrids() { return mAtomicGrids; }
-        const std::vector<AtomicGrid> &GetAtomicGrids() const { return mAtomicGrids; }
+        [[nodiscard]] const std::vector<AtomicGrid> &GetAtomicGrids() const { return mAtomicGrids; }
 
-        size_t GetGridSize() const { return mGridSize; }
+        [[nodiscard]] size_t GetGridSize() const { return mGridSize; }
 
     private:
         std::vector<AtomicGrid> mAtomicGrids;

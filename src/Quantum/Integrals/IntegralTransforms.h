@@ -39,6 +39,7 @@ namespace SCESS::Integrals {
          * Transforms all integrals (f12 and eri) in the OBS into MO integrals and:
          * - Project out linear dependence of the HF and CABS basis sets
          * - Makes CABS canonicalise the Fock operator
+         * - Converts from chemists to physicists' notation
          * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
          * This function also calculates the CABS single basis set error correction energy if the
          * parameter passed to cabsSingleCorrection is not nullptr.
@@ -49,6 +50,7 @@ namespace SCESS::Integrals {
                                const Eigen::MatrixXd &C_HF,
                                MolInts &mints,
                                F12::F12Integrals &f12Ints,
+                               bool convertChemToPhys = true,
                                Eigen::MatrixXd *fockOut = nullptr);
 
         /**

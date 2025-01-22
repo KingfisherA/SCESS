@@ -77,6 +77,7 @@ namespace SCESS::Integrals {
                                        const Eigen::MatrixXd &C_HF,
                                        MolInts &mints,
                                        F12::F12Integrals &f12Ints,
+                                       bool convertChemToPhys,
                                        Eigen::MatrixXd *fockOut) {
         using namespace Eigen;
 
@@ -103,15 +104,15 @@ namespace SCESS::Integrals {
             for (Index mu = 0; mu < nOBS; ++mu) {
                 double c = 0.0;
                 for (Index nu = 0; nu < nOBS; nu++)
-                    c += SInv(mu, nu) * S(nu, i);
+                    c -= SInv(mu, nu) * S(nu, i);
 
                 if (i != mu)
-                    P(i, mu) = -c;
+                    P(mu, i) = c;
             }
         }
 
-        //Canonical Orthogonalisation with normalisation
-        MatrixXd S_tmp = P * S * P.transpose(); //P.transpose() * S * P;
+        //Canonical orthogonalisation with normalisation
+        MatrixXd S_tmp = P.transpose() * S * P;
         SelfAdjointEigenSolver<MatrixXd> orthoganalEig(S_tmp);
         MatrixXd U = orthoganalEig.eigenvectors().real();
         VectorXd s = orthoganalEig.eigenvalues().real();
@@ -122,7 +123,7 @@ namespace SCESS::Integrals {
                 sInvSqrt(i, i) = 1.0 / sqrt(s(i));
 
         MatrixXd X = U * sInvSqrt;
-        MatrixXd P_Prime = P.transpose() * X;
+        MatrixXd P_Prime = P * X;
 
         //Fock matrix built in CABS virtual orbitals
         MatrixXd F; {
@@ -135,13 +136,14 @@ namespace SCESS::Integrals {
                         for (Index nu = 0; nu < nOBS; nu++) {
                             double J = eri(i, j, mu, nu);
                             double K = eri(i, nu, mu, j);
-                            //(2.0 * J - K)
-                            //(J - 0.5 * K)
+
                             G(i, j) += D(mu, nu) * (2.0 * J - K);
                         }
 
             F = T + V + G;
         }
+
+        MatrixXd H = T + V;
 
         auto F_Prime = P_Prime.transpose() * F * P_Prime;
         SelfAdjointEigenSolver<MatrixXd> fockEigensolver(F_Prime);
@@ -150,8 +152,8 @@ namespace SCESS::Integrals {
         MatrixXd Q = P_Prime * fockEigensolver.eigenvectors().real();
         Q.block(0, 0, nOBS, nOBS) = C_HF;
 
-        auto TransformF12Tensor = [&Q](TEITensor &tei) {
-            tei = TransformTEI(tei, Q, true);
+        auto TransformF12Tensor = [&Q, convertChemToPhys](TEITensor &tei) {
+            tei = TransformTEI(tei, Q, convertChemToPhys);
         };
 
         auto TransformF12Matrix = [&Q](MatrixXd &m) {
@@ -159,6 +161,7 @@ namespace SCESS::Integrals {
         };
 
         //Transform the configuration integrals
+        TransformF12Matrix(F);
         TransformF12Matrix(S);
         TransformF12Matrix(T);
         TransformF12Matrix(V);

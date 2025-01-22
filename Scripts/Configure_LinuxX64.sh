@@ -16,3 +16,4 @@ while getopts ":c:" opt; do
 done
 
 cmake -DCMAKE_BUILD_TYPE=$CONFIG -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -S ../ -B ../cmake-build-"${CONFIG,,}"-linux
+

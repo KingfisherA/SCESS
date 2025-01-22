@@ -13,32 +13,32 @@ namespace SCESS {
 }
 
 namespace SCESS {
-
-
     class BasisSet {
     public:
         BasisSet() = default;
         BasisSet(const std::string &basisSetName, const Molecule &mol);
-        BasisSet(const BasisSet&) = default;
-        BasisSet(BasisSet&&) = default;
+        BasisSet(const BasisSet &) = default;
+        BasisSet(BasisSet &&) = default;
 
-        BasisSet& operator=(const BasisSet&) = default;
-        BasisSet& operator=(BasisSet&&) = default;
+        BasisSet &operator=(const BasisSet &) = default;
+        BasisSet &operator=(BasisSet &&) = default;
 
         static std::unordered_set<std::string> ListBasisSets();
 
         void LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol);
         void AddCGF(const ContractedGaussian &cgf);
+
         template<typename Iterator>
         void AddCGFs(const Iterator begin, const Iterator end) {
             mBasisFuncs.insert(mBasisFuncs.end(), begin, end);
         }
+
         void Clear() { mBasisFuncs.clear(); }
         size_t GetNoCGFs() const { return mBasisFuncs.size(); }
         size_t GetNoPrimitives() const;
 
-        ContractedGaussian& Get(size_t i){return mBasisFuncs[i];}
-        const ContractedGaussian& Get(size_t i) const{return mBasisFuncs[i];}
+        ContractedGaussian &Get(size_t i) { return mBasisFuncs[i]; }
+        const ContractedGaussian &Get(size_t i) const { return mBasisFuncs[i]; }
         std::vector<ContractedGaussian> &GetCGFs() { return mBasisFuncs; }
         const std::vector<ContractedGaussian> &GetCGFs() const { return mBasisFuncs; }
 
@@ -94,7 +94,7 @@ namespace SCESS {
         }
 
         [[nodiscard]] std::pair<size_t, size_t> GetCABSIndices() const {
-            return {GetNoHFFuncs(), mNumOfFuncs};
+            return {GetNoHFFuncs(), mNumOfFuncs - 1};
         }
 
         std::vector<size_t> ShellToBasisIdx() const;

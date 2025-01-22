@@ -10,12 +10,6 @@
 namespace SCESS::F12 {
     using namespace Eigen;
 
-    Tensor<double, 2> MatrixToTensor(const MatrixXd &matrix) {
-        Tensor<double, 2> tensor(matrix.rows(), matrix.cols());
-        memcpy(tensor.data(), matrix.data(), matrix.size() * sizeof(double));
-        return tensor;
-    }
-
     MP2::MP2F12Result MP2::MP2_F12(const UHFWavefunction &refWfn,
                                    const Integrals::MolInts &mints,
                                    const Integrals::F12::F12Integrals &f12Ints) {

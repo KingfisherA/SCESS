@@ -3,6 +3,7 @@
 
 #include "GraphicsEngine/Utilities/Memory.h"
 #include "Quantum/Molecule.h"
+#include "Quantum/TensorOperations.h"
 #include "Quantum/HF/HartreeFock.h"
 #include "Quantum/DFT/DensityFunctional.h"
 #include "Quantum/CC/CoupledCluster.h"
@@ -193,11 +194,12 @@ namespace SCESS::Tests {
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(configInts,
-                                                        1,
-                                                        1,
-                                                        hydrogenMolecule.CalculateNuclearRepulsion(),
-                                                        std::numeric_limits<double>::epsilon());
+        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(
+            Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+            1,
+            1,
+            hydrogenMolecule.CalculateNuclearRepulsion(),
+            std::numeric_limits<double>::epsilon());
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
                                                  uhfWfn->DensityAlpha,
                                                  uhfWfn->CAlpha,
@@ -213,35 +215,35 @@ namespace SCESS::Tests {
                 second << "]\n";
         std::cout << "--- CABS (Complementary Auxiliary Basis Set) ---\n";
         std::cout << "  * Name = " << CABS_BASIS_SET_NAME << '\n';
-        std::cout << "  * Indicies = [" << f12BasisSet.GetCABSIndices().first << " ... " << f12BasisSet.GetCABSIndices()
-                .second << "]\n";
+        std::cout << "  * Indicies = [" << f12BasisSet.GetCABSIndices().first
+                << " ... " << f12BasisSet.GetCABSIndices().second << "]\n";
 
         std::cout << "--All are in physicists' notation--\n";
 
         std::cout << "------------------------------------\n";
         std::cout << "      <ij | 1/r12 | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(configInts.eri));
+        Utilities::PrintTensor(configInts.eri);
 
         std::cout << "\n\n------------------------------------\n";
         std::cout << "      <ij | f(12) | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12));
+        Utilities::PrintTensor(f12Ints.f12);
 
         std::cout << "\n\n------------------------------------\n";
         std::cout << "      <ij | f(12)^2 | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq));
+        Utilities::PrintTensor(f12Ints.f12Sq);
 
         std::cout << "\n\n------------------------------------\n";
         std::cout << "      <ij | |Del 1/r12|^2 | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12DelSq));
+        Utilities::PrintTensor(f12Ints.f12DelSq);
 
         std::cout << "\n\n\n------------------------------------\n";
         std::cout << "      <ij | f(12)/r12 | kl>\n";
         std::cout << "------------------------------------\n";
-        Utilities::PrintTensor(Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion));
+        Utilities::PrintTensor(f12Ints.f12Repulsion);
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();
@@ -302,16 +304,19 @@ namespace SCESS::Tests {
                     1,
                     hydrogenMolecule.CalculateNuclearRepulsion(),
                     std::numeric_limits<double>::epsilon());
-        //Need to correct the reference energy with a perturbation. CABS singles.
-        //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double ECABSSingles = -0.009972302139;
+
         Eigen::MatrixXd F;
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
                                                  uhfWfn->DensityAlpha,
                                                  uhfWfn->CAlpha,
                                                  configInts,
                                                  f12Ints,
+                                                 true,
                                                  &F);
+
+        //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
+        //Correct the fact that there is a large basis set error in the non-correlated HF energy
+        double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
 
         //configInts.eri = eriImported;
         auto f12Result = F12::MP2::MP2_F12(*uhfWfn, configInts, f12Ints);
