@@ -4,7 +4,7 @@
 #include<Eigen/Core>
 #include<unsupported/Eigen/CXX11/Tensor>
 
-#include "Quantum/TensorOperations.h"
+#include "Tensor/TensorOperations.h"
 #include "Utilities/Utilities.h"
 
 namespace SCESS::F12 {
@@ -76,6 +76,7 @@ namespace SCESS::F12 {
             t1Last = t_xi;
         }
 
+        //Times two for pair of electrons
         //ix, xi ->
         Tensor<double, 0> ECABSSingles = 2.0 * F.Slice2({0, nOBS}, {nOcc, nCABS})
                 .Contract2(

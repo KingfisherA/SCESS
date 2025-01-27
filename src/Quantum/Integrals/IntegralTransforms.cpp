@@ -2,7 +2,7 @@
 #include"IntegralTransforms.h"
 
 #include "IntegralsF12.h"
-#include "Quantum/TensorOperations.h"
+#include "Tensor/TensorOperations.h"
 #include "Quantum/HF/HartreeFock.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Utilities/Utilities.h"

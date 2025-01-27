@@ -7,6 +7,7 @@
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/AssetFolder.h"
 
+
 int main(int argc, char *argv[]) {
     using namespace SCESS;
     std::cout <<
@@ -15,6 +16,10 @@ int main(int argc, char *argv[]) {
         return 1;
 
     Integrals::LibInt::InitLibInt();
+
+    //Tests::TestTensorEinsum();
+    Tests::TestCCQMC_F12();
+    //Tests::TestMP2_F12();
 
     if (argc > 1) {
         std::string arg1 = argv[1];

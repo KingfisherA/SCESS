@@ -1,7 +1,7 @@
 #include<Quantum/QuantumPCH.h>
 #include "F12.h"
 
-#include "Quantum/TensorOperations.h"
+#include "Tensor/TensorOperations.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"

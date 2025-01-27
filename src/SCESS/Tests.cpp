@@ -3,7 +3,8 @@
 
 #include "GraphicsEngine/Utilities/Memory.h"
 #include "Quantum/Molecule.h"
-#include "Quantum/TensorOperations.h"
+#include "Tensor/TensorOperations.h"
+#include "Tensor/TensorEinsum.h"
 #include "Quantum/HF/HartreeFock.h"
 #include "Quantum/DFT/DensityFunctional.h"
 #include "Quantum/CC/CoupledCluster.h"
@@ -339,6 +340,47 @@ namespace SCESS::Tests {
                 f12Result.E_F12_MP2 << " hartrees\n\n";
 
         std::cout << "Press any key to continue..\n";
+        std::cin.get();
+    }
+
+    void TestCCQMC_F12() {
+        constexpr const char *BASIS_SET_NAME = "sto-3g";
+        constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+
+        auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
+
+        F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
+        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
+        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
+
+        uRef<UHFWavefunction> uhfWfn =
+                HartreeFock::UHF(
+                    Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+                    1,
+                    1,
+                    hydrogenMolecule.CalculateNuclearRepulsion(),
+                    std::numeric_limits<double>::epsilon());
+
+        Eigen::MatrixXd F;
+        Integrals::Transforms::TransformF12Basis(f12BasisSet,
+                                                 uhfWfn->DensityAlpha,
+                                                 uhfWfn->CAlpha,
+                                                 configInts,
+                                                 f12Ints,
+                                                 true,
+                                                 &F);
+
+        //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
+        //Correct the fact that there is a large basis set error in the non-correlated HF energy
+        double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
+
+        auto W = F12::QMC::EvaluateW(f12Ints.f12, MatrixToTensor(configInts.S));
+
+        std::cout <<"---W Tensor---\n";
+        Utilities::PrintTensor(W);
+
+        std::cout << "\nPress any key to continue..\n";
         std::cin.get();
     }
 }

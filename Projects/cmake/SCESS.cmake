@@ -4,6 +4,7 @@
   "${SCESS_SRC_DIR}/SCESS/Application.cpp"
   "${SCESS_SRC_DIR}/SCESS/Tests.cpp"
   "${SCESS_SRC_DIR}/SCESS/Tests.h"
+        "${SCESS_SRC_DIR}/SCESS/TestEinsum.cpp"
 )
 
 add_dependencies("SCESS"

@@ -34,5 +34,18 @@ namespace SCESS {
             MP2F12Result MP2_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &configIntegrals,
                                  const Integrals::F12::F12Integrals &f12Ints);
         }
+
+        namespace QMC {
+            /**
+             * Generate the W intermediate for CCQMC F12
+             * @param f12Int The <pq | f(12) | rs> integrals
+             * @return The W tensors
+             */
+            Tensor4 EvaluateW(const Tensor4& f12Int, const Tensor2& S);
+
+            double CCQMC_F12(const UHFWavefunction& refWfn, const Integrals::MolInts &mints,
+                                 const Integrals::F12::F12Integrals &f12Ints);
+        }
+
     }
 }

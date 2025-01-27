@@ -3,7 +3,7 @@
 #include "Integrals.h"
 #include "IntegralsF12.h"
 #include "Quantum/Basis/BasisSet.h"
-#include "Quantum/TensorOperations.h"
+#include "Tensor/TensorOperations.h"
 
 #include<any>
 
