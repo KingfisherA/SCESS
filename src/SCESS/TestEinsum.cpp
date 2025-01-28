@@ -29,6 +29,7 @@ namespace SCESS::Tests {
         t2.setRandom();
 
         auto op = Einsum<Indices<alpha, M>, Indices<beta, M, I, J>, Indices<alpha, beta, I, J> >(t1,t2);
+        auto op2 = Einsum<Indices<I,J,K,L>, Indices<I,J,K,L>, Indices<>>(t1,t2);
 
     }
 }

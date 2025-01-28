@@ -1,2 +1,0 @@
-C += np.einsum('bx,klax->klab', f[nocc:nobs,nobs:], mp2f12.f12('iiax',1.0))
-C += np.einsum('ax,lkbx->klab', f[nocc:nobs,nobs:], mp2f12.f12('iiax',1.0))

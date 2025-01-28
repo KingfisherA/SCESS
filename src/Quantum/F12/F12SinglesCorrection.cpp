@@ -5,6 +5,9 @@
 #include<unsupported/Eigen/CXX11/Tensor>
 
 #include "Tensor/TensorOperations.h"
+#include "Tensor/TensorSlice.h"
+#include "Tensor/TensorEinsum.h"
+#include "Tensor/TensorEinsum.h"
 #include "Utilities/Utilities.h"
 
 namespace SCESS::F12 {
@@ -20,6 +23,32 @@ namespace SCESS::F12 {
         constexpr Index nVirt = 1;
         //Two spin orbitals are occupied in hydrogen and one spatial orbital
         const Index nOcc = 1;
+
+        enum {
+            //All OBS orbitals
+            P, Q,
+            //Occupied orbitals
+            I, J, K,
+            //Virtual orbitals
+            A, B,
+            //Virtual CABS orbitals
+            X, Y
+        };
+        TensorSliceIndices idxs = {
+            //All Occupied orbital indices
+            {I, {0, nOcc}},
+            {J, {0, nOcc}},
+            {K, {0, nOcc}},
+            //All virtual orbital indices
+            {A, {nOcc, nVirt}},
+            {B, {nOcc, nVirt}},
+            //All OBS indices
+            {P, {0, nOBS}},
+            {Q, {0, nOBS}},
+            //CABS indices
+            {X, {nOBS, nCABS}},
+            {Y, {nOBS, nCABS}}
+        };
 
 
         //We need to assume canonical orbitals to solve equations iteratively
@@ -40,7 +69,7 @@ namespace SCESS::F12 {
 
 
         //Inital guess
-        Tensor2 t_xi = F.Slice2({nOBS, 0}, {nCABS, nOcc});
+        Tensor2 t_xi = Slice<Indices<X, I> >(idxs, F);
         Tensor2 t_ai(nVirt, nOcc);
         t_ai.setZero();
 
@@ -52,23 +81,24 @@ namespace SCESS::F12 {
 
         uint32_t iteration = 0;
         for (; iteration < MAX_ITERATIONS; iteration++) {
-            Tensor2 rhs_ai = F.Slice2({nOcc, nOBS}, {nVirt, nCABS}).Contract1(
-                t_xi, ({{1,0}}));
+            //ax, xi -> ai
+            Tensor2 rhs_ai = Einsum<Indices<A, X>, Indices<X, I>, Indices<A, I> >(
+                Slice<Indices<A, X> >(idxs, F),
+                t_xi);
 
-            Tensor2 rhs_xi = F.Slice2({nOBS, 0}, {nCABS, nOcc});
+            Tensor2 rhs_xi = Slice<Indices<X, I> >(idxs, F);
 
             //xa,ai->xi
-            rhs_xi += F.Slice2({nOBS, nOcc}, {nCABS, nVirt})
-                    .Contract1(
-                        t_ai, ({{1,0}}));
-
+            rhs_xi += Einsum<Indices<X, A>, Indices<A, I>, Indices<X, I> >(
+                Slice<Indices<X, A> >(idxs, F),
+                t_ai);
 
             t_ai = rhs_ai / Dai;
             t_xi = rhs_xi / Dxi;
 
             Tensor2 deltaTensor = t_xi - t1Last;
             Tensor<double, 0> deltaTensor2 = deltaTensor.sum();
-            delta = abs(deltaTensor2(0)*100000);
+            delta = abs(deltaTensor2(0));
 
             if (delta < 1E-8)
                 break;
@@ -78,11 +108,9 @@ namespace SCESS::F12 {
 
         //Times two for pair of electrons
         //ix, xi ->
-        Tensor<double, 0> ECABSSingles = 2.0 * F.Slice2({0, nOBS}, {nOcc, nCABS})
-                .Contract2(
-                    t_xi,
-                    ({{0,1}, {1,0}}));
-
+        Tensor<double, 0> ECABSSingles = 2.0 * Einsum<Indices<I, X>, Indices<X, I>, Indices<> >(
+                                             Slice<Indices<I, X> >(idxs, F),
+                                              t_xi);
         if (t1Amps)
             *t1Amps = t_xi;
 

@@ -2,6 +2,8 @@
 #include "F12.h"
 
 #include "Tensor/TensorOperations.h"
+#include "Tensor/TensorSlice.h"
+#include "Tensor/TensorEinsum.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
@@ -13,45 +15,22 @@ namespace SCESS::F12 {
     MP2::MP2F12Result MP2::MP2_F12(const UHFWavefunction &refWfn,
                                    const Integrals::MolInts &mints,
                                    const Integrals::F12::F12Integrals &f12Ints) {
-        //We assume that the reference wavefunction is actually a closed shell RHF hence alternating alpha and beta spins (fix this in the future :( )
-        // We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
-        //All calculations are done in SPIN ORBITALS so we need to integrate spin out on the fly. All EVEN indices are spin alpha and ODD are spin beta
+        // * We assume that the reference wavefunction is actually a closed shell RHF hence alternating
+        //      alpha and beta spins (fix this in the future to support open shell :( )
+        // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
+        // * All calculations are done in SPIN ORBITALS so we need to integrate spin out the spin!
+        // * All EVEN indices are spin alpha and ODD are spin beta
 
+
+        //Extract out all the integral tensors we will need for this calculation
+        //These integrals have been canonicalised and transformed into the CABS/OBS MO basis set
         const MatrixXd &TInts = mints.T;
         const MatrixXd &VInts = mints.V;
-
-        // //In chemist's notation
-        // TEITensor eri = Integrals::Transforms::ConvertChemistsToPhysicists(mints.eri);
-        // TEITensor f12 = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12);
-        // TEITensor f12Sq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Sq);
-        // //F12 double commutator integrals?
-        // TEITensor f12DelSq = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12DelSq);
-        // //Same as f12g12 integrals
-        // TEITensor f12Repulsion = Integrals::Transforms::ConvertChemistsToPhysicists(f12Ints.f12Repulsion);
-
         const TEITensor &eri = mints.eri;
         const TEITensor &f12 = f12Ints.f12;
         const TEITensor &f12Sq = f12Ints.f12Sq;
         const TEITensor &f12DelSq = f12Ints.f12DelSq;
         const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
-
-        //nmo = Number of Molecular Orbitals
-        //nalpha = Number of alpha electrons = Number of beta electrons in closed-shell RHF = ndocc
-        //nfrzc = Number of frozen core electrons
-        //naocc = Number of active occupied electrons
-        //C = All wfn coefficients
-        //Co= Occupied wfn coefficients
-        //Cv = Virtual wfn coefficients
-        //epsilon are the HF orbital eigenvalues
-
-        //-- Indices --
-        //i,j,k,l,o,... = Occupied orbitals
-        //a,b,c,d,... = Virtual orbitals
-        //p,q,r,s... = All OBS
-        //x,y,w,z,... = CABS orbitals
-
-        //!! Need to integrate out alpha and beta spin !!
-
 
         //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
         constexpr Index nOBS = 2;
@@ -67,450 +46,381 @@ namespace SCESS::F12 {
         const Index nOcc = std::distance(refWfn.OccupationAlpha.begin(),
                                          std::ranges::find(refWfn.OccupationAlpha, 0));;
 
+        //-- Indices --
+        enum {
+            //Occupied orbitals
+            I, J, K, L, M, N, O,
+            //OBS Virtual orbitals
+            A, B, C, D,
+            //All OBS orbitals
+            P, Q, R, S,
+            //CABS virtual orbitals
+            X, Y, Z, W
+        };
+
+        TensorSliceIndices idxs = {
+            //All Occupied orbital indices
+            {I, {0, nOcc}},
+            {J, {0, nOcc}},
+            {K, {0, nOcc}},
+            {L, {0, nOcc}},
+            {M, {0, nOcc}},
+            {N, {0, nOcc}},
+            {O, {0, nOcc}},
+            //All virtual orbital indices
+            {A, {nOcc, nVirt}},
+            {B, {nOcc, nVirt}},
+            {C, {nOcc, nVirt}},
+            {D, {nOcc, nVirt}},
+            //All OBS indices
+            {P, {0, nOBS}},
+            {Q, {0, nOBS}},
+            {R, {0, nOBS}},
+            {S, {0, nOBS}},
+            //CABS indices
+            {X, {nOBS, nCABS}},
+            {Y, {nOBS, nCABS}},
+            {Z, {nOBS, nCABS}},
+            {W, {nOBS, nCABS}}
+        };
+
+
         //Make the V intermediate
-        TEITensor V = f12Repulsion.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOcc, nOcc});
+        //iiii
+        TEITensor V_ = Slice<Indices<I, I, I, I> >(idxs, f12Repulsion);
+
         //ijrs,klrs->ijkl
-        V -= eri.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                .Contract2(
-                    f12.Slice4({0,0,0,0}, {nOcc, nOcc, nOBS, nOBS}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));
+        V_ -= Einsum<Indices<I, J, R, S>, Indices<K, L, R, S>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, R, S> >(idxs, eri),
+            Slice<Indices<K, L, R, S> >(idxs, f12));
+
         //ijxm,klxm->ijkl
-        V -= eri.Slice4({0, 0, nOBS, 0}, {nOcc, nOcc, nCABS, nOcc})
-                .Contract2(
-                    f12.Slice4({0, 0, nOBS, 0}, {nOcc, nOcc, nCABS, nOcc}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));;
+        V_ -= Einsum<Indices<I, J, X, M>, Indices<K, L, X, M>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, X, M> >(idxs, eri),
+            Slice<Indices<K, L, X, M> >(idxs, f12));
+
         //ijmx,klmx->ijkl
-        V -= eri.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                .Contract2(
-                    f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));;
+        V_ -= Einsum<Indices<I, J, M, X>, Indices<K, L, M, X>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, M, X> >(idxs, eri),
+            Slice<Indices<K, L, M, X> >(idxs, f12));
 
 
-        TEITensor X = f12Sq.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOcc, nOcc});
+        TEITensor X_ = Slice<Indices<I, I, I, I> >(idxs, f12Sq);
         //ijrs,klrs->ijkl
-        X -= f12.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                .Contract2(
-                    f12.Slice4({0,0,0,0}, {nOcc, nOcc, nOBS, nOBS}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));
+        X_ -= Einsum<Indices<I, J, R, S>, Indices<K, L, R, S>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, R, S> >(idxs, f12),
+            Slice<Indices<K, L, R, S> >(idxs, f12));
+
         //ijxm,klxm->ijkl
-        X -= f12.Slice4({0, 0, nOBS, 0}, {nOcc, nOcc, nCABS, nOcc})
-                .Contract2(
-                    f12.Slice4({0, 0, nOBS, 0}, {nOcc, nOcc, nCABS, nOcc}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));;
+        X_ -= Einsum<Indices<I, J, X, M>, Indices<K, L, X, M>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, X, M> >(idxs, f12),
+            Slice<Indices<K, L, X, M> >(idxs, f12));
+
         //ijmx,klmx->ijkl
-        X -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                .Contract2(
-                    f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                    ({
-                        {2,2},
-                        {3,3}
-                        }));
+        X_ -= Einsum<Indices<I, J, M, X>, Indices<K, L, M, X>, Indices<I, J, K, L> >(
+            Slice<Indices<I, J, M, X> >(idxs, f12),
+            Slice<Indices<K, L, M, X> >(idxs, f12));
 
         //Full Fock Matrix
-        Tensor<double, 2> F = MatrixToTensor(TInts + VInts);
+        Tensor<double, 2> F_ = MatrixToTensor(TInts + VInts);
         //Coloumb Fock Terms
         //piqi->pq
-        F.Slice2({0, 0}, {nOBS, nOBS}) += 2.0 * eri.Slice4({0, 0, 0, 0}, {nOBS, nOcc, nOBS, nOcc}).Reduce2({1, 3});
+        Slice<Indices<P, Q> >(idxs, F_) += 2.0 * Einsum<Indices<P, I, Q, I>, Indices<P, Q> >(
+            Slice<Indices<P, I, Q, I> >(idxs, eri));
         //ipix->px
-        F.Slice2({0, nOBS}, {nOBS, nCABS}) += 2.0 * eri.Slice4({0, 0, 0, nOBS}, {nOcc, nOBS, nOcc, nCABS}).Reduce2({
-            0, 2
-        });
+        Slice<Indices<P, X> >(idxs, F_) += 2.0 * Einsum<Indices<I, P, I, X>, Indices<P, X> >(
+            Slice<Indices<I, P, I, X> >(idxs, eri));
         //ixiy->xy
-        F.Slice2({nOBS, nOBS}, {nCABS, nCABS}) += 2.0 * eri.Slice4({0, nOBS, 0, nOBS}, {nOcc, nCABS, nOcc, nCABS}).
-                Reduce2({0, 2});
+        Slice<Indices<X, Y> >(idxs, F_) += 2.0 * Einsum<Indices<I, X, I, Y>, Indices<X, Y> >(
+            Slice<Indices<I, X, I, Y> >(idxs, eri));
 
-        Tensor<double, 2> K(F.dimensions());
-        K.setZero();
+        Tensor<double, 2> K_(F_.dimensions());
+        K_.setZero();
         //Exchange Fock Terms
         //iipq->pq
-        K.Slice2({0, 0}, {nOBS, nOBS}) = eri.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS}).Reduce2({0, 1});
+        Slice<Indices<P, Q> >(idxs, K_) = Einsum<Indices<I, I, P, Q>, Indices<P, Q> >(
+            Slice<Indices<I, I, P, Q> >(idxs, eri));
         //iipx->px
-        K.Slice2({0, nOBS}, {nOBS, nCABS}) = eri.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}).Reduce2({0, 1});
+        Slice<Indices<P, X> >(idxs, K_) = Einsum<Indices<I, I, P, X>, Indices<P, X> >(
+            Slice<Indices<I, I, P, X> >(idxs, eri));
         //iixy->xy
-        K.Slice2({nOBS, nOBS}, {nCABS, nCABS}) = eri.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}).Reduce2({
-            0, 1
-        });
-        F -= K;
+        Slice<Indices<X, Y> >(idxs, K_) = Einsum<Indices<I, I, X, Y>, Indices<X, Y> >(
+            Slice<Indices<I, I, X, Y> >(idxs, eri));
+        F_ -= K_;
 
         //Fill in the remaining elements by symmetry
-        //Shuffle2(1,0)=transpose()
-        F.Slice2({nOBS, 0}, {nCABS, nOBS}) = F.Slice2({0, nOBS}, {nOBS, nCABS}).Shuffle2({1, 0});
-        K.Slice2({nOBS, 0}, {nCABS, nOBS}) = K.Slice2({0, nOBS}, {nOBS, nCABS}).Shuffle2({1, 0});
+        Slice<Indices<X, P> >(idxs, F_) = Einsum<Indices<P, X>, Indices<X, P> >(Slice<Indices<P, X> >(idxs, F_));
+        Slice<Indices<X, P> >(idxs, K_) = Einsum<Indices<P, X>, Indices<X, P> >(Slice<Indices<P, X> >(idxs, K_));
 
         //Fock matrix without the exchange terms
-        Tensor<double, 2> F_K = F + K;
+        Tensor<double, 2> F_K = F_ + K_;
 
         //Makes the B and C intermediate tensors
-        auto MakeB_C = [&f12Sq, &f12, &F, &F_K, &K, &nOcc, &nOBS, &nCABS]
-        (TEITensor &B, TEITensor &C)-> void {
+        auto MakeB_C = [&f12Sq, &f12, &F_, &F_K, &K_, &idxs, &nOcc, &nOBS, &nCABS]
+        (TEITensor &B_, TEITensor &C_)-> void {
             //-- F12 Contributions --
             //pr,lkqr-> plkq -> klpq
-            TEITensor tmp = F_K.Slice2({0, 0}, {nOBS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,0},{nOcc, nOcc, nOBS, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
+            TEITensor tmp = Einsum<Indices<P, R>, Indices<L, K, Q, R>, Indices<K, L, P, Q> >(
+                Slice<Indices<P, R> >(idxs, F_K),
+                Slice<Indices<L, K, Q, R> >(idxs, f12));
             //mnpq,klpq-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, P, Q>, Indices<K, L, P, Q>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, P, Q> >(idxs, f12),
+                tmp);
 
             //qr,klpr-> qklp -> klpq
-            tmp = F_K.Slice2({0, 0}, {nOBS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,0},{nOcc, nOcc, nOBS, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
+            tmp = Einsum<Indices<Q, R>, Indices<K, L, P, R>, Indices<K, L, P, Q> >(
+                Slice<Indices<Q, R> >(idxs, F_K),
+                Slice<Indices<K, L, P, R> >(idxs, f12));
             //mnpq,klpq-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, P, Q>, Indices<K, L, P, Q>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, P, Q> >(idxs, f12),
+                tmp);
 
             //px,lkqx-> plkq -> klpq
-            tmp = F_K.Slice2({0, nOBS}, {nOBS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,nOBS},{nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
+            tmp = Einsum<Indices<P, X>, Indices<L, K, Q, X>, Indices<K, L, P, Q> >(
+                Slice<Indices<P, X> >(idxs, F_K),
+                Slice<Indices<L, K, Q, X> >(idxs, f12));
             //mnpq,klpq-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, P, Q>, Indices<K, L, P, Q>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, P, Q> >(idxs, f12),
+                tmp);
 
             //qx,klpx-> qklp -> klpq
-            tmp = F_K.Slice2({0, nOBS}, {nOBS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,nOBS},{nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
+            tmp = Einsum<Indices<Q, X>, Indices<K, L, P, X>, Indices<K, L, P, Q> >(
+                Slice<Indices<Q, X> >(idxs, F_K),
+                Slice<Indices<K, L, P, X> >(idxs, f12));
             //mnpq,klpq-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOBS, nOBS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, P, Q>, Indices<K, L, P, Q>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, P, Q> >(idxs, f12),
+                tmp);
 
             //yp,klip-> ykli ->  kliy
-            tmp = F_K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,0},{nOcc, nOcc, nOcc, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
+            tmp = Einsum<Indices<Y, P>, Indices<K, L, I, P>, Indices<K, L, I, Y> >(
+                Slice<Indices<Y, P> >(idxs, F_K),
+                Slice<Indices<K, L, I, P> >(idxs, f12));
             //mniy,kliy-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, I, Y>, Indices<K, L, I, Y>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, I, Y> >(idxs, f12),
+                tmp);
 
             //xp,lkjp-> xlkj -> klxj
-            tmp = F_K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,0},{nOcc, nOcc, nOcc, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
+            tmp = Einsum<Indices<X, P>, Indices<L, K, J, P>, Indices<K, L, X, J> >(
+                Slice<Indices<X, P> >(idxs, F_K),
+                Slice<Indices<L, K, J, P> >(idxs, f12));
             //nmjx,klxj-> nmkl ->  klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp, ({{2,3},{3,2}}))
-                    .Shuffle4({2, 3, 1, 0});
+            B_ -= Einsum<Indices<N, M, J, X>, Indices<K, L, X, J>, Indices<K, L, M, N> >(
+                Slice<Indices<N, M, J, X> >(idxs, f12),
+                tmp);
 
             //ip,klpy-> ikly -> kliy
-            tmp = F_K.Slice2({0, 0,}, {nOcc, nOBS})
-                    .Contract1(
-                        f12.Slice4({0,0,0,nOBS},{nOcc, nOcc, nOBS, nCABS}),
-                        ({{1,2}}))
-                    .Shuffle4({1, 2, 0, 3});
+            tmp = Einsum<Indices<I, P>, Indices<K, L, P, Y>, Indices<K, L, I, Y> >(
+                Slice<Indices<I, P> >(idxs, F_K),
+                Slice<Indices<K, L, P, Y> >(idxs, f12));
             //mniy,kliy-> mnkl -> klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp, ({{2,2},{3,3}}))
-                    .Shuffle4({2, 3, 0, 1});
+            B_ -= Einsum<Indices<M, N, I, Y>, Indices<K, L, I, Y>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, I, Y> >(idxs, f12),
+                tmp);
 
             //yx,klix->kliy
-            tmp = F_K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
+            tmp = Einsum<Indices<Y, X>, Indices<K, L, I, X>, Indices<K, L, I, Y> >(
+                Slice<Indices<Y, X> >(idxs, F_K),
+                Slice<Indices<K, L, I, X> >(idxs, f12));
             //mniy,kliy->klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({3, 4, 0, 1});
+            B_ -= Einsum<Indices<M, N, I, Y>, Indices<K, L, I, Y>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, I, Y> >(idxs, f12),
+                tmp);
 
             //xy,lkjy->klxj
-            tmp = F_K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
+            tmp = Einsum<Indices<X, Y>, Indices<L, K, J, Y>, Indices<K, L, X, J> >(
+                Slice<Indices<X, Y> >(idxs, F_K),
+                Slice<Indices<L, K, J, Y> >(idxs, f12));
             //nmjx,klxj->klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({3, 4, 1, 0});
+            B_ -= Einsum<Indices<N, M, J, X>, Indices<K, L, X, J>, Indices<K, L, M, N> >(
+                Slice<Indices<N, M, J, X> >(idxs, f12),
+                tmp);
 
             //jp,lkpx->klxj
-            tmp = F_K.Slice2({0, 0}, {nOcc, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
+            tmp = Einsum<Indices<J, P>, Indices<L, K, P, X>, Indices<K, L, X, J> >(
+                Slice<Indices<J, P> >(idxs, F_K),
+                Slice<Indices<L, K, P, X> >(idxs, f12));
             //nmjx,klxj->klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({3, 4, 1, 0});
+            B_ -= Einsum<Indices<N, M, J, X>, Indices<K, L, X, J>, Indices<K, L, M, N> >(
+                Slice<Indices<N, M, J, X> >(idxs, f12),
+                tmp);
 
             //ix,klxy->kliy
-            tmp = F_K.Slice2({0, nOBS}, {nOcc, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({1, 2, 0, 3});
+            tmp = Einsum<Indices<I, X>, Indices<K, L, X, Y>, Indices<K, L, I, Y> >(
+                Slice<Indices<I, X> >(idxs, F_K),
+                Slice<Indices<K, L, X, Y> >(idxs, f12));
             //mniy,kliy->klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({3, 4, 0, 1});
+            B_ -= Einsum<Indices<M, N, I, Y>, Indices<K, L, I, Y>, Indices<K, L, M, N> >(
+                Slice<Indices<M, N, I, Y> >(idxs, f12),
+                tmp);
 
             //jy,lkyx->klxj
-            tmp = F_K.Slice2({0, nOBS}, {nOcc, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
+            tmp = Einsum<Indices<J, Y>, Indices<L, K, Y, X>, Indices<K, L, X, J> >(
+                Slice<Indices<J, Y> >(idxs, F_K),
+                Slice<Indices<L, K, Y, X> >(idxs, f12));
             //nmjx,klxj->klmn
-            B -= f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({3, 4, 1, 0});
+            B_ -= Einsum<Indices<N, M, J, X>, Indices<K, L, X, J>, Indices<K, L, M, N> >(
+                Slice<Indices<N, M, J, X> >(idxs, f12),
+                tmp);
 
             //-- Y contributions --
             //xp,lkbp->klxb
-            //xp,lkbp->klxb
-            tmp = K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, 0}, {nOcc, nOcc, nVirt, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
-
+            tmp = Einsum<Indices<X, P>, Indices<L, K, B, P>, Indices<K, L, X, B> >(
+                Slice<Indices<X, P> >(idxs, K_),
+                Slice<Indices<L, K, B, P> >(idxs, f12));
             //klxb,nmbx->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({0, 1, 4, 3});
+            B_ -= Einsum<Indices<K, L, X, B>, Indices<N, M, B, X>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<N, M, B, X> >(idxs, f12));
 
             //yp,klap->klay
-            tmp = K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, 0}, {nOcc, nOcc, nVirt, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
-
+            tmp = Einsum<Indices<Y, P>, Indices<K, L, A, P>, Indices<K, L, A, Y> >(
+                Slice<Indices<Y, P> >(idxs, K_),
+                Slice<Indices<K, L, A, P> >(idxs, f12));
             //klay,mnay->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, A, Y>, Indices<M, N, A, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, A, Y> >(idxs, f12));
 
             //xy,lkby->klxb
-            tmp = K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
-
+            tmp = Einsum<Indices<X, Y>, Indices<L, K, B, Y>, Indices<K, L, X, B> >(
+                Slice<Indices<X, Y> >(idxs, K_),
+                Slice<Indices<L, K, B, Y> >(idxs, f12));
             //klxb,nmbx->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({0, 1, 4, 3});
+            B_ -= Einsum<Indices<K, L, X, B>, Indices<N, M, B, X>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<N, M, B, X> >(idxs, f12));
 
             //bp,lkpx->klxb
-            tmp = K.Slice2({nOcc, 0}, {nVirt, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
-
+            tmp = Einsum<Indices<B, P>, Indices<L, K, P, X>, Indices<K, L, X, B> >(
+                Slice<Indices<B, P> >(idxs, K_),
+                Slice<Indices<L, K, P, X> >(idxs, f12));
             //klxb,nmbx->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({0, 1, 4, 3});
+            B_ -= Einsum<Indices<K, L, X, B>, Indices<N, M, B, X>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<N, M, B, X> >(idxs, f12));
 
             //ap,klpy->klay
-            tmp = K.Slice2({nOcc, 0}, {nVirt, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({1, 2, 0, 3});
-
+            tmp = Einsum<Indices<A, P>, Indices<K, L, P, Y>, Indices<K, L, A, Y> >(
+                Slice<Indices<A, P> >(idxs, K_),
+                Slice<Indices<K, L, P, Y> >(idxs, f12));
             //klay,mnay->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, A, Y>, Indices<M, N, A, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, A, Y> >(idxs, f12));
 
             //yx,klax->klay
-            tmp = K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
-
+            tmp = Einsum<Indices<Y, X>, Indices<K, L, A, X>, Indices<K, L, A, Y> >(
+                Slice<Indices<Y, X> >(idxs, K_),
+                Slice<Indices<K, L, A, X> >(idxs, f12));
             //klay,mnay->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, A, Y>, Indices<M, N, A, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, A, Y> >(idxs, f12));
+
 
             //by,lkyx->klxb
-            tmp = K.Slice2({nOcc, nOBS}, {nVirt, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
-
+            tmp = Einsum<Indices<B, Y>, Indices<L, K, Y, X>, Indices<K, L, X, B> >(
+                Slice<Indices<B, Y> >(idxs, K_),
+                Slice<Indices<L, K, Y, X> >(idxs, f12));
             //klxb,nmbx->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 3}, {3, 2}}))
-                    .Shuffle4({0, 1, 4, 3});
+            B_ -= Einsum<Indices<K, L, X, B>, Indices<N, M, B, X>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<N, M, B, X> >(idxs, f12));
 
             //ax,klxy->klay
-            tmp = K.Slice2({nOcc, nOBS}, {nVirt, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({1, 2, 0, 3});
-
+            tmp = Einsum<Indices<A, X>, Indices<K, L, X, Y>, Indices<K, L, A, Y> >(
+                Slice<Indices<A, X> >(idxs, K_),
+                Slice<Indices<K, L, X, Y> >(idxs, f12));
             //klay,mnay->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, A, Y>, Indices<M, N, A, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, A, Y> >(idxs, f12));
 
             //xp,klpy->klxy
-            tmp = K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({1, 2, 0, 3});
-
+            tmp = Einsum<Indices<X, P>, Indices<K, L, P, Y>, Indices<K, L, X, Y> >(
+                Slice<Indices<X, P> >(idxs, K_),
+                Slice<Indices<K, L, P, Y> >(idxs, f12));
             //klxy,mnxy->klmn
-            B -= f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, X, Y>, Indices<M, N, X, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, X, Y> >(idxs, f12));
 
             //yp,lkpx->klxy
-            tmp = K.Slice2({nOBS, 0}, {nCABS, nOBS})
-                    .Contract1(
-                        f12.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOBS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
-
+            tmp = Einsum<Indices<Y, P>, Indices<L, K, P, X>, Indices<K, L, X, Y> >(
+                Slice<Indices<Y, P> >(idxs, K_),
+                Slice<Indices<L, K, P, X> >(idxs, f12));
             //klxy,mnxy->klmn
-            B -= f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, X, Y>, Indices<M, N, X, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, X, Y> >(idxs, f12));
 
             //yz,lkzx->klxy
-            tmp = K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({2, 1, 3, 0});
-
+            tmp = Einsum<Indices<Y, Z>, Indices<L, K, Z, X>, Indices<K, L, X, Y> >(
+                Slice<Indices<Y, Z> >(idxs, K_),
+                Slice<Indices<L, K, Z, X> >(idxs, f12));
             //klxy,mnxy->klmn
-            B -= f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, X, Y>, Indices<M, N, X, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, X, Y> >(idxs, f12));
 
             //xz,klzy->klxy
-            tmp = K.Slice2({nOBS, nOBS}, {nCABS, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS}),
-                        ({{1, 2}}))
-                    .Shuffle4({1, 2, 0, 3});
-
+            tmp = Einsum<Indices<X, Z>, Indices<K, L, Z, Y>, Indices<K, L, X, Y> >(
+                Slice<Indices<X, Z> >(idxs, K_),
+                Slice<Indices<K, L, Z, Y> >(idxs, f12));
             //klxy,mnxy->klmn
-            B -= f12.Slice4({0, 0, nOBS, nOBS}, {nOcc, nOcc, nCABS, nCABS})
-                    .Contract2(tmp,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, X, Y>, Indices<M, N, X, Y>, Indices<K, L, M, N> >(
+                tmp,
+                Slice<Indices<M, N, X, Y> >(idxs, f12));
 
 
             //--F Squared Contributions--
             //kp,nmlp->klmn
-            B += F_K.Slice2({0, 0}, {nOcc, nOBS})
-                    .Contract1(
-                        f12Sq.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOcc, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({0, 3, 2, 1});
+            B_ += Einsum<Indices<K, P>, Indices<N, M, L, P>, Indices<K, L, M, N> >(
+                Slice<Indices<K, P> >(idxs, F_K),
+                Slice<Indices<N, M, L, P> >(idxs, f12Sq));
             //lp,mnkp->klmn
-            B += F_K.Slice2({0, 0}, {nOcc, nOBS})
-                    .Contract1(
-                        f12Sq.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOcc, nOBS}),
-                        ({{1, 3}}))
-                    .Shuffle4({3, 0, 1, 2});
+            B_ += Einsum<Indices<L, P>, Indices<M, N, K, P>, Indices<K, L, M, N> >(
+                Slice<Indices<L, P> >(idxs, F_K),
+                Slice<Indices<M, N, K, P> >(idxs, f12Sq));
             //kx,nmlx->klmn
-            B += F_K.Slice2({0, nOBS}, {nOcc, nCABS})
-                    .Contract1(
-                        f12Sq.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({0, 3, 2, 1});
+            B_ += Einsum<Indices<K, X>, Indices<N, M, L, X>, Indices<K, L, M, N> >(
+                Slice<Indices<K, X> >(idxs, F_K),
+                Slice<Indices<N, M, L, X> >(idxs, f12Sq));
             //lx,mnkx->klmn
-            B += F_K.Slice2({0, nOBS}, {nOcc, nCABS})
-                    .Contract1(
-                        f12Sq.Slice4({0, 0, 0, nOBS}, {nOcc, nOcc, nOcc, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({3, 0, 1, 2});
+            B_ += Einsum<Indices<L, X>, Indices<M, N, K, X>, Indices<K, L, M, N> >(
+                Slice<Indices<L, X> >(idxs, F_K),
+                Slice<Indices<M, N, K, X> >(idxs, f12Sq));
 
             //-- C Tensor --
             //bx,klax->klab
-            C += F.Slice2({nOcc, nOBS}, {nVirt, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({1, 2, 3, 0});
+            C_ += Einsum<Indices<B, X>, Indices<K, L, A, X>, Indices<K, L, A, B> >(
+                Slice<Indices<B, X> >(idxs, F_),
+                Slice<Indices<K, L, A, X> >(idxs, f12));
             //ax,lkbx->klab
-            C += F.Slice2({nOcc, nOBS}, {nVirt, nCABS})
-                    .Contract1(
-                        f12.Slice4({0, 0, nOcc, nOBS}, {nOcc, nOcc, nVirt, nCABS}),
-                        ({{1, 3}}))
-                    .Shuffle4({2, 1, 0, 3});
+            C_ += Einsum<Indices<A, X>, Indices<L, K, B, X>, Indices<K, L, A, B> >(
+                Slice<Indices<A, X> >(idxs, F_),
+                Slice<Indices<L, K, B, X> >(idxs, f12));
 
 
             //-- -FC contribution to B--
             //klab,mnab->klmn
-            B -= f12.Slice4({0, 0, nOcc, nOcc}, {nOcc, nOcc, nVirt, nVirt})
-                    .Contract2(C,
-                               ({{2, 2}, {3, 3}}))
-                    .Shuffle4({0, 1, 3, 4});
+            B_ -= Einsum<Indices<K, L, A, B>, Indices<M, N, A, B>, Indices<K, L, M, N> >(
+                Slice<Indices<K, L, A, B> >(idxs, f12),
+                C_);
 
             //--Symmetrise B--
-            B = 0.5 * (B + B.Shuffle4({2, 3, 0, 1}));
+            B_ = 0.5 * (B_ + Einsum<Indices<K, L, M, N>, Indices<M, N, K, L> >(B_));
         };
 
-        TEITensor B = f12DelSq.Slice4({0, 0, 0, 0}, {nOcc, nOcc, nOcc, nOcc});
-        TEITensor C(nOcc, nOcc, nVirt, nVirt);
-        C.setZero();
-        MakeB_C(B, C);
+        TEITensor B_ = Slice<Indices<I, I, I, I> >(idxs, f12DelSq);
+        TEITensor C_(nOcc, nOcc, nVirt, nVirt);
+        C_.setZero();
+        MakeB_C(B_, C_);
 
         //Calculate conventional MP2 energy
         double E_MP2 = 0.0;
@@ -536,22 +446,22 @@ namespace SCESS::F12 {
 
 
         //Makes the V tilde intermediate integrating out spin for a closed shell reference
-        auto MakeVTildeSpin = [&eri, &nOcc,&nVirt, &V, &C, &F](MatrixXd &V_AlphaAlpha,
-                                                               MatrixXd &V_AlphaBeta,
-                                                               Index i, Index j) {
+        auto MakeVTildeSpin = [&eri, &nOcc,&nVirt, &V_, &C_, &F_](MatrixXd &V_AlphaAlpha,
+                                                                  MatrixXd &V_AlphaBeta,
+                                                                  Index i, Index j) {
             TEITensor eri_oovv = eri.Slice4({0, 0, nOcc, nOcc},
                                             {nOcc, nOcc, nVirt, nVirt});
             Index col = 0;
             for (Index k = 0; k < nOcc; k++)
                 for (Index l = 0; l < nOcc; l++, col++) {
-                    double VAlphaBeta_kl = V(k, l, i, j);
-                    double VAlphaAlpha_kl = V(k, l, i, j) - V(l, k, i, j);
+                    double VAlphaBeta_kl = V_(k, l, i, j);
+                    double VAlphaAlpha_kl = V_(k, l, i, j) - V_(l, k, i, j);
                     for (Index a = 0; a < nVirt; a++)
                         for (Index b = 0; b < nVirt; b++) {
-                            double D_ijab = F(nOcc + a, nOcc + a) + F(nOcc + b, nOcc + b)
-                                            - F(i, i) - F(j, j);
-                            double C_klab = C(k, l, a, b);
-                            double C_klba = C(k, l, b, a);
+                            double D_ijab = F_(nOcc + a, nOcc + a) + F_(nOcc + b, nOcc + b)
+                                            - F_(i, i) - F_(j, j);
+                            double C_klab = C_(k, l, a, b);
+                            double C_klba = C_(k, l, b, a);
                             double eri_ijab = eri_oovv(i, j, a, b);
                             double eri_ijba = eri_oovv(i, j, b, a);
 
@@ -575,34 +485,34 @@ namespace SCESS::F12 {
         };
 
         //Makes the B tilde intermediate integrating out spin for a closed shell reference
-        auto MakeBTildeSpin = [&F, &C, &X, &B, &nOcc](MatrixXd &B_AlphaAlpha,
-                                                      MatrixXd &B_AlphaBeta,
-                                                      Index i, Index j) {
-            double epsilon_ij = F(i, i) + F(j, j);
+        auto MakeBTildeSpin = [&F_, &C_, &X_, &B_, &nOcc](MatrixXd &B_AlphaAlpha,
+                                                          MatrixXd &B_AlphaBeta,
+                                                          Index i, Index j) {
+            double epsilon_ij = F_(i, i) + F_(j, j);
             Index row = 0, col = 0;
             for (Index k = 0; k < nOcc; k++)
                 for (Index l = 0; l < nOcc; l++, row++) {
                     for (Index m = 0; m < nOcc; m++)
                         for (Index n = 0; n < nOcc; n++, col++) {
-                            double B_AlphaBeta_klmn = B(k, l, m, n)
-                                                      - epsilon_ij * X(k, l, m, n);
+                            double B_AlphaBeta_klmn = B_(k, l, m, n)
+                                                      - epsilon_ij * X_(k, l, m, n);
                             double B_AlphaAlpha_klmn = 0.0;
 
                             if (k < l && m < n)
                                 B_AlphaAlpha_klmn =
-                                        B(k, l, m, n)
-                                        - B(k, l, n, m)
-                                        - epsilon_ij * X(k, l, m, n)
-                                        + epsilon_ij * X(k, l, n, m);
+                                        B_(k, l, m, n)
+                                        - B_(k, l, n, m)
+                                        - epsilon_ij * X_(k, l, m, n)
+                                        + epsilon_ij * X_(k, l, n, m);
 
                             for (Index a = 0; a < nVirt; a++)
                                 for (Index b = 0; b < nVirt; b++) {
-                                    double D_ijab = F(nOcc + a, nOcc + a) + F(nOcc + b, nOcc + b) - F(
-                                                        i, i) - F(j, j);
-                                    double C_klab = C(k, l, a, b);
-                                    double C_klba = C(k, l, b, a);
-                                    double C_mnab = C(m, n, a, b);
-                                    double C_mnba = C(m, n, b, a);
+                                    double D_ijab = F_(nOcc + a, nOcc + a) + F_(nOcc + b, nOcc + b) - F_(
+                                                        i, i) - F_(j, j);
+                                    double C_klab = C_(k, l, a, b);
+                                    double C_klba = C_(k, l, b, a);
+                                    double C_mnab = C_(m, n, a, b);
+                                    double C_mnba = C_(m, n, b, a);
 
                                     B_AlphaBeta_klmn -= C_klab * C_mnab / D_ijab;
 

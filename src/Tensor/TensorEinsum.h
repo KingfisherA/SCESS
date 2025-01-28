@@ -26,7 +26,7 @@ namespace SCESS {
 
     template<Idx N>
     struct ShuffleIdxs {
-        std::array<Idx, N> shuffle{0};
+        std::array<Idx, N> shuffle{};
         Idx nShuffle{0};
     };
 
@@ -69,10 +69,10 @@ namespace SCESS {
         constexpr auto idxs = GenerateShuffleIdxs<IndexI, IndexJ>();
         static_assert(IndexI::N == idxs.nShuffle, "IndexI and IndexJ do not have the same shuffling indices");
 
-        if constexpr (IsShuffleRedundant<decltype(idxs)>(idxs))
+        if constexpr (IsShuffleRedundant<std::remove_reference_t<decltype(idxs)> >(idxs))
             return std::ref(t1);
         else
-            return t1.template shuffle<decltype(idxs.shuffle)>(idxs.shuffle);
+            return t1.template shuffle<std::remove_reference_t<decltype(idxs.shuffle)> >(idxs.shuffle);
     }
 
 #pragma endregion
@@ -82,8 +82,8 @@ namespace SCESS {
 
     template<Idx N_I, Idx N_J>
     struct ReductionIdxsTmp {
-        std::array<Idx, N_I> reduction{0};
-        std::array<Idx, N_J> shuffle{0};
+        std::array<Idx, N_I> reduction{};
+        std::array<Idx, N_J> shuffle{};
         Idx nReduce{0};
         Idx nShuffle{0};
     };
@@ -99,7 +99,7 @@ namespace SCESS {
     constexpr ReturnT GenerateReductionIdxsTmp() {
         static_assert(IndexI::N > IndexJ::N, "IndexJ must be smaller than IndexI in order to perform a reduction");
         ReturnT idxs;
-        std::array<Idx, 2 * IndexI::N> reductionIdxsTmp = {0};
+        std::array<Idx, 2 * IndexI::N> reductionIdxsTmp{};
         Idx p = 0;
 
         for (Idx i = 0; i < IndexI::N; ++i)
@@ -158,10 +158,10 @@ namespace SCESS {
         constexpr auto idxs = GenerateReductionIdxs<IndexI, IndexJ>();
 
         if constexpr (IsShuffleRedundant<decltype(idxs)>(idxs))
-            return t1.template sum<decltype(idxs.reduction)>(idxs.reduction);
+            return t1.template sum<std::remove_reference_t<decltype(idxs.reduction)> >(idxs.reduction);
         else
-            return t1.template sum<decltype(idxs.reduction)>(idxs.reduction)
-                    .template shuffle<decltype(idxs.shuffle)>(idxs.shuffle);
+            return t1.template sum<std::remove_reference_t<decltype(idxs.reduction)> >(idxs.reduction)
+                    .template shuffle<std::remove_reference_t<decltype(idxs.shuffle)> >(idxs.shuffle);
     }
 
 #pragma endregion
@@ -171,16 +171,16 @@ namespace SCESS {
 
     template<Idx N_I, Idx N_K>
     struct ContractIdxsTmp {
-        std::array<IdxP, N_I> contract{{{0, 0}}};
-        std::array<Idx, N_K> shuffle{0};
+        std::array<IdxP, N_I> contract{};
+        std::array<Idx, N_K> shuffle{};
         Idx nContract{0};
         Idx nShuffle{0};
     };
 
     template<Idx nContract, Idx nShuffle>
     struct ContractIdxs {
-        std::array<IdxP, nContract> contract{{{0, 0}}};
-        std::array<Idx, nShuffle> shuffle{0};
+        std::array<IdxP, nContract> contract{};
+        std::array<Idx, nShuffle> shuffle{};
     };
 
     template<class IndexI, class IndexJ, class IndexK>
@@ -260,10 +260,64 @@ namespace SCESS {
         constexpr auto idxs = GenerateContractIdxs<IndexI, IndexJ, IndexK>();
 
         if constexpr (IsShuffleRedundant<decltype(idxs)>(idxs))
-            return t1.template contract<TensorType2, decltype(idxs.contract)>(t2, idxs.contract);
+            return t1.template contract<std::remove_reference_t<TensorType2>,
+                std::remove_reference_t<decltype(idxs.contract)> >(t2, idxs.contract);
         else
-            return t1.template contract<TensorType2, decltype(idxs.contract)>(t2, idxs.contract)
-                    .template shuffle<decltype(idxs.shuffle)>(idxs.shuffle);
+            return t1.template contract<std::remove_reference_t<TensorType2>,
+                        std::remove_reference_t<decltype(idxs.contract)> >(t2, idxs.contract)
+                    .template shuffle<std::remove_reference_t<decltype(idxs.shuffle)> >(idxs.shuffle);
+    }
+
+#pragma endregion
+    //
+    //
+#pragma region Specialisation
+    template<class IndexI, class IndexJ,
+        class Scalar, int tensorRank>
+    auto Einsum(Eigen::Tensor<Scalar, tensorRank> &t1) {
+        return Einsum<IndexI, IndexJ, decltype(t1)>(t1);
+    }
+
+    template<class IndexI, class IndexJ,
+        class Scalar, int tensorRank>
+    auto Einsum(const Eigen::Tensor<Scalar, tensorRank> &t1) {
+        return Einsum<IndexI, IndexJ, decltype(t1)>(t1);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class Scalar1, int tensorRank1, class TensorType2>
+    auto Einsum(Eigen::Tensor<Scalar1, tensorRank1> &t1, TensorType2 t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class Scalar1, int tensorRank1, class TensorType2>
+    auto Einsum(const Eigen::Tensor<Scalar1, tensorRank1> &t1, TensorType2 t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class TensorType1, class Scalar2, int tensorRank2>
+    auto Einsum(TensorType1 t1, Eigen::Tensor<Scalar2, tensorRank2> &t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class TensorType1, class Scalar2, int tensorRank2>
+    auto Einsum(TensorType1 t1, const Eigen::Tensor<Scalar2, tensorRank2> &t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class Scalar1, int tensorRank1, class Scalar2, int tensorRank2>
+    auto Einsum(Eigen::Tensor<Scalar1, tensorRank1> &t1, Eigen::Tensor<Scalar2, tensorRank2> &t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
+    }
+
+    template<class IndexI, class IndexJ, class IndexK,
+        class Scalar1, int tensorRank1, class Scalar2, int tensorRank2>
+    auto Einsum(const Eigen::Tensor<Scalar1, tensorRank1> &t1, const Eigen::Tensor<Scalar2, tensorRank2> &t2) {
+        return Einsum<IndexI, IndexJ, IndexK, decltype(t1), decltype(t2)>(t1, t2);
     }
 
 #pragma endregion
