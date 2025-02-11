@@ -9,7 +9,7 @@
 #include "PeriodicTable.h"
 #include "Resources/AssetFolder.h"
 
-#include "GraphicsEngine/Utilities/StringOperations.h"
+#include "GraphicsEngine/Tools/Strings.h"
 
 //
 //
@@ -156,7 +156,7 @@ namespace SCESS {
                 size_t startIdx = line.find("  ", 0);
                 if (startIdx == line.npos)
                     continue;
-                std::vector<std::string> tokens = StringOperations::Split(line.substr(startIdx), ' ');
+                std::vector<std::string> tokens = Strings::Split(line.substr(startIdx), ' ');
                 a.SetAtomSymbol(tokens[0]);
                 double x = std::stod(tokens[1]);
                 double y = std::stod(tokens[2]);

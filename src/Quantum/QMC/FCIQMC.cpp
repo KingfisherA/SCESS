@@ -2,17 +2,17 @@
 #include "Quantum/CI/ConfigurationInteraction.h"
 #include "Utilities/Utilities.h"
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
-#include <GraphicsEngine/Utilities/Threading.h>
+#include <GraphicsEngine/Tools/Threading.h>
 
 #include "Quantum/Integrals/IntegralTransforms.h"
 
 namespace SCESS {
-    double QuantumMonteCarlo::FCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
+    double QMC::FCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
                                      const GEng::Thread *thread,
                                      std::stringstream *console,
                                      boost::circular_buffer<glm::vec2> *projEnergyGraph) {
@@ -31,7 +31,7 @@ namespace SCESS {
 
         MatrixXd H_FCI = MatrixXd::Zero((Eigen::Index) determinants.size(),
                                         (Eigen::Index) determinants.size()); {
-            MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWavefunction);
+            MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWavefunction.Hcore, rhfWavefunction.C);
             TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
                 Integrals::Transforms::TransformTEI(rhfWavefunction.Integrals.eri, rhfWavefunction.C));
 

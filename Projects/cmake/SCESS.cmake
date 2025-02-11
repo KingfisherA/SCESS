@@ -28,7 +28,7 @@ target_compile_definitions("SCESS" PRIVATE
 )
 target_link_libraries("SCESS" PRIVATE
   QuantumSCESS
-  ${GENG_LIBRARIES}
+  ${GENG_TOOLS_LIBRARIES}
   Boost::filesystem
   $<TARGET_NAME_IF_EXISTS:Libint2::int2>
   $<TARGET_NAME_IF_EXISTS:Libint2::libint2>

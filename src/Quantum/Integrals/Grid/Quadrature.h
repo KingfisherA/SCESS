@@ -6,17 +6,17 @@
 namespace SCESS {
     //Define Lebedev orders
     enum class LebedevOrder :int {
-        LEBEDEV_6 = 6,
-        LEBEDEV_14 = 14,
-        LEBEDEV_26 = 26,
-        LEBEDEV_38 = 38,
-        LEBEDEV_50 = 50,
-        LEBEDEV_74 = 74,
-        LEBEDEV_86 = 86,
-        LEBEDEV_110 = 110,
-        LEBEDEV_146 = 146,
-        LEBEDEV_170 = 170,
-        LEBEDEV_194 = 194
+        LEBEDEV_6 = 0,
+        LEBEDEV_14 = 1,
+        LEBEDEV_26 = 2,
+        LEBEDEV_38 = 3,
+        LEBEDEV_50 = 4,
+        LEBEDEV_74 = 5,
+        LEBEDEV_86 = 6,
+        LEBEDEV_110 = 7,
+        LEBEDEV_146 = 8,
+        LEBEDEV_170 = 9,
+        LEBEDEV_194 = 10
     };
 
     namespace Quadrature {

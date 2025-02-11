@@ -14,7 +14,7 @@ namespace SCESS {
     using Excitor = CIDeterminant;
     struct RHFWavefunction;
 
-    namespace QuantumMonteCarlo {
+    namespace QMC {
         //Full CI quantum monte carlo
         double FCIQMC(const RHFWavefunction &rhfWfn,
                              double Vnn,

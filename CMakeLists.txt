@@ -60,6 +60,21 @@ if(NOT (GENG_LIBRARIES STREQUAL "GENG_LIBRARIES-NOTFOUND"))
     message("-- Found GraphicsEngine: ${GENG_LIBRARIES}")
 endif()
 
+find_library(GENG_TOOLS_LIBRARIES GraphicsEngineTools REQUIRED
+        PATHS "${SCESS_GENG_DIR}/bin"
+        PATH_SUFFIXES "${SCESS_PLATFORM}/Release")
+if(NOT (GENG_TOOLS_LIBRARIES STREQUAL "GENG_TOOLS_LIBRARIES-NOTFOUND"))
+    if(NOT DEFINED GENG_INCLUDE_DIRS)
+        get_filename_component(GENG_INCLUDE_DIRS "${SCESS_GENG_DIR}/include" REALPATH)
+    endif()
+
+    if((NOT EXISTS "${GENG_INCLUDE_DIRS}"))
+        message(FATAL_ERROR "!! Cannot find GraphicsEngineTool's include directory !!")
+    endif()
+
+    message("-- Found GraphicsEngineTools: ${GENG_TOOLS_LIBRARIES}")
+endif()
+
 include(Projects/cmake/QuantumSCESS.cmake)
 include(Projects/cmake/SCESS.cmake)
 include(Projects/cmake/ViewerSCESS.cmake)

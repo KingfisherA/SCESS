@@ -3,7 +3,7 @@
 #include<boost/algorithm/string.hpp>
 #include<filesystem>
 #include<fstream>
-#include<GraphicsEngine/Utilities/StringOperations.h>
+#include "GraphicsEngine/Tools/Strings.h"
 #include<unsupported/Eigen/CXX11/Tensor>
 
 #include "IntegralsF12.h"
@@ -54,7 +54,7 @@ namespace SCESS::Integrals {
                 if (!std::isdigit(line[0]) && line[0] != '-')
                     break;
 
-                auto tokens = GEng::StringOperations::Split(line, ' ');
+                auto tokens = GEng::Strings::Split(line, ' ');
 
                 double integralVal = std::stod(tokens[0]);
                 array<Index, 4> orbIndices = {

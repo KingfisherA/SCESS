@@ -1,6 +1,6 @@
 #include <Quantum/QuantumPCH.h>
 #include<iostream>
-#include <GraphicsEngine/Utilities/Threading.h>
+#include <GraphicsEngine/Tools/Threading.h>
 
 #include  "Quantum/DFT/DensityFunctional.h"
 #include "Quantum/Basis/BasisSet.h"

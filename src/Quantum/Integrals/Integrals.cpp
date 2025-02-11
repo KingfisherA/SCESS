@@ -5,7 +5,7 @@
 #include<libint2.hpp>
 #include<memory_resource>
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include "Integrals.h"
 #include "IntegralTransforms.h"

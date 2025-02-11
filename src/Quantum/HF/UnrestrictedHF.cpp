@@ -2,7 +2,7 @@
 
 #include <chrono>
 #include <Eigen/Core>
-#include <GraphicsEngine/Utilities/Threading.h>
+#include <GraphicsEngine/Tools/Threading.h>
 
 #include "HartreeFock.h"
 #include "Quantum/Integrals/Integrals.h"

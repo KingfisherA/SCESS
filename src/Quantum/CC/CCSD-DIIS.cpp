@@ -2,7 +2,7 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include "Quantum/CC/CoupledCluster.h"
 #include "Quantum/Integrals/IntegralTransforms.h"

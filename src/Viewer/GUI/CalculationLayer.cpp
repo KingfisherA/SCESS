@@ -332,7 +332,7 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::FCIQMC: {
-                        mQMCEnergy = QuantumMonteCarlo::FCIQMC(*mRHFWfn,
+                        mQMCEnergy = QMC::FCIQMC(*mRHFWfn,
                                                                mMolecule->CalculateNuclearRepulsion(),
                                                                &mCalculationThread,
                                                                &mConsoleOutput,
@@ -341,7 +341,7 @@ namespace SCESS {
                     }
 
                     case CorrelationMethod::CCQMC: {
-                        mQMCEnergy = QuantumMonteCarlo::CCQMC(*mRHFWfn,
+                        mQMCEnergy = QMC::CCQMC(*mRHFWfn,
                                                               mMolecule->CalculateNuclearRepulsion(),
                                                               &mCalculationThread,
                                                               &mQMCGraphData);

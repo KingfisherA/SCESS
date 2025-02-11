@@ -1,7 +1,7 @@
 #include  "Quantum/QMC/QMC.h"
 #include  "Quantum/CI/ConfigurationInteraction.h"
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
@@ -17,7 +17,7 @@ namespace SCESS {
     using namespace Eigen;
     using namespace boost::random;
 
-    double QuantumMonteCarlo::CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
+    double QMC::CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
                                     const GEng::Thread *thread,
                                     boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         constexpr size_t NUM_CYCLES = 100;
@@ -30,7 +30,8 @@ namespace SCESS {
         TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
             Integrals::Transforms::TransformTEI(rhfWfn.Integrals.eri, rhfWfn.C));
 
-        MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWfn);
+        MatrixXd HSpin =
+            ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWfn.Hcore, rhfWfn.C);
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
@@ -507,7 +508,7 @@ namespace SCESS {
         return EProjAverage;
     }
 
-    std::vector<Excitor> QuantumMonteCarlo::GenerateAllExcitors(CIDeterminant reference, uint32_t nSpinOrbs,
+    std::vector<Excitor> QMC::GenerateAllExcitors(CIDeterminant reference, uint32_t nSpinOrbs,
                                                                 uint32_t nElectrons) {
         std::vector<Excitor> excitors =
                 ConfigurationInteraction::GenerateAllDeterminants(nSpinOrbs, nElectrons);

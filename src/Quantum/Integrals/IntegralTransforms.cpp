@@ -112,15 +112,15 @@ namespace SCESS::Integrals {
         }
 
         //Canonical orthogonalisation with normalisation
-        MatrixXd S_tmp = P.transpose() * S * P;
-        SelfAdjointEigenSolver<MatrixXd> orthoganalEig(S_tmp);
-        MatrixXd U = orthoganalEig.eigenvectors().real();
-        VectorXd s = orthoganalEig.eigenvalues().real();
+        auto S_tmp = P.transpose() * S * P;
+        SelfAdjointEigenSolver<MatrixXd> orthogonalEig(S_tmp);
+        MatrixXd U = orthogonalEig.eigenvectors().real();
+        VectorXd s = orthogonalEig.eigenvalues().real();
         MatrixXd sInvSqrt = MatrixXd::Zero(s.rows(), s.rows());
 
         for (Index i = 0; i < s.rows(); ++i)
             if (s(i) != 0.0)
-                sInvSqrt(i, i) = 1.0 / sqrt(s(i));
+                sInvSqrt(i, i) = 1.0 / std::sqrt(s(i));
 
         MatrixXd X = U * sInvSqrt;
         MatrixXd P_Prime = P * X;
@@ -143,13 +143,13 @@ namespace SCESS::Integrals {
             F = T + V + G;
         }
 
-        MatrixXd H = T + V;
-
         auto F_Prime = P_Prime.transpose() * F * P_Prime;
-        SelfAdjointEigenSolver<MatrixXd> fockEigensolver(F_Prime);
+        SelfAdjointEigenSolver<MatrixXd> fockEig(F_Prime);
 
         //Matrix which transforms both the OBS and CABS into the projected canonicalised basis set
-        MatrixXd Q = P_Prime * fockEigensolver.eigenvectors().real();
+        //This matrix is different to MRCC's as the degenerate eigenvectors are different
+        //but any observable property will be the same
+        MatrixXd Q = P_Prime * fockEig.eigenvectors().real();
         Q.block(0, 0, nOBS, nOBS) = C_HF;
 
         auto TransformF12Tensor = [&Q, convertChemToPhys](TEITensor &tei) {

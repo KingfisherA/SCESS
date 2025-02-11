@@ -2,6 +2,8 @@
 #include "Quantum/HF/HartreeFock.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 
+//#include "Tensor/TensorOperations.h"
+
 namespace SCESS {
     namespace Integrals {
         struct MolInts;
@@ -10,6 +12,8 @@ namespace SCESS {
     namespace Integrals::F12 {
         struct F12Integrals;
     }
+
+    //using TensorSliceIndices = std::unordered_map<int, std::pair<Idx, Idx> >;
 
     struct RHFWavefunction;
     struct UHFWavefunction;
@@ -31,8 +35,23 @@ namespace SCESS {
                 double E_F12_MP2;
             };
 
-            MP2F12Result MP2_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &configIntegrals,
-                                 const Integrals::F12::F12Integrals &f12Ints);
+            MP2F12Result MP2_F12_Optimise(const UHFWavefunction &refWfn,
+                                          const Integrals::MolInts &configIntegrals,
+                                          const Integrals::F12::F12Integrals &f12Ints);
+
+            MP2F12Result MP2_F12_Fixed(const UHFWavefunction &refWfn,
+                                       const Integrals::MolInts &configIntegrals,
+                                       const Integrals::F12::F12Integrals &f12Ints,
+                                       Tensor2*   F_out = nullptr,
+                                       TEITensor* V_out = nullptr,
+                                       TEITensor* X_out = nullptr,
+                                       TEITensor* B_out = nullptr);
+
+            double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,
+                                                const Tensor2 &F,
+                                                const TEITensor &V,
+                                                const TEITensor &X,
+                                                const TEITensor &B);
         }
 
         namespace QMC {
@@ -41,11 +60,10 @@ namespace SCESS {
              * @param f12Int The <pq | f(12) | rs> integrals
              * @return The W tensors
              */
-            Tensor4 EvaluateW(const Tensor4& f12Int, const Tensor2& S);
+            Tensor4 EvaluateW(const Tensor4 &f12Int);
 
-            double CCQMC_F12(const UHFWavefunction& refWfn, const Integrals::MolInts &mints,
-                                 const Integrals::F12::F12Integrals &f12Ints);
+            double CCQMC_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &mints,
+                             const Integrals::F12::F12Integrals &f12Ints);
         }
-
     }
 }

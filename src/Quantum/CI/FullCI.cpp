@@ -4,7 +4,7 @@
 #include <boost/range/irange.hpp>
 #include <boost/math/special_functions/binomial.hpp>
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include "ConfigurationInteraction.h"
 #include "Quantum/HF/HartreeFock.h"
@@ -172,7 +172,7 @@ namespace SCESS {
 
         // Transform the one-electron Hamiltonian matrix into the MO basis set
         // and integrate out spin functions
-        Eigen::MatrixXd HSpin = GenerateOneElectronHamiltonianSpin(rhfWavefunction);
+        Eigen::MatrixXd HSpin = GenerateOneElectronHamiltonianSpin(rhfWavefunction.Hcore, rhfWavefunction.C);
 
         //Must be the same number of alpha and beta spin electrons for a closed-shell RHF determinant
         uint32_t nElectrons = std::distance(rhfWavefunction.Occupation.begin(),
@@ -237,12 +237,13 @@ namespace SCESS {
         return std::make_unique<CIWavefunction>(Energies, Wavefunctions, std::move(determinants));
     }
 
-    Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(const RHFWavefunction &rhfWfn) {
-        const Eigen::MatrixXd &C = rhfWfn.C;
+    Eigen::MatrixXd ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(
+        const Eigen::MatrixXd &HCore,
+        const Eigen::MatrixXd &C) {
         // Transform the one-electron Hamiltonian matrix into the MO basis set
         // and integrate out spin functions
         Eigen::MatrixXd HSpin = Eigen::MatrixXd::Zero(C.rows() * 2, C.cols() * 2);
-        Eigen::MatrixXd H_Transformed = C.transpose() * rhfWfn.Hcore * C;
+        Eigen::MatrixXd H_Transformed = C.transpose() * HCore * C;
 
         for (uint32_t i = 0; i < HSpin.rows(); i++)
             for (uint32_t j = i; j < HSpin.cols(); j++) {

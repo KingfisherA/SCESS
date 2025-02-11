@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <Eigen/Core>
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 #include "HartreeFock.h"
 #include "Quantum/Basis/BasisSet.h"

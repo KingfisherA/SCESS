@@ -12,7 +12,32 @@
 namespace SCESS::F12 {
     using namespace Eigen;
 
-    MP2::MP2F12Result MP2::MP2_F12(const UHFWavefunction &refWfn,
+    // Tensor4 EvaluateVIntermediate(const TEITensor &f12Repulsion,
+    //                             const TEITensor &f12,
+    //                             const TEITensor &eri) {
+    //     //Make the V intermediate
+    //     //iiii
+    //     TEITensor V_ = Slice<Indices<I, I, I, I> >(idxs, f12Repulsion);
+    //
+    //     //ijrs,klrs->ijkl
+    //     V_ -= Einsum<Indices<I, J, R, S>, Indices<K, L, R, S>, Indices<I, J, K, L> >(
+    //         Slice<Indices<I, J, R, S> >(idxs, eri),
+    //         Slice<Indices<K, L, R, S> >(idxs, f12));
+    //
+    //     //ijxm,klxm->ijkl
+    //     V_ -= Einsum<Indices<I, J, X, M>, Indices<K, L, X, M>, Indices<I, J, K, L> >(
+    //         Slice<Indices<I, J, X, M> >(idxs, eri),
+    //         Slice<Indices<K, L, X, M> >(idxs, f12));
+    //
+    //     //ijmx,klmx->ijkl
+    //     V_ -= Einsum<Indices<I, J, M, X>, Indices<K, L, M, X>, Indices<I, J, K, L> >(
+    //         Slice<Indices<I, J, M, X> >(idxs, eri),
+    //         Slice<Indices<K, L, M, X> >(idxs, f12));
+    //
+    //     return V_;
+    // }
+
+    MP2::MP2F12Result MP2::MP2_F12_Optimise(const UHFWavefunction &refWfn,
                                    const Integrals::MolInts &mints,
                                    const Integrals::F12::F12Integrals &f12Ints) {
         // * We assume that the reference wavefunction is actually a closed shell RHF hence alternating
@@ -20,31 +45,6 @@ namespace SCESS::F12 {
         // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
         // * All calculations are done in SPIN ORBITALS so we need to integrate spin out the spin!
         // * All EVEN indices are spin alpha and ODD are spin beta
-
-
-        //Extract out all the integral tensors we will need for this calculation
-        //These integrals have been canonicalised and transformed into the CABS/OBS MO basis set
-        const MatrixXd &TInts = mints.T;
-        const MatrixXd &VInts = mints.V;
-        const TEITensor &eri = mints.eri;
-        const TEITensor &f12 = f12Ints.f12;
-        const TEITensor &f12Sq = f12Ints.f12Sq;
-        const TEITensor &f12DelSq = f12Ints.f12DelSq;
-        const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
-
-        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
-        constexpr Index nOBS = 2;
-        //Number of orbitals in the complementary auxiliary set
-        constexpr Index nCABS = 10;
-        //Total number of basis functions in the combined OBS and CABS basis sets
-        constexpr Index nbf = nOBS + nCABS;
-        //Number of spatial molecular orbitals equals the number of OBS used in normal Hartree-Fock
-        constexpr Index nMO = nOBS;
-        //Only one occupied spatial MO in hydrogen
-        constexpr Index nVirt = nMO - 1;
-        //Two spin orbitals are occupied in hydrogen and one spatial orbital
-        const Index nOcc = std::distance(refWfn.OccupationAlpha.begin(),
-                                         std::ranges::find(refWfn.OccupationAlpha, 0));;
 
         //-- Indices --
         enum {
@@ -58,6 +58,20 @@ namespace SCESS::F12 {
             X, Y, Z, W
         };
 
+        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
+        constexpr Index nOBS = 2;
+        //Number of orbitals in the complementary auxiliary set
+        constexpr Index nCABS = 10;
+        //Total number of basis functions in the combined OBS and CABS basis sets
+        constexpr Index nbf = nOBS + nCABS;
+        //Number of spatial molecular orbitals equals the number of OBS used in normal Hartree-Fock
+        constexpr Index nMO = nOBS;
+        //Only one occupied spatial MO in hydrogen
+        constexpr Index nVirt = nMO - 1;
+        //Two spin orbitals are occupied in hydrogen and one spatial orbital
+        const Index nOcc = 1;
+        // std::distance(refWfn.OccupationAlpha.begin(),
+        //                              std::ranges::find(refWfn.OccupationAlpha, 0));;
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
             {I, {0, nOcc}},
@@ -84,6 +98,15 @@ namespace SCESS::F12 {
             {W, {nOBS, nCABS}}
         };
 
+        //Extract out all the integral tensors we will need for this calculation
+        //These integrals have been canonicalised and transformed into the CABS/OBS MO basis set
+        const MatrixXd &TInts = mints.T;
+        const MatrixXd &VInts = mints.V;
+        const TEITensor &eri = mints.eri;
+        const TEITensor &f12 = f12Ints.f12;
+        const TEITensor &f12Sq = f12Ints.f12Sq;
+        const TEITensor &f12DelSq = f12Ints.f12DelSq;
+        const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
 
         //Make the V intermediate
         //iiii
@@ -156,7 +179,8 @@ namespace SCESS::F12 {
         Tensor<double, 2> F_K = F_ + K_;
 
         //Makes the B and C intermediate tensors
-        auto MakeB_C = [&f12Sq, &f12, &F_, &F_K, &K_, &idxs, &nOcc, &nOBS, &nCABS]
+        //, &idxs, &nOcc, &nOBS, &nCABS]
+        auto MakeB_C = [&f12Sq, &f12, &F_, &F_K, &K_, &idxs]
         (TEITensor &B_, TEITensor &C_)-> void {
             //-- F12 Contributions --
             //pr,lkqr-> plkq -> klpq
@@ -446,9 +470,10 @@ namespace SCESS::F12 {
 
 
         //Makes the V tilde intermediate integrating out spin for a closed shell reference
-        auto MakeVTildeSpin = [&eri, &nOcc,&nVirt, &V_, &C_, &F_](MatrixXd &V_AlphaAlpha,
-                                                                  MatrixXd &V_AlphaBeta,
-                                                                  Index i, Index j) {
+        //&nOcc,&nVirt,
+        auto MakeVTildeSpin = [&eri, &V_, &C_, &F_](MatrixXd &V_AlphaAlpha,
+                                                    MatrixXd &V_AlphaBeta,
+                                                    Index i, Index j) {
             TEITensor eri_oovv = eri.Slice4({0, 0, nOcc, nOcc},
                                             {nOcc, nOcc, nVirt, nVirt});
             Index col = 0;
@@ -485,7 +510,8 @@ namespace SCESS::F12 {
         };
 
         //Makes the B tilde intermediate integrating out spin for a closed shell reference
-        auto MakeBTildeSpin = [&F_, &C_, &X_, &B_, &nOcc](MatrixXd &B_AlphaAlpha,
+        //&nOcc
+        auto MakeBTildeSpin = [&F_, &C_, &X_, &B_](MatrixXd &B_AlphaAlpha,
                                                           MatrixXd &B_AlphaBeta,
                                                           Index i, Index j) {
             double epsilon_ij = F_(i, i) + F_(j, j);

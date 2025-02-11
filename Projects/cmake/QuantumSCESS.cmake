@@ -17,7 +17,7 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/DFT/XCFunctionals.h"
   "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12.cpp"
   "${SCESS_SRC_DIR}/Quantum/F12/F12.h"
-  "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12.cpp"
+  "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12_Optimise.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/HartreeFock.h"
   "${SCESS_SRC_DIR}/Quantum/HF/RestrictedHF.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/UnrestrictedHF.cpp"
@@ -47,8 +47,9 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/F12/F12SinglesCorrection.cpp"
   "${SCESS_SRC_DIR}/Quantum/F12/CCQMC_F12.cpp"
   "${SCESS_SRC_DIR}/Tensor/TensorOperations.h"
-  "${SCESS_SRC_DIR}/Tensor/Einsum.h"
+  "${SCESS_SRC_DIR}/Tensor/TensorEinsum.h"
   "${SCESS_SRC_DIR}/Tensor/TensorSlice.h"
+  "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12_Fixed.cpp"
 )
 
 set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER 
@@ -98,7 +99,7 @@ target_link_libraries("QuantumSCESS" PRIVATE
   Boost::filesystem
   $<TARGET_NAME_IF_EXISTS:Boost::math>
   $<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
-  ${GENG_LIBRARIES}
+  ${GENG_TOOLS_LIBRARIES}
   $<TARGET_NAME_IF_EXISTS:Libint2::int2>
   $<TARGET_NAME_IF_EXISTS:Libint2::libint2>
   Libxc::xc

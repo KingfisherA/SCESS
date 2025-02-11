@@ -9,7 +9,7 @@
 #include<vector>
 #include<functional>
 
-#include "GraphicsEngine/Utilities/Threading.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
 namespace SCESS {
     class ScalarField;

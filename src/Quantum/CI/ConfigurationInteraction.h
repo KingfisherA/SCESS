@@ -121,7 +121,9 @@ namespace SCESS {
          * functions integrated out
          * @return
          */
-        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(const RHFWavefunction &rhfWfn);
+        static Eigen::MatrixXd GenerateOneElectronHamiltonianSpin(
+            const Eigen::MatrixXd& HCore,
+            const Eigen::MatrixXd& C);
 
         static CIDeterminant::OrbitalBitStr MixAlphaAndBeta(const CIDeterminant::OrbitalBitStr alphaList,
                                                             size_t numAlpha,
