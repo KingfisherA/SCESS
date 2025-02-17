@@ -19,8 +19,8 @@ namespace SCESS {
 #pragma region Helper Functions
 
     Integrals::MolInts Integrals::EvaluateMolecularIntegrals(const BasisSet &basisSet,
-                                                      const std::vector<Atom> &atoms,
-                                                      const GEng::Thread *thread) {
+                                                             const std::vector<Atom> &atoms,
+                                                             const GEng::Thread *thread) {
         Eigen::MatrixXd S =
                 Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
         Eigen::MatrixXd T =

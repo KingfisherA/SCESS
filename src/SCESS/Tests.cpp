@@ -50,10 +50,10 @@ namespace SCESS::Tests {
 
         Integrals::MolInts ints = Integrals::EvaluateMolecularIntegrals(basisSet, hydrogenMolecule.GetAtoms());
 
-        const Gaussian &pgf1 = basisSet.GetCGFs()[0].Get(0);
+        const ContractedGaussian &cgf1 = basisSet.GetCGFs()[0];
 
         std::vector<double> Bx, By, Bz;
-        double primIntegral = Integrals::TwoElectronRepulsion(pgf1, pgf1, pgf1, pgf1, Bx, By, Bz);
+        double primIntegral = Integrals::TwoElectronRepulsion(cgf1, cgf1, cgf1, cgf1, Bx, By, Bz);
 
         double val = boost::math::tgamma_lower(0.5, 1E-8);
 

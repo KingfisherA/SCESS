@@ -25,6 +25,8 @@ namespace SCESS {
         double EvaluateSinglesCorrectionEnergy(const Tensor2 &F,
                                                Tensor2 *t1Amps = nullptr);
 
+        Tensor4 GenerateFixedGeminalAmplitudes(uint32_t nOcc);
+
         namespace CCSD {
             double CCSD_F12(const UHFWavefunction &refWfn, Integrals::F12::F12Integrals &f12Ints);
         }
@@ -42,16 +44,16 @@ namespace SCESS {
             MP2F12Result MP2_F12_Fixed(const UHFWavefunction &refWfn,
                                        const Integrals::MolInts &configIntegrals,
                                        const Integrals::F12::F12Integrals &f12Ints,
-                                       Tensor2*   F_out = nullptr,
-                                       TEITensor* V_out = nullptr,
-                                       TEITensor* X_out = nullptr,
-                                       TEITensor* B_out = nullptr);
+                                       Tensor2 *F_out = nullptr,
+                                       TEITensor *V_out = nullptr,
+                                       TEITensor *X_out = nullptr,
+                                       TEITensor *B_out = nullptr);
 
             double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,
-                                                const Tensor2 &F,
-                                                const TEITensor &V,
-                                                const TEITensor &X,
-                                                const TEITensor &B);
+                                                            const Tensor2 &F,
+                                                            const TEITensor &V,
+                                                            const TEITensor &X,
+                                                            const TEITensor &B);
         }
 
         namespace QMC {

@@ -25,14 +25,28 @@ namespace SCESS::F12::QMC {
     constexpr Index nVirt = 1;
     constexpr Index nCABS = 10;
 
-    enum { alpha, beta, I, J, M, N, A, B, P, Q, R, S };
+    enum {
+        alpha, beta,
+        //
+        I, J, K, M, N,
+        //
+        X, Y,
+        //
+        A, B, C, D,
+        //
+        P, Q, R, S
+    };
 
     static TensorSliceIndices idxs = {
         {alpha, {nOcc, nVirt + nCABS}},
         {beta, {nOcc, nVirt + nCABS}},
         //
+        {X, {nOcc + nVirt, nCABS}},
+        {Y, {nOcc + nVirt, nCABS}},
+        //
         {I, {0, nOcc}},
         {J, {0, nOcc}},
+        {K, {0, nOcc}},
         {M, {0, nOcc}},
         {N, {0, nOcc}},
         //
@@ -47,35 +61,35 @@ namespace SCESS::F12::QMC {
 
     Tensor4 EvaluateW(const Tensor4 &f12) {
         Tensor4 W = (3.0 / 8.0) * Slice<Indices<alpha, beta, I, J> >(idxs, f12);
-        W -= (1.0 / 8.0) * Slice<Indices<alpha, beta, I, J> >(idxs, f12);
+        W += (1.0 / 8.0) * Slice<Indices<alpha, beta, I, J> >(idxs, f12);
 
         return W;
     }
 
-    double EvaluateGeminalElement(CIDeterminant Di, const Tensor4 &eri, const Tensor4 &W) {
-        std::vector<int> orbIndices;
-
-        for (int i = 0; i < 2; i++)
-            if (Di.GetAlphaOrbitals() & (1 << i))
-                orbIndices.push_back(i);
-
-        for (int i = 0; i < 2; i++)
-            if (Di.GetBetaOrbitals() & (1 << i))
-                orbIndices.push_back(i);
-
-
-        int i = orbIndices[0];
-        int j = orbIndices[1];
-
-        double integral = 0.0;
-        for (int alpha = 0; alpha < nCABS + nVirt; alpha++)
-            for (int beta = 0; beta < nCABS + nVirt; beta++) {
-                integral += W(i, j, alpha, beta) * eri(i, j, alpha, beta) +
-                        W(j, i, alpha, beta) * eri(j, i, alpha, beta);
-            }
-
-        return integral;
-    }
+    // double EvaluateGeminalElement(CIDeterminant Di, const Tensor4 &eri, const Tensor4 &W) {
+    //     std::vector<int> orbIndices;
+    //
+    //     for (int i = 0; i < 2; i++)
+    //         if (Di.GetAlphaOrbitals() & (1 << i))
+    //             orbIndices.push_back(i);
+    //
+    //     for (int i = 0; i < 2; i++)
+    //         if (Di.GetBetaOrbitals() & (1 << i))
+    //             orbIndices.push_back(i);
+    //
+    //
+    //     int i = orbIndices[0];
+    //     int j = orbIndices[1];
+    //
+    //     double integral = 0.0;
+    //     for (int alpha = 0; alpha < nCABS + nVirt; alpha++)
+    //         for (int beta = 0; beta < nCABS + nVirt; beta++) {
+    //             integral += W(i, j, alpha, beta) * eri(i, j, alpha, beta) +
+    //                     W(j, i, alpha, beta) * eri(j, i, alpha, beta);
+    //         }
+    //
+    //     return integral;
+    // }
 
     Excitor MakeGeminalExcitor() {
         Excitor ex = {0, 0};
@@ -84,9 +98,83 @@ namespace SCESS::F12::QMC {
         return ex;
     }
 
+    Tensor4 GenerateFixedGeminalAmplitudes(uint32_t nOcc) {
+        Tensor4 C_(nOcc, nOcc, nOcc, nOcc);
+
+        for (Index x = 0; x < nOcc; x++)
+            for (Index y = 0; y < nOcc; y++)
+                for (Index i = 0; i < nOcc; i++)
+                    for (Index j = 0; j < nOcc; j++) {
+                        C_(x, y, i, j) =
+                                static_cast<double>((x == i) && (y == j)) -
+                                static_cast<double>((x == j) && (y == i));
+                    }
+
+        return C_;
+    }
+
     bool IsGeminalExcitor(Excitor ex) {
         return (ex.GetAlphaOrbitals() & ((unsigned long) (1) << 63)) && (
                    ex.GetBetaOrbitals() & ((unsigned long) (1) << 63));
+    }
+
+    void EvaluateGeminalResidualCorrections(const Tensor<double, 4> &W_, const Tensor<double, 4> &C_,
+                                            const Tensor<double, 4> &V_,
+                                            const Tensor<double, 2> &F_,
+                                            const Tensor<double, 4> &eri,
+                                            Tensor2 &VBar1, Tensor2 &UBar1, Tensor2 &CBar1,
+                                            Tensor4 &VBar2, Tensor4 &UBar2, Tensor4 &CBar2) {
+        VBar1 = Einsum<Indices<I, K, X, Y>, Indices<P, K, X, Y>, Indices<P, I> >(C_, V_);
+        VBar2 = Einsum<Indices<I, J, X, Y>, Indices<P, Q, X, Y>, Indices<P, Q, I, J> >(C_, V_);
+
+        Tensor<double, 4> tmp = Einsum<Indices<I, K, X, Y>, Indices<A, C, X, Y>, Indices<I, K, A, C> >(C_, W_);
+        CBar1 = Einsum<Indices<K, C>, Indices<I, K, A, C>, Indices<A, I>,
+            double, 2, double, 4>(F_, tmp);
+
+        tmp = Einsum<Indices<A, C>, Indices<C, B, X, Y>, Indices<A, B, X, Y> >(F_, W_);
+        CBar2 = Einsum<Indices<X, Y, I, J>, Indices<A, B, X, Y>, Indices<A, B, I, J> >(
+            C_, static_cast<const Tensor4 &>(tmp));
+        CBar2 = Einsum<Indices<A, B, I, J>, Indices<B, A, I, J> >(CBar2);
+
+        tmp = Einsum<Indices<X, Y, J, K>, Indices<A, C, X, Y>, Indices<J, K, A, C> >(C_, W_);
+        UBar1 = -Einsum<Indices<J, K, I, C>, Indices<J, K, A, C>, Indices<A, I> >(
+            eri, static_cast<const Tensor4 &>(tmp));
+
+        tmp = Einsum<Indices<X, Y, J, K>, Indices<B, C, X, Y>, Indices<J, K, B, C> >(C_, W_);
+        UBar2 = Einsum<Indices<A, K, I, C>, Indices<J, K, B, C>, Indices<A, B, I, J> >(
+            eri, static_cast<const Tensor4 &>(tmp));
+        UBar2 = Einsum<Indices<A, B, I, J>, Indices<B, A, J, I> >(UBar2);
+    }
+
+    double EvaluateGeminalElement(CIDeterminant gem_Dj,
+                                  const Tensor2 &VBar1, const Tensor2 &UBar1, const Tensor2 &CBar1,
+                                  const Tensor4 &VBar2, const Tensor4 &UBar2, const Tensor4 &CBar2) {
+        std::vector<uint32_t> uniqueI, uniqueJ, commonIJ;
+        int8_t sign = 0;
+
+        CIDeterminant D0 = CIDeterminant::MakeReference(2, 2);
+        CIDeterminant::CalculateDifferences(D0, gem_Dj, 2, 2,
+                                            uniqueI, uniqueJ, commonIJ, sign);
+
+        switch (uniqueJ.size()) {
+            case 0:
+                return 0.0;
+            case 1:
+                return CBar1(uniqueJ[0], uniqueJ[1])
+                       + VBar1(uniqueJ[0], uniqueJ[1])
+                       + UBar1(uniqueJ[0], uniqueJ[1]);
+            case 2:
+                return CBar2(uniqueJ[0], uniqueJ[1], uniqueJ[2], uniqueJ[3])
+                       + VBar2(uniqueJ[0], uniqueJ[1], uniqueJ[2], uniqueJ[3])
+                       + UBar2(uniqueJ[0], uniqueJ[1], uniqueJ[2], uniqueJ[3]);
+                break;
+            default:
+
+
+
+        }
+
+        return 0.0;
     }
 
     double CCQMC_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &mints,
@@ -105,12 +193,6 @@ namespace SCESS::F12::QMC {
                 ConfigurationInteraction::
                 GenerateOneElectronHamiltonianSpin(refWfn.Hcore, refWfn.CAlpha);
 
-        Tensor4 W_ = EvaluateW(f12Ints.f12);
-
-        Tensor2 F_;
-        TEITensor V_, X_, B_;
-        MP2::MP2_F12_Fixed(refWfn, mints, f12Ints, &F_, &V_, &X_, &B_);
-
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
         //quantity.
@@ -124,6 +206,19 @@ namespace SCESS::F12::QMC {
         uint32_t nAnnihilationBits = nOccupied;
         //The remaining bits in the excitor bit string are the creation operators for the virtual orbitals
         uint32_t nCreationBits = nSpatialOrbitals - nOccupied;
+
+        //F12 intermediates
+        Tensor4 W_ = EvaluateW(f12Ints.f12);
+        Tensor2 F_;
+        TEITensor V_, X_, B_;
+        MP2::MP2_F12_Fixed(refWfn, mints, f12Ints, &F_, &V_, &X_, &B_);
+        Tensor4 C_ = GenerateFixedGeminalAmplitudes(nElectrons / 2);
+        Tensor2 VBar1_, CBar1_, UBar1_;
+        Tensor4 VBar2_, CBar2_, UBar2_;
+        EvaluateGeminalResidualCorrections(W_, C_, V_, F_, mints.eri,
+                                           VBar1_, UBar1_,
+                                           CBar1_, VBar2_,
+                                           UBar2_, CBar2_);
 
         mt19937 randGenerator(time(nullptr));
         uniform_01<mt19937> randomNumber(randGenerator);
@@ -508,15 +603,15 @@ namespace SCESS::F12::QMC {
                                 excitorAmplitude * H0i / (pClust);
                     }
 
-                    if (isGeminal) {
-                        auto orbIdxs = FindOrbitalIdxs(Di);
+                    if (isGeminal && DiIdx == 0) {
+                        //auto orbIdxs = FindOrbitalIdxs(Di);
                         //Add contributions for each pair of electrons in the determinant
                         double H0i = 0.0;
-                        for (int i = 0; i < orbIdxs.size() / 2; i++)
-                            H0i += MP2::CalculateMP2_F12_FixedEnergyElectronPair(
-                                orbIdxs[i * 2 + 0],
-                                orbIdxs[i * 2 + 1], F_, V_, X_, B_);
-                        EProjCluster += (excitorAmplitude / pClust) * (H0i / Na);
+                        for (int i = 0; i < nElectrons / 2; i++)
+                            for (int j = 0; j < nElectrons / 2; ++j)
+                                H0i += MP2::CalculateMP2_F12_FixedEnergyElectronPair(
+                                    i, j, F_, V_, X_, B_);
+                        EProjCluster += (excitorAmplitude / pClust) * (H0i);
                     }
 
                     // -- Spawning --
@@ -528,11 +623,10 @@ namespace SCESS::F12::QMC {
                     if (DiIdx != DjIdx && DjIdx != excitors.size()) {
                         Dj.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
-                        double Hij = 0.0;
-                        // if (isGeminal)
-                        //     Hij = EvaluateGeminalElement(Di, mints.eri, W);
-                        // else
-                        Hij = H_FCI(DiIdx, DjIdx);
+                        double Hij = H_FCI(DiIdx, DjIdx);
+                        if (isGeminal)
+                            Hij += EvaluateGeminalElement(Di, VBar1_, UBar1_, CBar1_,
+                                                          VBar2_, UBar2_, CBar2_);
 
                         //1.2 *
                         double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize * 2.0); //

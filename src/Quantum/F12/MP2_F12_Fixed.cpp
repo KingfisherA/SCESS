@@ -107,7 +107,7 @@ namespace SCESS::F12 {
             Slice<Indices<K, L, M, X> >(idxs, f12));
 
 
-        TEITensor X_ = Slice<Indices<I, I, I, I> >(idxs, f12Sq);
+        TEITensor X_ = Slice<Indices<I, I, I, I>>(idxs, f12Sq);
         //ijrs,klrs->ijkl
         X_ -= Einsum<Indices<I, J, R, S>, Indices<K, L, R, S>, Indices<I, J, K, L> >(
             Slice<Indices<I, J, R, S> >(idxs, f12),
