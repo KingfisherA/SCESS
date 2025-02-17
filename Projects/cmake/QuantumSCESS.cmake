@@ -45,7 +45,7 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/QMC/FCIQMC.cpp"
   "${SCESS_SRC_DIR}/Quantum/QMC/QMC.h"
   "${SCESS_SRC_DIR}/Quantum/F12/F12SinglesCorrection.cpp"
-  "${SCESS_SRC_DIR}/Quantum/F12/CCQMC_F12.cpp"
+  "${SCESS_SRC_DIR}/Quantum/F12/CCQMC_MP2_F12.cpp"
   "${SCESS_SRC_DIR}/Tensor/TensorOperations.h"
   "${SCESS_SRC_DIR}/Tensor/TensorEinsum.h"
   "${SCESS_SRC_DIR}/Tensor/TensorSlice.h"

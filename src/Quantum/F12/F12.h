@@ -62,7 +62,7 @@ namespace SCESS {
              */
             Tensor4 EvaluateW(const Tensor4 &f12Int);
 
-            double CCQMC_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &mints,
+            double CCQMC_MP2_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &mints,
                              const Integrals::F12::F12Integrals &f12Ints);
         }
     }

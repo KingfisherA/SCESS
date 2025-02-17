@@ -474,7 +474,7 @@ namespace SCESS::Tests {
 
         double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
 
-        double ECCQMC_F12 = F12::QMC::CCQMC_F12(*uhfWfn, configInts, f12Ints);
+        double ECCQMC_F12 = F12::QMC::CCQMC_MP2_F12(*uhfWfn, configInts, f12Ints);
         double ECorrelation = ECCQMC_F12 - uhfWfn->Energy;
 
         std::cout << "\n\n--- CCQMC F12 Single Point Energy ---\n";
