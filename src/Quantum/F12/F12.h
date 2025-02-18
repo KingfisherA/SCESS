@@ -1,69 +1,96 @@
 #pragma once
-#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/HF/HF.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 
-//#include "Tensor/TensorOperations.h"
+#include "Quantum/Basis/BasisSet.h"
 
-namespace SCESS {
-    namespace Integrals {
-        struct MolInts;
+namespace SCESS::HF {
+    struct HF_Wfn;
+}
+
+namespace SCESS::Integrals {
+    struct MolInts;
+};
+
+namespace SCESS::Integrals::F12 {
+    struct F12Integrals;
+}
+
+
+//
+//
+namespace SCESS::F12 {
+    //
+    //
+    using HF_Wfn = HF::HF_Wfn;
+    using Tensor2 = Eigen::Tensor<double, 2>;
+    using Tensor4 = Eigen::Tensor<double, 4>;
+    using TEITensor = Eigen::Tensor<double, 4>;
+    //
+    //
+    struct F12Idxs {
+        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
+        int nOBS;
+        //Number of orbitals in the complementary auxiliary set
+        int nCABS;
+        //Only one occupied spatial MO in hydrogen
+        int nVirt;
+        //The number of spatial orbital occupied
+        int nOcc;
     };
-
-    namespace Integrals::F12 {
-        struct F12Integrals;
+    //
+    inline F12Idxs GenerateF12Idxs(const F12BasisSet &f12BasisSet, const HF_Wfn &wfn) {
+        int alphaOcc = std::distance(wfn.Occ_Alpha.begin(),
+                                     std::ranges::find(wfn.Occ_Alpha, 0));
+        return F12Idxs{
+            (int) f12BasisSet.GetNoHFFuncs(),
+            (int) f12BasisSet.GetNoCABSFuncs(),
+            alphaOcc,
+            (int) f12BasisSet.GetNoHFFuncs() - alphaOcc
+        };
     }
-
-    //using TensorSliceIndices = std::unordered_map<int, std::pair<Idx, Idx> >;
-
-    struct RHFWavefunction;
-    struct UHFWavefunction;
-
-    namespace F12 {
-        using Tensor2 = Eigen::Tensor<double, 2>;
-        using Tensor4 = Eigen::Tensor<double, 4>;
-
-        double EvaluateSinglesCorrectionEnergy(const Tensor2 &F,
-                                               Tensor2 *t1Amps = nullptr);
-
-        namespace CCSD {
-            double CCSD_F12(const UHFWavefunction &refWfn, Integrals::F12::F12Integrals &f12Ints);
-        }
-
-        namespace MP2 {
-            struct MP2F12Result {
-                double E_MP2;
-                double E_F12_MP2;
-            };
-
-            MP2F12Result MP2_F12_Optimise(const UHFWavefunction &refWfn,
-                                          const Integrals::MolInts &configIntegrals,
-                                          const Integrals::F12::F12Integrals &f12Ints);
-
-            MP2F12Result MP2_F12_Fixed(const UHFWavefunction &refWfn,
-                                       const Integrals::MolInts &configIntegrals,
-                                       const Integrals::F12::F12Integrals &f12Ints,
-                                       Tensor2*   F_out = nullptr,
-                                       TEITensor* V_out = nullptr,
-                                       TEITensor* X_out = nullptr,
-                                       TEITensor* B_out = nullptr);
-
-            double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,
-                                                const Tensor2 &F,
-                                                const TEITensor &V,
-                                                const TEITensor &X,
-                                                const TEITensor &B);
-        }
-
-        namespace QMC {
-            /**
-             * Generate the W intermediate for CCQMC F12
-             * @param f12Int The <pq | f(12) | rs> integrals
-             * @return The W tensors
-             */
-            Tensor4 EvaluateW(const Tensor4 &f12Int);
-
-            double CCQMC_MP2_F12(const UHFWavefunction &refWfn, const Integrals::MolInts &mints,
-                             const Integrals::F12::F12Integrals &f12Ints);
-        }
-    }
+    //
+    //
+    struct MP2F12Result {
+        double E_MP2;
+        double E_F12_MP2;
+    };
+    //
+    //
+    double EvaluateCABSSinglesCorrection(const Tensor2 &F,
+                                           F12Idxs f12Idxs,
+                                           Tensor2 *t1Amps = nullptr);
+    //
+    //
+    MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
+                                  const Integrals::MolInts &configIntegrals,
+                                  const Integrals::F12::F12Integrals &f12Ints,
+                                  F12Idxs f12Idxs,
+                                  Tensor2 *F_out = nullptr,
+                                  TEITensor *V_out = nullptr,
+                                  TEITensor *X_out = nullptr,
+                                  TEITensor *B_out = nullptr);
+    //
+    MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
+                               const Integrals::MolInts &configIntegrals,
+                               const Integrals::F12::F12Integrals &f12Ints,
+                               F12Idxs f12Idxs,
+                               Tensor2 *F_out = nullptr,
+                               TEITensor *V_out = nullptr,
+                               TEITensor *X_out = nullptr,
+                               TEITensor *B_out = nullptr);
+    //
+    Tensor4 EvaluateW(const Tensor4 &f12Int, F12Idxs f12Idxs);
+    Tensor4 EvaluateVab(const Tensor4 &f12Repulsion,
+                        const Tensor4 &f12,
+                        const Tensor4 &eri,
+                        F12Idxs f12Idxs);
+    //
+    double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,
+                                                    const Tensor2 &F,
+                                                    const TEITensor &V,
+                                                    const TEITensor &X,
+                                                    const TEITensor &B);
+    //
+    //
 }

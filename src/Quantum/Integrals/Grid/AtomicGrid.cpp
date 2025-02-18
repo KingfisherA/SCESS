@@ -1,18 +1,25 @@
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include<numbers>
-
+//
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
 #include "Quantum/Integrals/Grid/AtomicGrid.h"
 #include "Quantum/Integrals/Grid/Quadrature.h"
 
-namespace SCESS {
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
     using namespace Eigen;
     using std::numbers::pi;
-
-
-    void AtomicGrid::Create(const Atom &atom, const BasisSet &basisSet, uint32_t angularPoints,
-                            uint32_t radialPoints, uint32_t lebedevOffset) {
+    //
+    //
+    void AtomicGrid::Create(const Atom &atom,
+                            const BasisSet &basisSet,
+                            uint32_t angularPoints,
+                            uint32_t radialPoints,
+                            uint32_t lebedevOffset) {
         mNumAngularPoints = angularPoints;
         mNumRadialPoints = radialPoints;
         mLebedevOffset = lebedevOffset;
@@ -61,14 +68,14 @@ namespace SCESS {
             }
         }
     }
-
+    //
     void AtomicGrid::SetDensity(const Eigen::MatrixXd &D) {
         for (GridPoint &pnt: mGridPoints)
             pnt.SetDensity(D);
 
         mDensityInvalidated = true;
     }
-
+    //
     VectorXd AtomicGrid::GetDensities() const {
         VectorXd densities = VectorXd::Zero(static_cast<Eigen::Index>(mGridPoints.size()));
 
@@ -77,14 +84,14 @@ namespace SCESS {
 
         return densities;
     }
-
+    //
     void AtomicGrid::ScaleDensity(double s) {
         for (GridPoint &pnt: mGridPoints)
             pnt.ScaleDensity(s);
 
         mDensityInvalidated = true;
     }
-
+    //
     void AtomicGrid::UpdateDensity() const {
         mDensity = 0.0;
 
@@ -93,12 +100,12 @@ namespace SCESS {
 
         mDensityInvalidated = false;
     }
-
+    //
     double AtomicGrid::GetDensity() const {
         if (mDensityInvalidated) UpdateDensity();
         return mDensity;
     }
-
+    //
     MatrixXd AtomicGrid::GetAmplitudes() const {
         MatrixXd amplitudes = MatrixXd::Zero(mNumBasisSetFuncs,
                                              static_cast<Eigen::Index>(mGridPoints.size()));
@@ -108,7 +115,7 @@ namespace SCESS {
 
         return amplitudes;
     }
-
+    //
     VectorXd AtomicGrid::GetWeights() const {
         VectorXd weights = VectorXd(mGridPoints.size());
 
@@ -117,7 +124,7 @@ namespace SCESS {
 
         return weights;
     }
-
+    //
     MatrixXd AtomicGrid::GetPositions() const {
         MatrixXd positions = MatrixXd::Zero(
             static_cast<Eigen::Index>(mGridPoints.size()),
@@ -128,11 +135,13 @@ namespace SCESS {
 
         return positions;
     }
-
+    //
     void AtomicGrid::SetBeckeWeights(const Eigen::VectorXd &weights) {
         for (uint32_t i = 0; i < weights.size(); i++) {
             mGridPoints[i].ScaleWeight(weights(i));
             mGridPoints[i].SetBeckeWeight(weights(i));
         }
     }
+    //
+    //
 } // SCESS

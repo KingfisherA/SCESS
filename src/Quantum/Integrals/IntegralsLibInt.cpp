@@ -1,32 +1,35 @@
-#include <Quantum/QuantumPCH.h>
+#include <Quantum/Q_PCH.h>
 #include "IntegralsLibInt.h"
 #include "Integrals.h"
 #include "IntegralsF12.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Tensor/TensorOperations.h"
-
 #include<any>
 
+//
+//
 namespace SCESS::Integrals {
+    //
+    //
     using namespace libint2;
     using namespace Utils;
-
     using LIAtom = libint2::Atom;
-
+    //
+    //
 #pragma region LibInt Init
-
+    //
     void LibInt::InitLibInt() {
         libint2::initialize(true);
     }
-
+    //
     void LibInt::CloseLibInt() {
         libint2::finalize();
     }
-
+    //
 #pragma endregion
-
+    //
 #pragma region Evaluation Functions
-
+    //
     static TEITensor EvaluateTwoElectronTensor(const libint2::BasisSet &basisSet, Operator op,
                                                const std::any &params = {}) {
         TEITensor teiTensor(
@@ -92,7 +95,7 @@ namespace SCESS::Integrals {
 
         return teiTensor;
     }
-
+    //
     static TEITensor EvaluateTwoElectronTensor(const F12BasisSet &basisSet, Operator op,
                                                const std::any &params = {}) {
         TEITensor teiTensor(
@@ -162,7 +165,7 @@ namespace SCESS::Integrals {
 
         return teiTensor;
     }
-
+    //
     static Eigen::MatrixXd EvaluateOneElectronMatrix(const libint2::BasisSet &basisSet,
                                                      Operator op, const std::any &params = {}) {
         Eigen::MatrixXd resultMatrix(basisSet.nbf(), basisSet.nbf());
@@ -207,7 +210,7 @@ namespace SCESS::Integrals {
 
         return resultMatrix;
     }
-
+    //
     static Eigen::MatrixXd EvaluateOneElectronMatrix(const F12BasisSet &basisSet,
                                                      Operator op, const std::any &params = {}) {
         Eigen::MatrixXd resultMatrix(basisSet.GetNumOfFuncs(), basisSet.GetNumOfFuncs());
@@ -251,11 +254,11 @@ namespace SCESS::Integrals {
 
         return resultMatrix;
     }
-
+    //
 #pragma endregion
-
+    //
 #pragma region IntegralsLibInt
-
+    //
     MolInts LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
                                            const AtomListLI &atoms) {
         MolInts mints;
@@ -267,27 +270,27 @@ namespace SCESS::Integrals {
 
         return mints;
     }
-
+    //
     Eigen::MatrixXd LibInt::CalculateOverlapMatrix(const libint2::BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::overlap);
     }
-
+    //
     Eigen::MatrixXd LibInt::CalculateNuclearMatrix(const libint2::BasisSet &basisSet, const AtomListLI &atoms) {
         return EvaluateOneElectronMatrix(basisSet, Operator::nuclear, make_point_charges(atoms));
     }
-
+    //
     Eigen::MatrixXd LibInt::CalculateKineticMatrix(const libint2::BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::kinetic);
     }
-
+    //
     TEITensor LibInt::TwoElectronRepulsionTensor(const libint2::BasisSet &basisSet) {
         return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
     }
-
+    //
 #pragma endregion
-
+    //
 #pragma region F12 Integrals
-
+    //
     MolInts F12::EvaluateMolecularIntegrals(const F12BasisSet &basisSet, const AtomListLI &atoms) {
         MolInts mints;
 
@@ -298,7 +301,7 @@ namespace SCESS::Integrals {
 
         return mints;
     }
-
+    //
     MolInts F12::ExtractHFIntegrals(const MolInts &f12MolInts, long startIdx, long hfBasisSetSize) {
         MolInts hfInts;
         hfInts.S = f12MolInts.S.block(startIdx, startIdx, hfBasisSetSize, hfBasisSetSize);
@@ -308,24 +311,24 @@ namespace SCESS::Integrals {
                                            {hfBasisSetSize, hfBasisSetSize, hfBasisSetSize, hfBasisSetSize});
         return hfInts;
     }
-
+    //
     Eigen::MatrixXd F12::CalculateOverlapMatrix(const F12BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::overlap);
     }
-
+    //
     Eigen::MatrixXd F12::CalculateNuclearMatrix(const F12BasisSet &basisSet,
                                                 const std::vector<libint2::Atom> &atoms) {
         return EvaluateOneElectronMatrix(basisSet, Operator::nuclear, make_point_charges(atoms));
     }
-
+    //
     Eigen::MatrixXd F12::CalculateKineticMatrix(const F12BasisSet &basisSet) {
         return EvaluateOneElectronMatrix(basisSet, Operator::kinetic);
     }
-
+    //
     TEITensor F12::TwoElectronRepulsionTensor(const F12BasisSet &basisSet) {
         return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
     }
-
+    //
     F12::F12Integrals F12::EvaluateF12Integrals(const F12BasisSet &basisSet, double gamma) {
         LibIntCGF slaterGeminal = CalculateSlaterContraction(gamma);
         LibIntCGF slaterGeminalSquared = CalculateSlaterSquaredContraction(slaterGeminal);
@@ -338,7 +341,7 @@ namespace SCESS::Integrals {
 
         return mints;
     }
-
+    //
     F12::LibIntCGF F12::CalculateSlaterContraction(double gamma) {
         if (gamma != 1.0)
             throw std::runtime_error(
@@ -359,7 +362,7 @@ namespace SCESS::Integrals {
 
         return cgf;
     }
-
+    //
     F12::LibIntCGF F12::CalculateSlaterSquaredContraction(const LibIntCGF &slaterContraction) {
         size_t cgfLength = slaterContraction.size();
         LibIntCGF squaredCGF(cgfLength * cgfLength, {0.0, 0.0});
@@ -372,21 +375,22 @@ namespace SCESS::Integrals {
 
         return squaredCGF;
     }
-
+    //
     constexpr double gamma = 1.0;
-
     //F12 integrals
     TEITensor F12::TwoElectronCGFF12Tensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::cgtg, cgf);
     }
-
+    //
     TEITensor F12::TwoElectronCGFF12RepulsionTensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::cgtg_x_coulomb, cgf);
     }
-
+    //
     TEITensor F12::TwoElectronCGFDelF12SquaredTensor(const F12BasisSet &basisSet, const LibIntCGF &cgf) {
         return EvaluateTwoElectronTensor(basisSet, Operator::delcgtg2, cgf);
     }
-
+    //
 #pragma endregion
+    //
+    //
 }

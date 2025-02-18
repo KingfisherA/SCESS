@@ -1,29 +1,23 @@
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include"F12.h"
-
+//
 #include<Eigen/Core>
 #include<unsupported/Eigen/CXX11/Tensor>
-
+//
 #include "Tensor/TensorOperations.h"
 #include "Tensor/TensorSlice.h"
 #include "Tensor/TensorEinsum.h"
-#include "Tensor/TensorEinsum.h"
 #include "Utilities/Utilities.h"
 
+//
+//
 namespace SCESS::F12 {
     using namespace Eigen;
-
-    double EvaluateSinglesCorrectionEnergy(const Tensor2 &F, Tensor2 *t1Amps) {
-        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
-        constexpr Index nOBS = 2;
-        //Number of orbitals in the complementary auxiliary set
-        constexpr Index nCABS = 10;
-        //Total number of basis functions in the combined OBS and CABS basis sets
-        constexpr Index nbf = nOBS + nCABS;
-        constexpr Index nVirt = 1;
-        //Two spin orbitals are occupied in hydrogen and one spatial orbital
-        const Index nOcc = 1;
-
+    //
+    //
+    double EvaluateCABSSinglesCorrection(const Tensor2 &F,
+                                           F12Idxs f12Idxs,
+                                           Tensor2 *t1Amps) {
         enum {
             //All OBS orbitals
             P, Q,
@@ -36,41 +30,41 @@ namespace SCESS::F12 {
         };
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
-            {I, {0, nOcc}},
-            {J, {0, nOcc}},
-            {K, {0, nOcc}},
+            {I, {0, f12Idxs.nOcc}},
+            {J, {0, f12Idxs.nOcc}},
+            {K, {0, f12Idxs.nOcc}},
             //All virtual orbital indices
-            {A, {nOcc, nVirt}},
-            {B, {nOcc, nVirt}},
+            {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {B, {f12Idxs.nOcc, f12Idxs.nVirt}},
             //All OBS indices
-            {P, {0, nOBS}},
-            {Q, {0, nOBS}},
+            {P, {0, f12Idxs.nOBS}},
+            {Q, {0, f12Idxs.nOBS}},
             //CABS indices
-            {X, {nOBS, nCABS}},
-            {Y, {nOBS, nCABS}}
+            {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {Y, {f12Idxs.nOBS, f12Idxs.nCABS}}
         };
 
 
         //We need to assume canonical orbitals to solve equations iteratively
-        Tensor2 Dai(nVirt, nOcc);
+        Tensor2 Dai(f12Idxs.nVirt, f12Idxs.nOcc);
         Dai.setZero();
 
-        for (Eigen::Index i = 0; i < nOcc; i++)
-            for (Eigen::Index a = 0; a < nVirt; a++)
-                Dai(a, i) = F(i, i) - F(a + nOcc, a + nOcc);
+        for (Eigen::Index i = 0; i < f12Idxs.nOcc; i++)
+            for (Eigen::Index a = 0; a < f12Idxs.nVirt; a++)
+                Dai(a, i) = F(i, i) - F(a + f12Idxs.nOcc, a + f12Idxs.nOcc);
 
 
-        Tensor2 Dxi(nCABS, nOcc);
+        Tensor2 Dxi(f12Idxs.nCABS, f12Idxs.nOcc);
         Dxi.setZero();
 
-        for (Eigen::Index x = 0; x < nCABS; x++)
-            for (Eigen::Index i = 0; i < nOcc; i++)
-                Dxi(x, i) = F(i, i) - F(x + nOBS, x + nOBS);
+        for (Eigen::Index x = 0; x < f12Idxs.nCABS; x++)
+            for (Eigen::Index i = 0; i < f12Idxs.nOcc; i++)
+                Dxi(x, i) = F(i, i) - F(x + f12Idxs.nOBS, x + f12Idxs.nOBS);
 
 
         //Inital guess
         Tensor2 t_xi = Slice<Indices<X, I> >(idxs, F);
-        Tensor2 t_ai(nVirt, nOcc);
+        Tensor2 t_ai(f12Idxs.nVirt, f12Idxs.nOcc);
         t_ai.setZero();
 
         Tensor2 t1Last(t_xi.dimensions());
@@ -110,10 +104,12 @@ namespace SCESS::F12 {
         //ix, xi ->
         Tensor<double, 0> ECABSSingles = 2.0 * Einsum<Indices<I, X>, Indices<X, I>, Indices<> >(
                                              Slice<Indices<I, X> >(idxs, F),
-                                              t_xi);
+                                             t_xi);
         if (t1Amps)
             *t1Amps = t_xi;
 
         return ECABSSingles(0);
     }
+    //
+    //
 }

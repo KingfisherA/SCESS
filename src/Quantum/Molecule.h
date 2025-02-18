@@ -1,26 +1,25 @@
 #pragma once
-
-#include "Quantum/Basis/Gaussian.h"
-
 #include<vector>
-#include<string_view>
-#include<utility>
 #include<unordered_set>
-#include<Eigen/Core>
+#include<unordered_map>
 #include<libint2.hpp>
 
+//
+//
 namespace SCESS {
     struct BondPair {
         size_t atom1 = 0;
         size_t atom2 = 0;
     };
-
+    //
     inline bool operator==(const BondPair &a, const BondPair &b) {
         return (a.atom1 == b.atom1 && a.atom2 == b.atom2) ||
                (a.atom1 == b.atom2 && a.atom2 == b.atom1);
     }
 }
 
+//
+//
 template<>
 struct std::hash<SCESS::BondPair> {
     std::size_t operator()(const SCESS::BondPair &k) const {
@@ -29,9 +28,14 @@ struct std::hash<SCESS::BondPair> {
     }
 };
 
+//
+//
 namespace SCESS {
+    //
+    //
     constexpr double ANGSTROM_2_BOHR = 1.8897259886;
-
+    //
+    //
     class Atom {
     public:
         Atom() = default;
@@ -75,7 +79,8 @@ namespace SCESS {
         std::string mSymbol;
         int mCharge = 0;
     };
-
+    //
+    //
     class Molecule {
     public:
         Molecule() = default;
@@ -111,13 +116,10 @@ namespace SCESS {
             return mAtoms.size();
         }
         std::vector<libint2::Atom> GetAtomsLibInt() const;
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="tolerance2">The squared distance between atoms where a bond is considered in bohr radii.</param>
+        //
+        //The squared distance between atoms where a bond is considered in bohr radii
         void ConstructBonding(double tolerance2 = 0.5);
-
+        //
         std::unordered_set<BondPair> &GetBonds() {
             return mBonds;
         }
@@ -128,7 +130,7 @@ namespace SCESS {
             return mNoElectrons;
         }
 
-        double CalculateNuclearRepulsion() const;
+        double CalculateVnn() const;
 
         static Molecule LoadFromXYZ(const std::string &filePath);
         static Molecule GenerateWaterMolecule();
@@ -145,4 +147,6 @@ namespace SCESS {
         std::unordered_set<BondPair> mBonds;
         size_t mNoElectrons = 0;
     };
+    //
+    //
 }

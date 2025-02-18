@@ -1,13 +1,13 @@
 #include <iostream>
-#include "Quantum/Integrals/IntegralsF12.h"
-
 #include<string>
+//
 #include "Tests.h"
-#include "Quantum/Molecule.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/AssetFolder.h"
 
 
+//
+//
 int main(int argc, char *argv[]) {
     using namespace SCESS;
     std::cout <<
@@ -19,11 +19,11 @@ int main(int argc, char *argv[]) {
 
     //Tests::TestMP2_F12_Fixed();
     //Tests::TestFCIQMC();
-    Tests::TestCCQMC_F12();
+    //Tests::TestCCQMC_MP2_F12();
+    //Tests::TestFullCI();
     //Tests::TestMolecularInts();
     //Tests::TestF12Integrals();
     //Tests::TestTensorEinsum();
-    //Tests::TestCCQMC_F12();
 
     if (argc > 1) {
         std::string arg1 = argv[1];
@@ -37,6 +37,10 @@ int main(int argc, char *argv[]) {
             Tests::TestDFT();
         else if (arg1 == "fci")
             Tests::TestFullCI();
+        else if (arg1 == "fciqmc")
+            Tests::TestFCIQMC();
+        else if (arg1 == "ccqmc(mp2-f12)")
+            Tests::TestCCQMC_MP2_F12();
         else
             std::cout << "Command \"" << arg1 << "\" not recognised\n";
     } else {

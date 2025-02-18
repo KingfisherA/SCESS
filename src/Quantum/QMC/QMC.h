@@ -1,34 +1,107 @@
 #pragma once
 #include <boost/circular_buffer.hpp>
 #include <glm/vec2.hpp>
+#include <boost/random/mersenne_twister.hpp>
+//
+#include "Quantum/CI/CI.h"
+//
 
-#include "Quantum/CI/ConfigurationInteraction.h"
-#include "Quantum/F12/F12.h"
-#include "Quantum/HF/HartreeFock.h"
 
 namespace GEng {
     class Thread;
 }
 
-namespace SCESS {
-    using Excitor = CIDeterminant;
-    struct RHFWavefunction;
+namespace SCESS::HF {
+    struct HF_Wfn;
+}
 
-    namespace QMC {
+namespace SCESS::CI {
+    class SlaterDet;
+}
+
+namespace SCESS::Integrals {
+    struct MolInts;
+}
+
+//
+//
+namespace SCESS::QMC {
+    using SlaterDet = CI::SlaterDet;
+    using Excitor = CI::SlaterDet;
+    using OrbBitStr = CI::OrbBitStr;
+    using HF_Wfn = HF::HF_Wfn;
+    using TEITensor = Eigen::Tensor<double, 4>;
+    //
+    //
+    namespace FCI {
         //Full CI quantum monte carlo
-        double FCIQMC(const RHFWavefunction &rhfWfn,
-                             double Vnn,
-                             const GEng::Thread *thread = nullptr,
-                             std::stringstream *console = nullptr,
-                             boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
+        double FCIQMC(const HF_Wfn &rhfWfn,
+                      const Integrals::MolInts &mints,
+                      double Vnn,
+                      const GEng::Thread *thread = nullptr,
+                      std::stringstream *console = nullptr,
+                      boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
+    }
 
+    //
+    //
+    namespace CC {
         // Unlinked coupled-cluster quantum monte carlo. The similarity transformed Hamiltonian is not
         // applied here.
-        double CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
-                            const GEng::Thread *thread = nullptr,
-                            boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
-
-        std::vector<Excitor> GenerateAllExcitors(CIDeterminant reference, uint32_t nSpinOrbs,
-                                                        uint32_t nElectrons);
+        double CCQMC(const HF_Wfn &rhfWfn,
+                     const Integrals::MolInts &mints,
+                     const GEng::Thread *thread = nullptr,
+                     boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
+        //
+        //
+        void CountOperations(Excitor excitor,
+                             const uint32_t nAnnihilationBits,
+                             const uint32_t nCreationBits,
+                             uint32_t &numAnnihAlpha,
+                             uint32_t &numCreationAlpha,
+                             uint32_t &numAnnihBeta,
+                             uint32_t &numCreationBeta);
+        //
+        uint32_t CountNumElecs(OrbBitStr bitStr, const uint32_t nSpatialOrbitals);
+        //
+        void DestroyCreateElec(OrbBitStr &sourceBitStr,
+                               OrbBitStr &destBitStr,
+                               uint32_t orbitalToDelete,
+                               uint32_t orbitalToCreate,
+                               const uint32_t nAnnihilationBits,
+                               const uint32_t nCreationBits);
+        //
+        SlaterDet RandomSingleExcite(SlaterDet I,
+                                     boost::random::mt19937 &randGenerator,
+                                     const uint32_t nSpatialOrbitals,
+                                     const uint32_t nSpinOrbs,
+                                     const uint32_t nElectrons,
+                                     const uint32_t nAnnihilationBits,
+                                     const uint32_t nCreationBits,
+                                     double &pExcit);
+        SlaterDet RandomDoubleExcite(SlaterDet I,
+                                     boost::random::mt19937 &randGenerator,
+                                     const uint32_t nSpatialOrbitals,
+                                     const uint32_t nSpinOrbs,
+                                     const uint32_t nElectrons,
+                                     const uint32_t nAnnihilationBits,
+                                     const uint32_t nCreationBits,
+                                     double &pExcit);
+        //
+        uint32_t FindExcitorIdx(Excitor ex, const std::vector<Excitor> &excitors);
+        //
+        std::vector<Excitor> EnumerateExcitors(SlaterDet reference,
+                                               uint32_t nSpinOrbs,
+                                               uint32_t nElectrons);
+        //
+        void UpdateCumulativePop(std::vector<int64_t> &cumulativeWalkers,
+                                 std::vector<int64_t> &excitorWalkers,
+                                 int64_t &nExcips);
+        //
+        std::vector<double> GenerateCumulativeClusterProb(uint32_t nElectrons);
+        //
+        //
     }
+
+    //
 } // SCESS

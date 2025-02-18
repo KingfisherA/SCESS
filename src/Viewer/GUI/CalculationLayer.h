@@ -1,16 +1,19 @@
 #pragma once
-
+//
 #include"GraphicsEngine/Layers/Layer.h"
 #include"GraphicsEngine/3D/VertexArray.h"
 #include"GraphicsEngine/3D/ShaderProgram.h"
 #include"GraphicsEngine/Tools/Threading.h"
-
+//
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
-#include "Quantum/CI/ConfigurationInteraction.h"
-#include "Quantum/DFT/DensityFunctional.h"
+#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/HF/HF.h"
+#include "Quantum/CI/CI.h"
+#include "Quantum/DFT/DFT.h"
+#include "Quantum/CC/CC.h"
 #include "Viewer/Isosurfaces/Isosurfaces.h"
-
+//
 #include <boost/circular_buffer.hpp>
 
 
@@ -22,21 +25,26 @@ namespace GEng {
 }
 
 namespace SCESS {
-    struct CCSD_TWavefunction;
-    class ContractedGaussian;
-    struct RHFWavefunction;
-    struct UHFWavefunction;
-    struct KSWavefunction;
-    struct CCSDWavefunction;
-    class TriSurf;
+    class CGF;
+}
 
+namespace SCESS::Viewer {
+    class TriSurf;
+}
+
+
+//
+//
+namespace SCESS::Viewer {
+    //
+    //
     enum class SCFMethod : int {
         None = -1,
         RHF = 0,
         UHF = 1,
         KS_DFT = 2
     };
-
+    //
     enum class CorrelationMethod : int {
         None = -1,
         MP2 = 0,
@@ -46,14 +54,14 @@ namespace SCESS {
         FCIQMC = 4,
         CCQMC = 5
     };
-
+    //
     enum class DFTGridRes : int {
         Low = 0,
         Medium,
         High,
         Ultrafine
     };
-
+    //
     inline const char *SCFMethosToStr(SCFMethod method) {
         switch (method) {
             default:
@@ -63,7 +71,7 @@ namespace SCESS {
             case SCFMethod::KS_DFT: return "KS DFT";
         }
     }
-
+    //
     inline const char *CorrelationMethodToStr(CorrelationMethod method) {
         switch (method) {
             default:
@@ -72,30 +80,32 @@ namespace SCESS {
             case CorrelationMethod::CCSD: return "CCSD";
             case CorrelationMethod::CCSD_T: return "CCSD(T)";
             case CorrelationMethod::FCI: return "FCI";
-            case CorrelationMethod::CCQMC: return "CCQMC";
-            case CorrelationMethod::FCIQMC: return "FCIQMC";
+            case CorrelationMethod::CCQMC: return "CC";
+            case CorrelationMethod::FCIQMC: return "FCI";
         }
     }
-
-    inline MolecularGrid::Resolution DFTGridResToRes(DFTGridRes res) {
+    //
+    inline Quadrature::MolGrid::Resolution DFTGridResToRes(DFTGridRes res) {
         switch (res) {
             case DFTGridRes::Low:
-                return MolecularGrid::LOW_RES;
+                return Quadrature::MolGrid::LOW_RES;
             default:
             case DFTGridRes::Medium:
-                return MolecularGrid::MEDIUM_RES;
+                return Quadrature::MolGrid::MEDIUM_RES;
             case DFTGridRes::High:
-                return MolecularGrid::HIGH_RES;
+                return Quadrature::MolGrid::HIGH_RES;
             case DFTGridRes::Ultrafine:
-                return MolecularGrid::ULTRAFINE_RES;
+                return Quadrature::MolGrid::ULTRAFINE_RES;
         }
     }
-
+    //
     enum class MoleculeStyle:int {
         SpaceFill = 0,
         BallStick = 1
     };
-
+    //
+    //
+    //
     class CalculationLayer : public GEng::Layer {
     public:
         CalculationLayer();
@@ -115,12 +125,12 @@ namespace SCESS {
         bool SelectMoleculeFromFile();
 
         inline bool HaveSCFResult() {
-            return mRHFWfn != nullptr || mUHFWfn != nullptr || mKSWfn != nullptr;
+            return mRHFWfn.has_value() || mUHFWfn.has_value() || mKSWfn.has_value();
         }
 
         inline bool HaveCorrelationResult() {
-            return mCCSDWfn != nullptr || mCCSD_TWfn != nullptr || mFCIWfn != nullptr || mMP2Energy.has_value() ||
-                   mQMCEnergy != 0.0;
+            return mCCSDWfn.has_value() || mCCSD_TWfn.has_value() || mFCIWfn.has_value()
+                   || mMP2Energy.has_value() || mQMCEnergy != 0.0;
         }
 
         void ExecuteCalculation();
@@ -167,17 +177,18 @@ namespace SCESS {
 
         DFTGridRes mDFTGridRes = DFTGridRes::Medium;
 
-        uRef<RHFWavefunction> mRHFWfn;
-        uRef<UHFWavefunction> mUHFWfn;
+        Integrals::MolInts mints;
+        std::optional<HF::HF_Wfn> mRHFWfn;
+        std::optional<HF::HF_Wfn> mUHFWfn;
         //Kohn-Sham DFT wavefunction
-        uRef<KSWavefunction> mKSWfn;
+        std::optional<DFT::KS_Wfn> mKSWfn;
         bool mUseLastSCF = true, mInvalidateLastSCF = false;
 
-        uRef<CCSDWavefunction> mCCSDWfn;
-        uRef<CCSD_TWavefunction> mCCSD_TWfn;
+        std::optional<CC::CCSD_Wfn> mCCSDWfn;
+        std::optional<CC::CCSD_Wfn> mCCSD_TWfn;
         std::optional<double> mMP2Energy;
 
-        uRef<CIWavefunction> mFCIWfn;
+        std::optional<CI::CI_Wfn> mFCIWfn;
 
         std::string mCalcBasisSet;
 
@@ -194,4 +205,6 @@ namespace SCESS {
         int mIsosurfaceResolution = 20;
         float mIsosurfaceVolume = 5.0f;
     };
+    //
+    //
 }

@@ -1,18 +1,20 @@
 #pragma once
-
-#include<string_view>
+#include<string>
 #include<vector>
 #include<unordered_set>
-#include<nlohmann/json.hpp>
-
-#include "Quantum/Basis/Gaussian.h"
-#include "Quantum/Integrals/IntegralsLibInt.h"
+#include<libint2.hpp>
+//
+#include "CGF.h"
 
 namespace SCESS {
     class Molecule;
 }
 
+//
+//
 namespace SCESS {
+    //
+    //
     class BasisSet {
     public:
         BasisSet() = default;
@@ -26,7 +28,7 @@ namespace SCESS {
         static std::unordered_set<std::string> ListBasisSets();
 
         void LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol);
-        void AddCGF(const ContractedGaussian &cgf);
+        void AddCGF(const CGF &cgf);
 
         template<typename Iterator>
         void AddCGFs(const Iterator begin, const Iterator end) {
@@ -37,16 +39,16 @@ namespace SCESS {
         size_t GetNoCGFs() const { return mBasisFuncs.size(); }
         size_t GetNoPrimitives() const;
 
-        ContractedGaussian &Get(size_t i) { return mBasisFuncs[i]; }
-        const ContractedGaussian &Get(size_t i) const { return mBasisFuncs[i]; }
-        std::vector<ContractedGaussian> &GetCGFs() { return mBasisFuncs; }
-        const std::vector<ContractedGaussian> &GetCGFs() const { return mBasisFuncs; }
+        CGF &Get(size_t i) { return mBasisFuncs[i]; }
+        const CGF &Get(size_t i) const { return mBasisFuncs[i]; }
+        std::vector<CGF> &GetCGFs() { return mBasisFuncs; }
+        const std::vector<CGF> &GetCGFs() const { return mBasisFuncs; }
 
     private:
-        std::vector<ContractedGaussian> mBasisFuncs;
+        std::vector<CGF> mBasisFuncs;
     };
-
-
+    //
+    //
     class F12BasisSet {
     public:
         using Shells_T = std::vector<libint2::Shell>;
@@ -132,4 +134,6 @@ namespace SCESS {
                 mNumPrimitives = 0;
         int mMaxL = 0;
     };
+    //
+    //
 }

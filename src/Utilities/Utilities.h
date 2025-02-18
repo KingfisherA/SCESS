@@ -3,7 +3,11 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <iostream>
 
+//
+//
 namespace SCESS {
+    //
+    //
     class Utilities {
     public:
         static void PrintMatrix(const Eigen::MatrixXd &matrix);
@@ -42,4 +46,6 @@ namespace SCESS {
             PrintTensorRecursive<T, rank>(tensor, 0, &indicesArray);
         }
     };
+    //
+    //
 }

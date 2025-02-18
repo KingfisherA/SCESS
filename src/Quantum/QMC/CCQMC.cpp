@@ -1,25 +1,284 @@
-#include  "Quantum/QMC/QMC.h"
-#include  "Quantum/CI/ConfigurationInteraction.h"
-
-#include "GraphicsEngine/Tools/Threading.h"
-
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_int.hpp>
-#include<boost/math/special_functions/sign.hpp>
-
+#include <boost/math/special_functions/sign.hpp>
+//
+#include "Quantum/QMC/QMC.h"
+#include "Quantum/CI/CI.h"
+#include "GraphicsEngine/Tools/Threading.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
+//
+//
 // Linked coupled-cluster; <Di |e^{-T} H e^{T}| D0>
 // Unlinked coupled-cluster; <Di | H e^{T}| D0>
-
-namespace SCESS {
+namespace SCESS::QMC::CC {
+    //
+    //
     using namespace Eigen;
     using namespace boost::random;
+    //
+    //
+#pragma region CCQMC Utility Functions
+    //
+    //
+    //Return the number of annihilation and creation operators in a given bitstring
+    void CountOperations(Excitor excitor,
+                         const uint32_t nAnnihilationBits,
+                         const uint32_t nCreationBits,
+                         uint32_t &numAnnihAlpha,
+                         uint32_t &numCreationAlpha,
+                         uint32_t &numAnnihBeta,
+                         uint32_t &numCreationBeta) {
+        for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; ++i) {
+            if (excitor.GetAlphaOrbitals() & (0x1 << i)) {
+                if (i < nAnnihilationBits) {
+                    numAnnihAlpha++;
+                } else {
+                    numCreationAlpha++;
+                }
+            }
+        }
 
-    double QMC::CCQMC(const RHFWavefunction &rhfWfn, double Vnn,
-                                    const GEng::Thread *thread,
-                                    boost::circular_buffer<glm::vec2> *projEnergyGraph) {
+        for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; ++i) {
+            if (excitor.GetBetaOrbitals() & (0x1 << i)) {
+                if (i < nAnnihilationBits) {
+                    numAnnihBeta++;
+                } else {
+                    numCreationBeta++;
+                }
+            }
+        }
+    }
+    //
+    uint32_t CountNumElecs(OrbBitStr bitStr, const uint32_t nSpatialOrbitals) {
+        uint32_t numOrbs = 0;
+
+        for (uint32_t i = 0; i < nSpatialOrbitals; i++) {
+            if (bitStr & (0x1) << i)numOrbs++;
+        }
+        return numOrbs;
+    }
+    //
+    void DestroyCreateElec(OrbBitStr &sourceBitStr,
+                           OrbBitStr &destBitStr,
+                           uint32_t orbitalToDelete,
+                           uint32_t orbitalToCreate,
+                           const uint32_t nAnnihilationBits,
+                           const uint32_t nCreationBits) {
+        uint32_t bitCounter = 0;
+
+        OrbBitStr srcString = sourceBitStr;
+        OrbBitStr destString = destBitStr;
+
+        for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; i++) {
+            if (srcString & (0x1 << i)) {
+                if (orbitalToDelete == bitCounter) {
+                    sourceBitStr &= ~(0x1 << i);
+                    break;
+                }
+
+                bitCounter++;
+            }
+        }
+
+        bitCounter = 0;
+        for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; i++) {
+            if ((destString & (0x1 << i)) == 0) {
+                if (orbitalToCreate == bitCounter) {
+                    destBitStr |= (0x1 << i);
+                    break;
+                }
+
+                bitCounter++;
+            }
+        }
+    }
+    //
+    SlaterDet RandomSingleExcite(SlaterDet I,
+                                 mt19937 &randGenerator,
+                                 const uint32_t nSpatialOrbitals,
+                                 const uint32_t nSpinOrbs,
+                                 const uint32_t nElectrons,
+                                 const uint32_t nAnnihilationBits,
+                                 const uint32_t nCreationBits,
+                                 double &pExcit) {
+        uniform_01<mt19937> random(randGenerator);
+
+        //Randomly select whether to excite the alpha or beta electron
+        OrbBitStr *sourceBitStr = nullptr;
+        OrbBitStr *destBitStr = nullptr;
+
+        if (random() > 0.5) {
+            sourceBitStr = &I.GetAlphaOrbitals();
+            destBitStr = &I.GetAlphaOrbitals();
+        } else {
+            sourceBitStr = &I.GetBetaOrbitals();
+            destBitStr = &I.GetBetaOrbitals();
+        }
+
+        //pExcit *= 0.5;
+
+        //Number of occupied spaces
+        uint32_t numSrc = CountNumElecs(*sourceBitStr, nSpatialOrbitals);
+        //Number of free spaces
+        uint32_t numDest = nSpatialOrbitals - CountNumElecs(*destBitStr, nSpatialOrbitals);
+
+        uniform_int_distribution<uint32_t> deleteDist(0, numSrc - 1);
+        uniform_int_distribution<uint32_t> createDist(0, numDest - 1);
+
+        if (numSrc == 0 || numDest == 0)
+            return I;
+
+        //Index of the orbital to destroy from the occupied set
+        uint32_t orbitalToDelete = deleteDist(randGenerator);
+        //Index of the orbital to create from the free set
+        uint32_t orbitalToCreate = createDist(randGenerator);
+
+        if (orbitalToCreate != orbitalToDelete)
+            DestroyCreateElec(*sourceBitStr, *destBitStr,
+                              orbitalToDelete, orbitalToCreate,
+                              nAnnihilationBits, nCreationBits);
+
+        //pExcit *= (1.0 / numSrc) * (1.0 / numDest);
+
+        pExcit *= (1.0 / (nSpinOrbs - nElectrons));
+
+        return I;
+    }
+    SlaterDet RandomDoubleExcite(SlaterDet I,
+                                 mt19937 &randGenerator,
+                                 const uint32_t nSpatialOrbitals,
+                                 const uint32_t nSpinOrbs,
+                                 const uint32_t nElectrons,
+                                 const uint32_t nAnnihilationBits,
+                                 const uint32_t nCreationBits,
+                                 double &pExcit) {
+        //Randomly select whether to excite the alpha or beta electron
+        uniform_01<mt19937> random(randGenerator);
+
+        //Cannot perform a double excitation if there are less than two electrons
+        if (nElectrons < 2)
+            return I;
+
+        //Number of occupied spaces
+        uint32_t numAlpha = CountNumElecs(I.GetAlphaOrbitals(), nSpatialOrbitals);
+        //Number of free spaces
+        uint32_t numBeta = CountNumElecs(I.GetBetaOrbitals(), nSpatialOrbitals);
+
+        OrbBitStr *sourceBitStr1 = nullptr;
+        OrbBitStr *destBitStr1 = nullptr;
+
+        if (random() < 0.5) {
+            sourceBitStr1 = &I.GetAlphaOrbitals();
+            destBitStr1 = &I.GetAlphaOrbitals();
+        } else {
+            sourceBitStr1 = &I.GetBetaOrbitals();
+            destBitStr1 = &I.GetBetaOrbitals();
+        }
+
+        OrbBitStr *sourceBitStr2 = nullptr;
+        OrbBitStr *destBitStr2 = nullptr;
+
+        if (random() < 0.5) {
+            sourceBitStr2 = &I.GetAlphaOrbitals();
+            destBitStr2 = &I.GetAlphaOrbitals();
+        } else {
+            sourceBitStr2 = &I.GetBetaOrbitals();
+            destBitStr2 = &I.GetBetaOrbitals();
+        }
+
+        //0.5*0.5
+        //pExcit *= 0.25;
+        pExcit *= 2.0 * (1.0 / ((nSpinOrbs - nElectrons) / 2));
+
+        //Number of occupied spaces
+        uint32_t numSrc1 = CountNumElecs(*sourceBitStr1, nSpatialOrbitals);
+        uint32_t numSrc2 = CountNumElecs(*sourceBitStr2, nSpatialOrbitals);
+        //Number of free spaces
+        uint32_t numDest1 = nSpatialOrbitals - CountNumElecs(*destBitStr1, nSpatialOrbitals);
+        uint32_t numDest2 = nSpatialOrbitals - CountNumElecs(*destBitStr2, nSpatialOrbitals);
+
+        if (numSrc1 == 0 || numSrc2 == 0 || numDest1 == 0 || numDest2 == 0)
+            return I;
+
+        uniform_int_distribution<uint32_t> deleteDist1(0, numSrc1 - 1);
+        uniform_int_distribution<uint32_t> deleteDist2(0, numSrc2 - 1);
+        uniform_int_distribution<uint32_t> createDist1(0, numDest1 - 1);
+        uniform_int_distribution<uint32_t> createDist2(0, numDest2 - 1);
+
+        //Index of the orbital to destroy from the occupied set
+        uint32_t orbitalToDelete1 = deleteDist1(randGenerator);
+        uint32_t orbitalToDelete2 = deleteDist2(randGenerator);
+        //Index of the orbital to create from the free set
+        uint32_t orbitalToCreate1 = createDist1(randGenerator);
+        uint32_t orbitalToCreate2 = createDist2(randGenerator);
+
+        DestroyCreateElec(*sourceBitStr1, *destBitStr1,
+                          orbitalToDelete1, orbitalToCreate1,
+                          nAnnihilationBits, nCreationBits);
+        DestroyCreateElec(*sourceBitStr2, *destBitStr2,
+                          orbitalToDelete2, orbitalToCreate2,
+                          nAnnihilationBits, nCreationBits);
+
+        //(1.0 / numSrc1) * (1.0 / numDest1) * (1.0 / numSrc2) * (1.0 / numDest2);
+
+        return I;
+    }
+    //
+    //
+    uint32_t FindExcitorIdx(Excitor ex, const std::vector<Excitor> &excitors) {
+        return std::distance(excitors.begin(), std::ranges::find(excitors, ex));
+    }
+    //
+    std::vector<Excitor> EnumerateExcitors(SlaterDet reference,
+                                           uint32_t nSpinOrbs,
+                                           uint32_t nElectrons) {
+        std::vector<Excitor> excitors = CI::EnumerateDet(nSpinOrbs, nElectrons);
+
+        for (Excitor &ex: excitors) {
+            ex.CalculateSign(reference, nSpinOrbs / 2, nSpinOrbs / 2);
+            ex.GetAlphaOrbitals() ^= reference.GetAlphaOrbitals();
+            ex.GetBetaOrbitals() ^= reference.GetBetaOrbitals();
+        }
+
+        return excitors;
+    }
+    //
+    void UpdateCumulativePop(std::vector<int64_t> &cumulativeWalkers,
+                             std::vector<int64_t> &excitorWalkers,
+                             int64_t &nExcips) {
+        cumulativeWalkers[0] = excitorWalkers[0];
+        nExcips = abs(excitorWalkers[0]);
+        for (size_t i = 1; i < cumulativeWalkers.size(); i++) {
+            cumulativeWalkers[i] = excitorWalkers[i] + cumulativeWalkers[i - 1];
+            nExcips += abs(excitorWalkers[i]);
+        }
+    }
+    //
+    std::vector<double> GenerateCumulativeClusterProb(uint32_t nElectrons) {
+        //The cumulative 1/2^(s+1) probability distribution
+        std::vector<double> cumulativeClusterProb(nElectrons, 0.0);
+        cumulativeClusterProb[0] = 0.5;
+        for (uint32_t i = 1; i < cumulativeClusterProb.size(); i++) {
+            cumulativeClusterProb[i] = cumulativeClusterProb[i - 1] + 1.0 / pow(2.0, i + 1);
+        }
+        cumulativeClusterProb.back() -= 1.0 - cumulativeClusterProb.back();
+
+        return cumulativeClusterProb;
+    }
+    //
+    //
+#pragma endregion
+    //
+    //
+#pragma region CCQMC Implementation
+    //
+    //
+    double CCQMC(const HF_Wfn &rhfWfn,
+                 const Integrals::MolInts &mints,
+                 const GEng::Thread *thread,
+                 boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts
         uint32_t Na = 200;
@@ -27,19 +286,19 @@ namespace SCESS {
 
         std::cout << "--- Coupled Cluster Quantum Monte Carlo ---\n";
 
-        TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::TransformTEI(rhfWfn.Integrals.eri, rhfWfn.C));
+        TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
+            Integrals::Transforms::TransformTEI(mints.eri, rhfWfn.C_Alpha));
 
-        MatrixXd HSpin =
-            ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWfn.Hcore, rhfWfn.C);
+        auto h = mints.T + mints.V;
+        MatrixXd hSpin = CI::GenerateHCoreSpinTransform(h, rhfWfn.C_Alpha);
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
         //quantity.
-        uint32_t nOccupied = std::distance(rhfWfn.Occupation.begin(),
-                                           std::ranges::find(rhfWfn.Occupation, 0));
+        uint32_t nOccupied = std::distance(rhfWfn.Occ_Alpha.begin(),
+                                           std::ranges::find(rhfWfn.Occ_Alpha, 0));
         uint32_t nElectrons = nOccupied * 2;
-        uint32_t nSpatialOrbitals = rhfWfn.Occupation.size();
+        uint32_t nSpatialOrbitals = rhfWfn.Occ_Alpha.size();
         uint32_t nSpinOrbs = nSpatialOrbitals * 2;
 
         //The first nAnnihilationBits number of bits indicate an annihilation of an occupied orbital
@@ -51,222 +310,28 @@ namespace SCESS {
         uniform_01<mt19937> randomNumber(randGenerator);
 
         //The reference determinant
-        const CIDeterminant D0 = CIDeterminant::MakeReference(nOccupied, nOccupied);
+        const SlaterDet D0 = SlaterDet::MakeReference(nOccupied, nOccupied);
         //Generate all possible excitors in this full CC
         //The first "nAnnihilationBits" bits are the annihilators and the
         //remaning "nCreationBits" are the creation operators
-        std::vector<Excitor> excitors = GenerateAllExcitors(D0, nSpinOrbs, nElectrons);
+        std::vector<Excitor> excitors = EnumerateExcitors(D0, nSpinOrbs, nElectrons);
         //The populations of walkers on each of the excitors generated above
         std::vector<int64_t> excitorWalkers(excitors.size(), 0);
         excitorWalkers[0] = 100;
         std::vector<int64_t> cumulativeWalkers(excitors.size(), 0);
         std::vector<int64_t> excitorSpawn(excitors.size(), 0);
 
-        //Make the Hamiltonian matrix
+        //Make the FCI Hamiltonian matrix
         MatrixXd H_FCI = MatrixXd::Zero(excitors.size(), excitors.size());
         for (uint32_t i = 0; i < H_FCI.rows(); i++)
             for (uint32_t j = i; j < H_FCI.cols(); j++)
                 H_FCI(i, j) = H_FCI(j, i) =
-                              ConfigurationInteraction::CalculateHamiltonianElement(
+                              CI::CalculateHamiltonianElement(
                                   excitors[i] ^ D0, excitors[j] ^ D0, nSpatialOrbitals,
-                                  nSpatialOrbitals, HSpin, moSpinTEI);
-
-        //To check the FCI hamiltonian matrix has been constructed correctly
-        // SelfAdjointEigenSolver<MatrixXd> eigensolver(H_FCI);
-        // VectorXd fciEnergies = eigensolver.eigenvalues().real();
-        // MatrixXd fciWavefuncs = eigensolver.eigenvectors().real();
+                                  nSpatialOrbitals, hSpin, spinERI);
 
         //The cumulative 1/2^(s+1) probability distribution
-        std::vector<double> cumulativeClusterProb(nElectrons, 0.0);
-        cumulativeClusterProb[0] = 0.5;
-        for (uint32_t i = 1; i < cumulativeClusterProb.size(); i++) {
-            cumulativeClusterProb[i] = cumulativeClusterProb[i - 1] + 1.0 / pow(2.0, i + 1);
-        }
-        cumulativeClusterProb.back() -= 1.0 - cumulativeClusterProb.back();
-
-
-        auto CountNumElecs = [&nSpatialOrbitals](CIDeterminant::OrbitalBitStr bitStr) {
-            uint32_t numOrbs = 0;
-
-            for (uint32_t i = 0; i < nSpatialOrbitals; i++) {
-                if (bitStr & (0x1) << i)numOrbs++;
-            }
-            return numOrbs;
-        };
-
-        //Return the number of annihilation and creation operators in a given bitstring
-        auto CountOperations = [&nAnnihilationBits, &nCreationBits](Excitor excitor,
-                                                                    uint32_t &numAnnihAlpha,
-                                                                    uint32_t &numCreationAlpha,
-                                                                    uint32_t &numAnnihBeta,
-                                                                    uint32_t &numCreationBeta) {
-            for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; ++i) {
-                if (excitor.GetAlphaOrbitals() & (0x1 << i)) {
-                    if (i < nAnnihilationBits) {
-                        numAnnihAlpha++;
-                    } else {
-                        numCreationAlpha++;
-                    }
-                }
-            }
-
-            for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; ++i) {
-                if (excitor.GetBetaOrbitals() & (0x1 << i)) {
-                    if (i < nAnnihilationBits) {
-                        numAnnihBeta++;
-                    } else {
-                        numCreationBeta++;
-                    }
-                }
-            }
-        };
-
-        auto DestroyCreateOne = [&nAnnihilationBits, &nCreationBits](
-            Excitor::OrbitalBitStr &sourceBitStr, Excitor::OrbitalBitStr &destBitStr,
-            uint32_t orbitalToDelete, uint32_t orbitalToCreate) {
-            uint32_t bitCounter = 0;
-
-            Excitor::OrbitalBitStr srcString = sourceBitStr;
-            Excitor::OrbitalBitStr destString = destBitStr;
-
-            for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; i++) {
-                if (srcString & (0x1 << i)) {
-                    if (orbitalToDelete == bitCounter) {
-                        sourceBitStr &= ~(0x1 << i);
-                        break;
-                    }
-
-                    bitCounter++;
-                }
-            }
-
-            bitCounter = 0;
-            for (uint32_t i = 0; i < nAnnihilationBits + nCreationBits; i++) {
-                if ((destString & (0x1 << i)) == 0) {
-                    if (orbitalToCreate == bitCounter) {
-                        destBitStr |= (0x1 << i);
-                        break;
-                    }
-
-                    bitCounter++;
-                }
-            }
-        };
-
-        auto RandomSingleExcite = [&nSpatialOrbitals, &randomNumber,&randGenerator, &CountNumElecs, &DestroyCreateOne](
-            CIDeterminant I, double &pExcit) {
-            //Randomly select whether to excite the alpha or beta electron
-
-            Excitor::OrbitalBitStr *sourceBitStr = nullptr;
-            Excitor::OrbitalBitStr *destBitStr = nullptr;
-
-            if (randomNumber() > 0.5) {
-                sourceBitStr = &I.GetAlphaOrbitals();
-                destBitStr = &I.GetAlphaOrbitals();
-            } else {
-                sourceBitStr = &I.GetBetaOrbitals();
-                destBitStr = &I.GetBetaOrbitals();
-            }
-
-            pExcit *= 0.5;
-
-            //Number of occupied spaces
-            uint32_t numSrc = CountNumElecs(*sourceBitStr);
-            //Number of free spaces
-            uint32_t numDest = nSpatialOrbitals - CountNumElecs(*destBitStr);
-
-            uniform_int_distribution<uint32_t> deleteDist(0, numSrc - 1);
-            uniform_int_distribution<uint32_t> createDist(0, numDest - 1);
-
-            if (numSrc == 0 || numDest == 0)
-                return I;
-
-            //Index of the orbital to destroy from the occupied set
-            uint32_t orbitalToDelete = deleteDist(randGenerator);
-            //Index of the orbital to create from the free set
-            uint32_t orbitalToCreate = createDist(randGenerator);
-
-            DestroyCreateOne(*sourceBitStr, *destBitStr, orbitalToDelete, orbitalToCreate);
-
-            pExcit *= (1.0 / numSrc) * (1.0 / numDest);
-
-            return I;
-        };
-
-        auto RandomDoubleExcite = [&DestroyCreateOne,
-                    &nSpatialOrbitals, &nElectrons, &randomNumber,&randGenerator, &CountNumElecs](
-            CIDeterminant I, double &pExcit) {
-            //Randomly select whether to excite the alpha or beta electron
-
-            //Cannot perform a double excitation if there are less than two electrons
-            if (nElectrons < 2)
-                return I;
-
-            //Number of occupied spaces
-            uint32_t numAlpha = CountNumElecs(I.GetAlphaOrbitals());
-            //Number of free spaces
-            uint32_t numBeta = CountNumElecs(I.GetBetaOrbitals());
-
-            Excitor::OrbitalBitStr *sourceBitStr1 = nullptr;
-            Excitor::OrbitalBitStr *destBitStr1 = nullptr;
-
-            if (randomNumber() < 0.5) {
-                sourceBitStr1 = &I.GetAlphaOrbitals();
-                destBitStr1 = &I.GetAlphaOrbitals();
-            } else {
-                sourceBitStr1 = &I.GetBetaOrbitals();
-                destBitStr1 = &I.GetBetaOrbitals();
-            }
-
-            Excitor::OrbitalBitStr *sourceBitStr2 = nullptr;
-            Excitor::OrbitalBitStr *destBitStr2 = nullptr;
-
-            if (randomNumber() < 0.5) {
-                sourceBitStr2 = &I.GetAlphaOrbitals();
-                destBitStr2 = &I.GetAlphaOrbitals();
-            } else {
-                sourceBitStr2 = &I.GetBetaOrbitals();
-                destBitStr2 = &I.GetBetaOrbitals();
-            }
-
-            //0.5*0.5
-            pExcit *= 0.25;
-
-            //Number of occupied spaces
-            uint32_t numSrc1 = CountNumElecs(*sourceBitStr1);
-            uint32_t numSrc2 = CountNumElecs(*sourceBitStr2);
-            //Number of free spaces
-            uint32_t numDest1 = nSpatialOrbitals - CountNumElecs(*destBitStr1);
-            uint32_t numDest2 = nSpatialOrbitals - CountNumElecs(*destBitStr2);
-
-            if (numSrc1 == 0 || numSrc2 == 0 || numDest1 == 0 || numDest2 == 0)
-                return I;
-
-            uniform_int_distribution<uint32_t> deleteDist1(0, numSrc1 - 1);
-            uniform_int_distribution<uint32_t> deleteDist2(0, numSrc2 - 1);
-            uniform_int_distribution<uint32_t> createDist1(0, numDest1 - 1);
-            uniform_int_distribution<uint32_t> createDist2(0, numDest2 - 1);
-
-            //Index of the orbital to destroy from the occupied set
-            uint32_t orbitalToDelete1 = deleteDist1(randGenerator);
-            uint32_t orbitalToDelete2 = deleteDist2(randGenerator);
-            //Index of the orbital to create from the free set
-            uint32_t orbitalToCreate1 = createDist1(randGenerator);
-            uint32_t orbitalToCreate2 = createDist2(randGenerator);
-
-            DestroyCreateOne(*sourceBitStr1, *destBitStr1, orbitalToDelete1, orbitalToCreate1);
-            DestroyCreateOne(*sourceBitStr2, *destBitStr2, orbitalToDelete2, orbitalToCreate2);
-
-            pExcit *= 2.0 * (1.0 / numSrc1) * (1.0 / numDest1) * (1.0 / numSrc2) * (1.0 / numDest2);
-
-            return I;
-        };
-
-        auto FindExcitorIdx = [&excitors](Excitor ex)-> uint32_t {
-            return (uint32_t) std::distance(excitors.begin(),
-                                            std::find(excitors.begin(), excitors.end(), ex));
-        };
-
+        std::vector<double> cumulativeClusterProb = GenerateCumulativeClusterProb(nElectrons);
 
         double shift = 0.0;
         double tau = 0.1;
@@ -280,29 +345,20 @@ namespace SCESS {
         int64_t nExcips = 0;
         int64_t nExcipsLast = 0;
 
-        auto UpdateCumulativePop = [&cumulativeWalkers, &excitorWalkers, &nExcips]() {
-            cumulativeWalkers[0] = excitorWalkers[0];
-            nExcips = abs(excitorWalkers[0]);
-            for (size_t i = 1; i < cumulativeWalkers.size(); i++) {
-                cumulativeWalkers[i] = excitorWalkers[i] + cumulativeWalkers[i - 1];
-                nExcips += abs(excitorWalkers[i]);
-            }
-        };
-
         int64_t D0_Population = excitorWalkers[0];
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             EProjCycle = 0.0;
 
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
-                if(thread)
-                    if(thread->ShouldStop())
+                if (thread)
+                    if (thread->ShouldStop())
                         return 0.0;
 
                 for (auto &val: excitorSpawn)
                     val = 0;
-                UpdateCumulativePop();
 
+                UpdateCumulativePop(cumulativeWalkers, excitorWalkers, nExcips);
 
                 double EProjCluster = 0.0;
                 Na = nExcips;
@@ -366,37 +422,41 @@ namespace SCESS {
                     }
 
                     //Generate determinant by applying new excitor to the HF determinant
-                    CIDeterminant Di;
+                    SlaterDet Di;
                     Di.GetAlphaOrbitals() = collapsedExcitor.GetAlphaOrbitals() ^ D0.GetAlphaOrbitals();
                     Di.GetBetaOrbitals() = collapsedExcitor.GetBetaOrbitals() ^ D0.GetBetaOrbitals();
                     Di.GetSign() = collapsedExcitor.GetSign();
                     // Di.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
-                    uint32_t numAlphaElecs = CountNumElecs(Di.GetAlphaOrbitals());
-                    uint32_t numBetaElecs = CountNumElecs(Di.GetBetaOrbitals());
+                    uint32_t numAlphaElecs = CountNumElecs(Di.GetAlphaOrbitals(), nSpatialOrbitals);
+                    uint32_t numBetaElecs = CountNumElecs(Di.GetBetaOrbitals(), nSpatialOrbitals);
 
                     //We have formed a cluster
                     if (numAlphaElecs + numBetaElecs > nElectrons)
                         continue;
                     //goto CLUSTER_LOOP_BEGIN;
 
-                    uint32_t DiIdx = FindExcitorIdx(Di ^ D0);
+                    uint32_t DiIdx = FindExcitorIdx(Di ^ D0, excitors);
                     if (DiIdx == excitors.size()) continue;
                     uint32_t DjIdx = 0;
 
                     //Now randomly produce a determinant that is 1 or 2 excitations away from Dj
-                    CIDeterminant Dj;
+                    SlaterDet Dj;
                     //Probability of generating j given we have i
                     //Half chance of selecting a single excitation and half chance of selecting a double
                     double pExcit = 1.0; //0.5;
                     if (randomNumber() < 0.5) {
                         //Perform a single excitation/de-excitation
-                        Dj = RandomSingleExcite(Di, pExcit);
+                        Dj = RandomSingleExcite(Di, randGenerator,
+                                                nSpatialOrbitals, nSpinOrbs, nElectrons,
+                                                nAnnihilationBits, nCreationBits, pExcit);
                     } else {
                         //Perform a double excitation/de-excitation
-                        Dj = RandomDoubleExcite(Di, pExcit);
+                        Dj = RandomDoubleExcite(Di, randGenerator,
+                                                nSpatialOrbitals, nSpinOrbs, nElectrons,
+                                                nAnnihilationBits, nCreationBits, pExcit);
                     }
-                    DjIdx = FindExcitorIdx(Dj ^ D0);
+                    DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
 
                     //Update the projected energy
                     if (DiIdx != 0) {
@@ -472,7 +532,7 @@ namespace SCESS {
             //rhfWfn.Energy +
             //double EProj = (EProjCycle / NUM_CYCLES) + rhfWfn.Energy;
 
-            double EProj = rhfWfn.Energy;
+            double EProj = rhfWfn.E_HF;
 
             for (uint32_t I = 1; I < excitorWalkers.size(); I++) {
                 EProj += H_FCI(0, I) * double(excitorWalkers[I]) / double(excitorWalkers[0]);
@@ -487,7 +547,7 @@ namespace SCESS {
 
 
             if (reportCycle == 50)
-                shift = rhfWfn.Energy;
+                shift = rhfWfn.E_HF;
 
             if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
                 shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
@@ -507,18 +567,9 @@ namespace SCESS {
 
         return EProjAverage;
     }
-
-    std::vector<Excitor> QMC::GenerateAllExcitors(CIDeterminant reference, uint32_t nSpinOrbs,
-                                                                uint32_t nElectrons) {
-        std::vector<Excitor> excitors =
-                ConfigurationInteraction::GenerateAllDeterminants(nSpinOrbs, nElectrons);
-
-        for (Excitor &ex: excitors) {
-            ex.CalculateSign(reference, nSpinOrbs / 2, nSpinOrbs / 2);
-            ex.GetAlphaOrbitals() ^= reference.GetAlphaOrbitals();
-            ex.GetBetaOrbitals() ^= reference.GetBetaOrbitals();
-        }
-
-        return excitors;
-    }
+    //
+    //
+#pragma endregion
+    //
+    //
 }

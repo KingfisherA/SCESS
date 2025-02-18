@@ -1,86 +1,93 @@
-#include <Quantum/QuantumPCH.h>
-
+#include <Quantum/Q_PCH.h>
+//
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
-
+//
 #include "GraphicsEngine/Tools/Threading.h"
+#include "Quantum/CC/CC.h"
 
-#include "Quantum/CC/CoupledCluster.h"
-
-namespace SCESS {
+//
+//
+namespace SCESS::CC {
     using namespace Eigen;
-
-    uRef<CCSD_TWavefunction> CoupledCluster::CCSD_T(const RHFWavefunction &rhfResult, const GEng::Thread *thread,
-                                                    std::stringstream *console) {
+    //
+    //
+    CCSD_Wfn CCSD_T(const HFWfn &rhfResult,
+                    const Integrals::MolInts &mints,
+                    const GEng::Thread *thread,
+                    std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
 
         //Perform CCSD with DIIS acceleration and get t1 and t2 amplitudes
-        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD_DIIS(rhfResult, thread, console);
+        CCSD_Wfn ccsdWfn = CCSD_DIIS(rhfResult, mints, thread, console);
 
-        if (ccsd == nullptr) {
-            if (console)
-                *console << "Cannot calculate triples correction as the CCSD t amplitudes did not converge.\n";
-
-            return nullptr;
-        }
+        // if (ccsdWfn == nullptr) {
+        //     if (console)
+        //         *console << "Cannot calculate triples correction as the CCSD t amplitudes did not converge.\n";
+        //
+        //     return nullptr;
+        // }
 
         if (console)
             *console << "Calculating triples correction to the energy ... \n";
 
         //Number of occupied spin orbitals
-        Eigen::Index nOcc = std::distance(rhfResult.Occupation.begin(),
-                                          std::ranges::find(rhfResult.Occupation, 0));
+        Index nOcc = std::distance(rhfResult.Occ_Alpha.begin(),
+                                   std::ranges::find(rhfResult.Occ_Alpha, 0));
         //For two electrons in each orbital
         nOcc *= 2;
         //Number of virtual spin orbitals
-        Eigen::Index nVirt = rhfResult.Occupation.size() * 2 - nOcc;
+        Index nVirt = rhfResult.Occ_Alpha.size() * 2 - nOcc;
 
         //Get the Fock matrix in canonical MO basis set
         FockTensor F = TransformFockToMO(rhfResult);
 
         if (thread)
             if (thread->ShouldStop())
-                return nullptr;
+                return {};
 
         //Calculate the triples perturbation correction energy
-        double triplesCorrection = CalculateTriplesCorrection(*ccsd, F, nOcc, nVirt, thread);
+        double E_T = CalculateTriplesCorrection(ccsdWfn, F, mints.eri, nOcc, nVirt, thread);
 
         if (console) {
-            *console << "E(T) = " << triplesCorrection << "\n";
-            *console << "E(Total) = E(Hartree Fock) + E(CCSD) + E((T)) = " << rhfResult.Energy + ccsd->
-                    ccsdCorrelationEnergy + triplesCorrection << '\n';
+            *console << "E(T) = " << E_T << "\n";
+            *console << "E(Total) = E(Hartree Fock) + E(CCSD) + E((T)) = " <<
+                rhfResult.E_HF + ccsdWfn.E_CCSD + E_T << '\n';
         }
 
-        return std::make_unique<CCSD_TWavefunction>(*ccsd, triplesCorrection);
-    }
+        ccsdWfn.E_T = E_T;
 
+        return ccsdWfn;
+    }
+    //
     //Computes the triple correction energy with the spin integrated out
-    double CoupledCluster::CalculateTriplesCorrection(const CCSDWavefunction &ccsd,
-                                                      const FockTensor &F, const Eigen::Index nOcc,
-                                                      const Eigen::Index nVirt,
-                                                      const GEng::Thread *thread) {
+    double CalculateTriplesCorrection(const CCSD_Wfn &ccsd,
+                                      const FockTensor &F,
+                                      const TEITensor &eri,
+                                      Index nOcc,
+                                      Index nVirt,
+                                      const GEng::Thread *thread) {
         using IdxP = Eigen::IndexPair<int>;
-        const TEITensor &moTEI = ccsd.moTEI;
 
 
         //Construct W; the connected triples tensor
-        auto MakeWijkabc = [&moTEI, &ccsd, nOcc, nVirt]() {
+        auto MakeWijkabc = [&eri, &ccsd, nOcc, nVirt]() {
             //jkae,eibc -> jkaibc -> ijkabc
-            Tensor<double, 6> Wijkabc = ccsd.t2Amps.contract(moTEI.slice(array<Eigen::Index, 4>{nOcc, 0, nOcc, nOcc},
-                                                                         array<Eigen::Index, 4>{
-                                                                             nVirt, nOcc, nVirt, nVirt
-                                                                         }),
-                                                             array<IdxP, 1>{
-                                                                 IdxP{3, 0}
-                                                             }).shuffle(array<int, 6>{3, 0, 1, 2, 4, 5});
+            Tensor<double, 6> Wijkabc = ccsd.t2.contract(eri.slice(array<Eigen::Index, 4>{nOcc, 0, nOcc, nOcc},
+                                                                   array<Eigen::Index, 4>{
+                                                                       nVirt, nOcc, nVirt, nVirt
+                                                                   }),
+                                                         array<IdxP, 1>{
+                                                             IdxP{3, 0}
+                                                         }).shuffle(array<int, 6>{3, 0, 1, 2, 4, 5});
 
             //imbc,majk-> ibcajk -> ijkabc
-            Wijkabc -= ccsd.t2Amps.contract(moTEI.slice(array<Eigen::Index, 4>{0, nOcc, 0, 0},
-                                                        array<Eigen::Index, 4>{nOcc, nVirt, nOcc, nOcc}),
-                                            array<IdxP, 1>{
-                                                IdxP{1, 0}
-                                            }).shuffle(array<int, 6>{0, 4, 5, 3, 1, 2});
+            Wijkabc -= ccsd.t2.contract(eri.slice(array<Eigen::Index, 4>{0, nOcc, 0, 0},
+                                                  array<Eigen::Index, 4>{nOcc, nVirt, nOcc, nOcc}),
+                                        array<IdxP, 1>{
+                                            IdxP{1, 0}
+                                        }).shuffle(array<int, 6>{0, 4, 5, 3, 1, 2});
 
 
             //P(i/jk) * P(a/bc)
@@ -111,12 +118,12 @@ namespace SCESS {
         };
 
         //Construct the V tensor; the disconnected triples tensor
-        auto MakeVijkabc = [&ccsd, &moTEI, nOcc, nVirt]() {
-            const T1Tensor &t1 = ccsd.t1Amps;
+        auto MakeVijkabc = [&ccsd, &eri, nOcc, nVirt]() {
+            const T1Tensor &t1 = ccsd.t1;
 
             //ia,jkbc -> iajkbc -> ijkabc
-            Tensor<double, 6> Vijkabc = t1.contract(moTEI.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
-                                                                array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
+            Tensor<double, 6> Vijkabc = t1.contract(eri.slice(array<Eigen::Index, 4>{0, 0, nOcc, nOcc},
+                                                              array<Eigen::Index, 4>{nOcc, nOcc, nVirt, nVirt}),
                                                     array<IdxP, 0>{}).shuffle(array<int, 6>{0, 2, 3, 1, 4, 5});
 
             //P(i/jk) * P(a/bc)
@@ -179,14 +186,14 @@ namespace SCESS {
         double tCorrectionEnergy = 0.0; {
             Tensor<double, 6> Wijkabc = MakeWijkabc();
 
-            if(thread)
-                if(thread->ShouldStop())
+            if (thread)
+                if (thread->ShouldStop())
                     return 0.0;
 
             Tensor<double, 6> sumTensor = (Wijkabc + MakeVijkabc()) / MakeDijkabc();
 
-            if(thread)
-                if(thread->ShouldStop())
+            if (thread)
+                if (thread->ShouldStop())
                     return 0.0;
 
             Tensor<double, 0> correctionETensor = Wijkabc.contract(sumTensor, array<IdxP, 6>{
@@ -202,4 +209,6 @@ namespace SCESS {
 
         return (1.0 / 36.0) * tCorrectionEnergy;
     }
+    //
+    //
 }

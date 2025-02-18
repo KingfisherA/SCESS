@@ -1,21 +1,24 @@
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include"IntegralTransforms.h"
-
+//
 #include "IntegralsF12.h"
 #include "Tensor/TensorOperations.h"
-#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/HF/HF.h"
 #include "Quantum/Basis/BasisSet.h"
-#include "Utilities/Utilities.h"
 
-namespace SCESS::Integrals {
+//
+//
+namespace SCESS::Integrals::Transforms {
+    //
+    //
     using namespace Eigen;
-
-    TEITensor Transforms::TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C, bool convertChemToPhys) {
+    //
+    TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C, bool convertChemToPhys) {
         return TransformTEI(tei, C, C, C, C, convertChemToPhys);
     }
-
-    TEITensor Transforms::TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B,
-                                       const Eigen::MatrixXd &C, const Eigen::MatrixXd &D, bool convertChemToPhys) {
+    //
+    TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B,
+                           const Eigen::MatrixXd &C, const Eigen::MatrixXd &D, bool convertChemToPhys) {
         //Note that the tei tensors are in chemists’ notation
 
         //tei(p,q,r,s)= C(mu,p)*C(nu,q)*tei(mu, nu, kap, lam)*C(kap,r)*C(lam, s)
@@ -71,14 +74,14 @@ namespace SCESS::Integrals {
 
         return transformed4;
     }
-
-    void Transforms::TransformF12Basis(const F12BasisSet &basisSet,
-                                       const Eigen::MatrixXd &HF_Density,
-                                       const Eigen::MatrixXd &C_HF,
-                                       MolInts &mints,
-                                       F12::F12Integrals &f12Ints,
-                                       bool convertChemToPhys,
-                                       Eigen::MatrixXd *fockOut) {
+    //
+    void TransformF12Basis(const F12BasisSet &basisSet,
+                           const Eigen::MatrixXd &HF_Density,
+                           const Eigen::MatrixXd &C_HF,
+                           MolInts &mints,
+                           F12::F12Integrals &f12Ints,
+                           bool convertChemToPhys,
+                           Eigen::MatrixXd *fockOut) {
         using namespace Eigen;
 
         const auto nOBS = (Index) basisSet.GetNoHFFuncs();
@@ -176,8 +179,8 @@ namespace SCESS::Integrals {
         if (fockOut)
             *fockOut = std::move(F);
     }
-
-    TEITensor Transforms::AntisymmetriseTEI(const TEITensor &tei) {
+    //
+    TEITensor AntisymmetriseTEI(const TEITensor &tei) {
         TEITensor transformed(tei.dimensions());
 
         for (Index p = 0; p < transformed.dimension(0); ++p)
@@ -188,8 +191,8 @@ namespace SCESS::Integrals {
 
         return transformed;
     }
-
-    TEITensor Transforms::AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
+    //
+    TEITensor AntisymmetriseIntegrateOutSpinClosedShell(const TEITensor &moTEI) {
         Eigen::DSizes<Index, 4> dimensions = moTEI.dimensions();
 
         //Make the tensor twice as big to hold the spin-integrated integrals
@@ -217,8 +220,8 @@ namespace SCESS::Integrals {
 
         return transformed;
     }
-
-    TEITensor Transforms::ConvertChemistsToPhysicists(const TEITensor &tei) {
+    //
+    TEITensor ConvertChemistsToPhysicists(const TEITensor &tei) {
         //mu, nu, kap, lam -> mu, kap, nu, lam
         return tei.Shuffle4({0, 2, 1, 3});
 
@@ -233,4 +236,11 @@ namespace SCESS::Integrals {
 
         //return transformed;
     }
+    //
+    TEITensor ConvertPhysicistsToChemists(const TEITensor &tei) {
+        //mu, nu, kap, lam -> mu, kap, nu, lam
+        return tei.Shuffle4({0, 2, 1, 3});
+    }
+    //
+    //
 }

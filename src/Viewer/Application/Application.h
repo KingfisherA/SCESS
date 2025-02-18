@@ -1,7 +1,5 @@
 #pragma once
 
-#include<Quantum/QuantumPCH.h>
-
 #include "GraphicsEngine/Application/GraphicsApp.h"
 #include"GraphicsEngine/Utilities/Memory.h"
 #include"GraphicsEngine/GUI/Display.h"
@@ -24,7 +22,7 @@ namespace GEng {
     class Texture2D;
 }
 
-namespace SCESS {
+namespace SCESS::Viewer {
     class CalculationLayer;
 
     class Application : public GEng::GraphicsApp {

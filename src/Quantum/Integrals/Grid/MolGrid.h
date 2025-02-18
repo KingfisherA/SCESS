@@ -10,9 +10,10 @@ namespace SCESS {
     class Molecule;
 }
 
-namespace SCESS {
-
-    class MolecularGrid {
+namespace SCESS::Quadrature {
+    //
+    //
+    class MolGrid {
     public:
         struct Resolution {
             uint32_t radialPoints;
@@ -24,7 +25,7 @@ namespace SCESS {
         constexpr static Resolution HIGH_RES{20, LebedevOrder::LEBEDEV_110};
         constexpr static Resolution ULTRAFINE_RES{30, LebedevOrder::LEBEDEV_194};
 
-        explicit MolecularGrid(const Molecule* molecule, const BasisSet *basisSet);
+        explicit MolGrid(const Molecule *molecule, const BasisSet *basisSet);
 
         void Create(Resolution resolution);
 
@@ -52,4 +53,6 @@ namespace SCESS {
         const Molecule *mMolecule = nullptr;
         const BasisSet *mBasisSet = nullptr;
     };
+    //
+    //
 } // SCESS

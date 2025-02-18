@@ -1,26 +1,34 @@
-#include <Quantum/QuantumPCH.h>
-#include<iostream>
+#include <Quantum/Q_PCH.h>
 #include <GraphicsEngine/Tools/Threading.h>
-
-#include  "Quantum/DFT/DensityFunctional.h"
+//
+#include "Quantum/DFT/DFT.h"
 #include "Quantum/Basis/BasisSet.h"
-#include  "Quantum/Integrals/Integrals.h"
-#include  "Quantum/Integrals/Grid/MolecularGrid.h"
-
+#include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Integrals/Grid/MolGrid.h"
 #include "xc.h"
-#include "XCFunctionals.h"
-#include  "Quantum/Integrals/Grid/Quadrature.h"
+#include "XC.h"
+#include "Quantum/Integrals/Grid/Quadrature.h"
 
 //
 //
-namespace SCESS {
+namespace SCESS::DFT {
     using namespace Eigen;
-
-    uRef<KSWavefunction> DensityFunctional::KohnShamDFT(const Molecule &mol,
-                                                        const BasisSet &basis,
-                                                        MolecularGrid::Resolution gridRes,
-                                                        const GEng::Thread *thread,
-                                                        std::stringstream *console) {
+    using namespace Quadrature;
+    //
+    //
+    MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
+                                    const MatrixXd &Density);
+    MatrixXd CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs);
+    void CalculateXCMatrix(const MolGrid &grid,
+                           MatrixXd &ExchangeCorr,
+                           double &E_XC);
+    //
+    //
+    DFT::KS_Wfn KS_DFT(const Molecule &mol,
+                       const BasisSet &basis,
+                       MolGrid::Resolution gridRes,
+                       const GEng::Thread *thread,
+                       std::stringstream *console) {
         if (console) {
             *console << "--- Kohn-Sham Density Functional Theory ---\n";
             *console << "--- Selected Functionals ---\n";
@@ -34,7 +42,7 @@ namespace SCESS {
 
         if (thread)
             if (thread->ShouldStop())
-                return nullptr;
+                return {};
 
         if (console)
             *console << "Molecular Integrals Evaluated!\n";
@@ -56,14 +64,14 @@ namespace SCESS {
 
         if (console)
             *console << "Creating Molecular Gauss-Chebyshev-Lebedev grid...\n";
-        MolecularGrid molecularGrid(&mol, &basis);
-        molecularGrid.Create(gridRes);
+        MolGrid MolGrid(&mol, &basis);
+        MolGrid.Create(gridRes);
         if (console) {
             *console << "Molecular Gauss-Chebyshev-Lebedev grid created with:\n";
             *console << "   - Radial Points: " << gridRes.radialPoints << '\n';
             *console << "   - Lebedev Points: " << Quadrature::nLebedevPoints[(int) gridRes.lebedevOrder] << '\n';
-            *console << "   - Atomic Grids: " << molecularGrid.GetAtomicGrids().size() << '\n';
-            *console << "   - Total Number of Points: " << molecularGrid.GetGridSize() << '\n';
+            *console << "   - Atomic Grids: " << MolGrid.GetAtomicGrids().size() << '\n';
+            *console << "   - Total Number of Points: " << MolGrid.GetGridSize() << '\n';
         }
 
 
@@ -72,7 +80,7 @@ namespace SCESS {
         // The Kohn-Sham Fock matrix
         MatrixXd F;
         // The one particle density matrices
-        MatrixXd Density = MatrixXd::Zero(S.rows(), S.cols());
+        MatrixXd D = MatrixXd::Zero(S.rows(), S.cols());
         //The J coulomb matrix
         MatrixXd J = MatrixXd::Zero(S.rows(), S.cols());
         //The exchange-correlation matrix
@@ -80,12 +88,12 @@ namespace SCESS {
         // The wavefunction coefficient matrix
         MatrixXd C;
         // The Kohn-Sham orbital energies
-        VectorXd Energies;
+        VectorXd Ep;
 
         //The total electronic energy of the system
-        double E = 0.0, lastE = 0.0;
+        double E_KS = 0.0, lastE = 0.0;
         //Nuclear-nuclear repulsion energy
-        double Vnn = mol.CalculateNuclearRepulsion();
+        double Vnn = mol.CalculateVnn();
 
         constexpr double E_CONVERGENCE = 1e-5;
         constexpr uint32_t MAX_ITERATIONS = 500;
@@ -97,92 +105,92 @@ namespace SCESS {
             //Poll to check whether we should cancel the calculation
             if (thread)
                 if (thread->ShouldStop())
-                    return nullptr;
+                    return {};
 
             F = H + 2.0 * J + ExchangeCorr;
             MatrixXd Fprime = U.transpose() * F * U;
 
             SelfAdjointEigenSolver<MatrixXd> eigensolver2(Fprime);
-            Energies = eigensolver2.eigenvalues().real();
+            Ep = eigensolver2.eigenvalues().real();
             C = U * eigensolver2.eigenvectors().real();
 
             MatrixXd NewDensity = CreateDensityMatrix(C, nElectrons);
 
             if (iter == 0)
-                Density = NewDensity;
+                D = NewDensity;
             else
-                Density = ALPHA * Density + (1 - ALPHA) * NewDensity;
+                D = ALPHA * D + (1 - ALPHA) * NewDensity;
 
-            molecularGrid.SetDensity(Density);
-            molecularGrid.CorrectDensities();
+            MolGrid.SetDensity(D);
+            MolGrid.CorrectDensities();
 
-            J = CreateColoumbMatrixTEI(tei, Density);
+            J = CreateColoumbMatrixTEI(tei, D);
             //Exchange-correlation energy
             double E_XC = 0.0;
-            CalculateXCMatrix(molecularGrid, ExchangeCorr, E_XC);
+            CalculateXCMatrix(MolGrid, ExchangeCorr, E_XC);
 
             //Single electron energy
-            double kineticPotentialE = 2.0 * (Density * H).trace();
+            double kineticPotentialE = 2.0 * (D * H).trace();
             //Coulomb repulsion energy
-            double electronRepulsion = 2.0 * (Density * J).trace();
+            double electronRepulsion = 2.0 * (D * J).trace();
 
-            E = kineticPotentialE + electronRepulsion + Vnn + E_XC;
+            E_KS = kineticPotentialE + electronRepulsion + Vnn + E_XC;
 
-            double dE = abs(E - lastE);
-            if (console) *console << "   DFT(" << iter << "): E(DFT) = " << E << "          dE = " << dE << '\n';
+            double dE = abs(E_KS - lastE);
+            if (console) *console << "   DFT(" << iter << "): E(DFT) = " << E_KS << "          dE = " << dE << '\n';
 
             if (dE < E_CONVERGENCE) {
                 if (console) *console << "--- DFT procedure has converged! ---\n";
                 break;
             }
-            lastE = E;
+            lastE = E_KS;
         }
 
         if (console) {
             *console << "--- Final DFT Energy ---\n";
-            *console << "  E(DFT) = " << E << " hartrees\n";
+            *console << "  E(DFT) = " << E_KS << " hartrees\n";
         }
 
-        VectorXi Occupation = VectorXi::Zero(H.rows());
+        VectorXi Occ = VectorXi::Zero(H.rows());
 
         for (int64_t i = ((int64_t) mol.GetNoElectrons() / 2) - 1; i >= 0; --i)
-            Occupation(i) = 2;
+            Occ(i) = 2;
 
-        return std::make_unique<KSWavefunction>(F, C, Density, E, Energies, Occupation, mints);
+        return KS_Wfn{E_KS, F, D, C, Ep, Occ};
     }
-
-    MatrixXd DensityFunctional::CreateColoumbMatrixTEI(const TEITensor &tei,
-                                                       const MatrixXd &Density) {
+    //
+    MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
+                                    const MatrixXd &Density) {
         MatrixXd J = MatrixXd::Zero(Density.rows(), Density.cols());
 
-        for (Eigen::Index i = 0; i < J.rows(); i++)
-            for (Eigen::Index j = 0; j < J.rows(); j++)
-                for (Eigen::Index k = 0; k < J.rows(); k++)
-                    for (Eigen::Index l = 0; l < J.rows(); l++) {
+        for (Index i = 0; i < J.rows(); i++)
+            for (Index j = 0; j < J.rows(); j++)
+                for (Index k = 0; k < J.rows(); k++)
+                    for (Index l = 0; l < J.rows(); l++) {
                         //Coulomb integral; <ik | jl> = (ij | kl)
                         J(i, j) += Density(k, l) * tei(i, j, k, l);
                     }
 
         return J;
     }
-
-    MatrixXd DensityFunctional::CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs) {
-        MatrixXd Density = MatrixXd::Zero(C.rows(), C.rows());
-        for (int i = 0; i < Density.rows(); i++) {
-            for (int j = 0; j < Density.rows(); j++) {
+    //
+    MatrixXd CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs) {
+        MatrixXd D = MatrixXd::Zero(C.rows(), C.rows());
+        for (int i = 0; i < D.rows(); i++) {
+            for (int j = 0; j < D.rows(); j++) {
                 for (int k = 0; k < (Nelecs / 2); k++) {
-                    Density(i, j) += C(i, k) * C(j, k);
+                    D(i, j) += C(i, k) * C(j, k);
                 }
             }
         }
 
-        return Density;
+        return D;
     }
-
-    void DensityFunctional::CalculateXCMatrix(const MolecularGrid &grid,
-                                              MatrixXd &ExchangeCorr,
-                                              double &E_XC) {
-        for (Eigen::Index i = 0; i < ExchangeCorr.size(); i++)
+    //
+    void CalculateXCMatrix(const MolGrid &grid,
+                           MatrixXd &ExchangeCorr,
+                           double &E_XC) {
+        for (Index i = 0; i < ExchangeCorr.size(); i++)
             ExchangeCorr.data()[i] = 0.0;
 
         VectorXd densities = grid.GetDensities();
@@ -201,10 +209,10 @@ namespace SCESS {
         VectorXd densitiesb = densities * 0.5;
 
         // calculate exchange energies and potential
-        XCFunctionals::xalpha_x_functional(densitiesa, densitiesb, ex, vxa, vxb);
+        XC::xalpha_x_functional(densitiesa, densitiesb, ex, vxa, vxb);
 
         // calculate correlation energy and potential
-        XCFunctionals::vwm_c_functional(densitiesa, densitiesb, ec, vca, vcb);
+        XC::vwm_c_functional(densitiesa, densitiesb, ec, vca, vcb);
 
         // calculate total exchange-correlation energy
         E_XC = weights.dot(ex + ec);
@@ -221,4 +229,6 @@ namespace SCESS {
             }
         }
     }
+    //
+    //
 }

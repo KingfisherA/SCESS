@@ -1,6 +1,5 @@
 #pragma once
 //Adapted from https://github.com/nihaljn/marching-cubes
-
 #include<glm/vec3.hpp>
 #include<utility>
 #include<condition_variable>
@@ -11,14 +10,20 @@
 
 #include "GraphicsEngine/Tools/Threading.h"
 
-namespace SCESS {
+namespace SCESS::Viewer {
     class ScalarField;
+}
 
+//
+//
+namespace SCESS::Viewer {
+    //
+    //
     struct GridCell {
         glm::vec3 vertex[8];
         float value[8];
     };
-
+    //
     template<typename T>
     struct Triangle {
         typedef glm::vec<3, T, glm::packed_highp> VecT;
@@ -58,7 +63,9 @@ namespace SCESS {
     public:
         VecT mVertices[3];
     };
-
+    //
+    //
+    //
     class MarchingCubes {
     public:
         /// edgeToVertices[i] = {a, b} => edge i joins vertices a and b
@@ -102,7 +109,9 @@ namespace SCESS {
     private:
         glm::vec3 mIntersections[12] = {};
     };
-
+    //
+    //
+    //
     class ScalarField {
     public:
         typedef std::vector<std::vector<std::vector<float> > > TensorTy;
@@ -183,7 +192,9 @@ namespace SCESS {
         TensorTy mField;
         GEng::Thread mThread;
     };
-
+    //
+    //
+    //
     class TriSurf {
     public:
         TriSurf() {
@@ -256,4 +267,6 @@ namespace SCESS {
         bool mUsingMultithreading = false;
         GEng::Thread mThread;
     };
+    //
+    //
 }

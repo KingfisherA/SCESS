@@ -1,26 +1,31 @@
 //Class for performing integral calculations
 //Code modified from https://github.com/ifilot/pyqint?tab=readme-ov-file
 
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include<libint2.hpp>
 #include<memory_resource>
-
+//
 #include "GraphicsEngine/Tools/Threading.h"
-
+//
 #include "Integrals.h"
 #include "IntegralTransforms.h"
 #include "Quantum/Basis/BasisSet.h"
-#include "Quantum/Basis/Gaussian.h"
+#include "Quantum/Basis/CGF.h"
 #include "Quantum/Molecule.h"
 
-namespace SCESS {
-    using namespace Integrals::Utils;
-
+//
+//
+namespace SCESS::Integrals {
+    //
+    //
+    using namespace Utils;
+    //
+    //
 #pragma region Helper Functions
-
-    Integrals::MolInts Integrals::EvaluateMolecularIntegrals(const BasisSet &basisSet,
-                                                      const std::vector<Atom> &atoms,
-                                                      const GEng::Thread *thread) {
+    //
+    MolInts EvaluateMolecularIntegrals(const BasisSet &basisSet,
+                                       const std::vector<Atom> &atoms,
+                                       const GEng::Thread *thread) {
         Eigen::MatrixXd S =
                 Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
         Eigen::MatrixXd T =
@@ -35,36 +40,36 @@ namespace SCESS {
                     return {};
 
             for (Eigen::Index j = i; j < basisSet.GetNoCGFs(); j++) {
-                const ContractedGaussian &c1 = basisSet.Get(i);
-                const ContractedGaussian &c2 = basisSet.Get(j);
+                const CGF &c1 = basisSet.Get(i);
+                const CGF &c2 = basisSet.Get(j);
 
                 //Overlap Evaluation
-                S(i, j) = S(j, i) = EvaluateOverlap(c1, c2);
+                S(i, j) = S(j, i) = OverlapCGF(c1, c2);
 
                 //Kinetic Evaluation
-                T(i, j) = T(j, i) = EvaluateKinetic(c1, c2);
+                T(i, j) = T(j, i) = KineticCGF(c1, c2);
 
                 double Vn = 0.0;
                 for (const Atom &a: atoms) {
-                    Vn += EvaluateNuclear(c1, c2, a.GetPos(), a.GetCharge(), ax, ay, az);
+                    Vn += NuclearCGF(c1, c2, a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = Vn;
             }
         }
 
 
-        TEITensor tei = TwoElectronRepulsionTensorMultithread(basisSet, thread);
+        TEITensor tei = ERITensorMultithread(basisSet, thread);
 
         return MolInts{S, T, V, tei};
     }
 
 #pragma endregion
-
+    //
 #pragma region Overlap
 
-    double Integrals::Overlap1D(double gamma,
-                                int angX1, double posX1,
-                                int angX2, double posX2) {
+    double Overlap1D(double gamma,
+                     int angX1, double posX1,
+                     int angX2, double posX2) {
         // Only even values of i and j will persist
         // Note that(Px - Ax) terms reduce to zero if the posX coords are relative to the centre
         double result = 0.0;
@@ -76,7 +81,7 @@ namespace SCESS {
         return result;
     }
 
-    double Integrals::OverlapGaussian(const Gaussian &gto1, const Gaussian &gto2) {
+    double OverlapPGF(const PGF &gto1, const PGF &gto2) {
         const auto &exp1 = gto1.mExponent;
         const auto &exp2 = gto2.mExponent;
         const auto &ang1 = gto1.mAngular;
@@ -100,48 +105,48 @@ namespace SCESS {
         return Eab * wx * wy * wz;
     }
 
-    double Integrals::EvaluateOverlap(const ContractedGaussian &c1, const ContractedGaussian &c2) {
+    double OverlapCGF(const CGF &c1, const CGF &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
             for (size_t j = 0; j < c2.Size(); j++) {
-                const Gaussian &g1 = c1.Get(i);
-                const Gaussian &g2 = c2.Get(j);
+                const PGF &g1 = c1.Get(i);
+                const PGF &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * Integrals::OverlapGaussian(g1, g2);
+                        g2.mCoeff * OverlapPGF(g1, g2);
             }
         }
 
         return result;
     }
 
-    Eigen::MatrixXd Integrals::CalculateOverlapMatrix(const BasisSet &basisSet) {
+    Eigen::MatrixXd CalculateOverlapMatrix(const BasisSet &basisSet) {
         Eigen::MatrixXd S = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         for (Eigen::Index i = 0; i < S.rows(); i++)
             for (Eigen::Index j = i; j < S.cols(); j++)
-                S(i, j) = S(j, i) = EvaluateOverlap(basisSet.Get(i), basisSet.Get(j));
+                S(i, j) = S(j, i) = OverlapCGF(basisSet.Get(i), basisSet.Get(j));
 
         return S;
     }
 
 
-    Eigen::MatrixXd Integrals::CalculateMixedOverlapMatrix(const BasisSet &set1, const BasisSet &set2) {
+    Eigen::MatrixXd CalculateMixedOverlapMatrix(const BasisSet &set1, const BasisSet &set2) {
         Eigen::MatrixXd S = Eigen::MatrixXd::Zero(set1.GetNoCGFs(), set2.GetNoCGFs());
 
         for (Eigen::Index i = 0; i < S.rows(); i++)
             for (Eigen::Index j = i; j < S.cols(); j++)
-                S(i, j) = S(j, i) = EvaluateOverlap(set1.Get(i), set2.Get(j));
+                S(i, j) = S(j, i) = OverlapCGF(set1.Get(i), set2.Get(j));
 
         return S;
     }
 
 #pragma endregion
-
+    //
 #pragma region Nuclear
 
-    void Integrals::A_Array(AArray &aArray, int ang1, int ang2, double posA_P, double posB_P, double posNuc_P,
-                            double gamma) {
+    void A_Array(AArray &aArray, int ang1, int ang2, double posA_P, double posB_P, double posNuc_P,
+                 double gamma) {
         auto AFactor = [](int i, int r, int u, int ang1, int ang2,
                           double posA_P, double posB_P, double posNuc_P, double gamma)-> double {
             double numerator = powMinus1(i) * PolynomialCoeff(i, ang1, ang2, posA_P, posB_P) * powMinus1(u) *
@@ -161,9 +166,9 @@ namespace SCESS {
                 }
     }
 
-    double Integrals::NuclearGaussian(const Gaussian &gto1, const Gaussian &gto2,
-                                      const Eigen::Vector3d &nuclearPos,
-                                      AArray &ax, AArray &ay, AArray &az) {
+    double NuclearPGF(const PGF &gto1, const PGF &gto2,
+                      const Eigen::Vector3d &nuclearPos,
+                      AArray &ax, AArray &ay, AArray &az) {
         using std::numbers::pi;
 
         const auto &exp1 = gto1.mExponent;
@@ -210,24 +215,24 @@ namespace SCESS {
         return -2.0 * pi / gamma * exp(-gto1.mExponent * gto2.mExponent * r2 / gamma) * result;
     }
 
-    double Integrals::EvaluateNuclear(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                      const Eigen::Vector3d &nuclearPos, const int charge,
-                                      AArray &ax, AArray &ay, AArray &az) {
+    double NuclearCGF(const CGF &c1, const CGF &c2,
+                      const Eigen::Vector3d &nuclearPos, const int charge,
+                      AArray &ax, AArray &ay, AArray &az) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
             for (size_t j = 0; j < c2.Size(); j++) {
-                const Gaussian &g1 = c1.Get(i);
-                const Gaussian &g2 = c2.Get(j);
+                const PGF &g1 = c1.Get(i);
+                const PGF &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * Integrals::NuclearGaussian(g1, g2, nuclearPos, ax, ay, az);
+                        g2.mCoeff * NuclearPGF(g1, g2, nuclearPos, ax, ay, az);
             }
         }
 
         return result * (double) charge;
     }
 
-    Eigen::MatrixXd Integrals::CalculateNuclearMatrix(const BasisSet &basisSet, const std::vector<Atom> &atoms) {
+    Eigen::MatrixXd CalculateNuclearMatrix(const BasisSet &basisSet, const std::vector<Atom> &atoms) {
         Eigen::MatrixXd V = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         AArray ax, ay, az;
@@ -235,8 +240,8 @@ namespace SCESS {
             for (size_t j = i; j < V.rows(); j++) {
                 double result = 0.0;
                 for (const Atom &a: atoms) {
-                    result += EvaluateNuclear(basisSet.Get(i), basisSet.Get(j),
-                                              a.GetPos(), a.GetCharge(), ax, ay, az);
+                    result += NuclearCGF(basisSet.Get(i), basisSet.Get(j),
+                                         a.GetPos(), a.GetCharge(), ax, ay, az);
                 }
                 V(i, j) = V(j, i) = result;
             }
@@ -244,20 +249,20 @@ namespace SCESS {
         return V;
     }
 #pragma endregion
-
+    //
 #pragma region Kinetic
 
-    double Integrals::KineticGaussian(const Gaussian &gto1, const Gaussian &gto2) {
+    double KineticPGF(const PGF &gto1, const PGF &gto2) {
         double term0 = gto2.mExponent *
                        (2.0 * (gto2.mAngular[0] + gto2.mAngular[1] + gto2.mAngular[2]) + 3.0) *
-                       OverlapGaussian(gto1, gto2);
+                       OverlapPGF(gto1, gto2);
 
         auto OverlapAngMom = [&gto1, &gto2](Eigen::Vector3i l) {
-            return OverlapGaussian(gto1,
-                                   {
-                                       gto2.mExponent, gto2.mCoeff, gto2.mPosition,
-                                       gto2.mAngular + l
-                                   });
+            return OverlapPGF(gto1,
+                              {
+                                  gto2.mExponent, gto2.mCoeff, gto2.mPosition,
+                                  gto2.mAngular + l
+                              });
         };
 
         double term1 = -2.0 * std::pow(gto2.mExponent, 2.0) * (
@@ -275,28 +280,28 @@ namespace SCESS {
         return term0 + term1 + term2;
     }
 
-    double Integrals::EvaluateKinetic(const ContractedGaussian &c1, const ContractedGaussian &c2) {
+    double KineticCGF(const CGF &c1, const CGF &c2) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++) {
             for (size_t j = 0; j < c2.Size(); j++) {
-                const Gaussian &g1 = c1.Get(i);
-                const Gaussian &g2 = c2.Get(j);
+                const PGF &g1 = c1.Get(i);
+                const PGF &g2 = c2.Get(j);
                 result += g1.mNorm * g2.mNorm * g1.mCoeff *
-                        g2.mCoeff * Integrals::KineticGaussian(g1, g2);
+                        g2.mCoeff * KineticPGF(g1, g2);
             }
         }
 
         return result;
     }
 
-    Eigen::MatrixXd Integrals::CalculateKineticMatrix(const BasisSet &basisSet) {
+    Eigen::MatrixXd CalculateKineticMatrix(const BasisSet &basisSet) {
         Eigen::MatrixXd K = Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
 
         //i=Rows, j=Cols
         for (size_t i = 0; i < K.rows(); i++) {
             for (size_t j = i; j < K.cols(); j++) {
-                K(i, j) = K(j, i) = EvaluateKinetic(basisSet.Get(i), basisSet.Get(j));
+                K(i, j) = K(j, i) = KineticCGF(basisSet.Get(i), basisSet.Get(j));
             }
         }
 
@@ -304,10 +309,10 @@ namespace SCESS {
     }
 
 #pragma endregion
-
+    //
 #pragma region Two Electron Integrals
-
-    TEITensor Integrals::TwoElectronRepulsionTensor(const BasisSet &basisSet, const GEng::Thread *thread) {
+    //
+    TEITensor EvaluateERITensor(const BasisSet &basisSet, const GEng::Thread *thread) {
         TEITensor returnTensor((Eigen::Index) basisSet.GetNoCGFs(),
                                (Eigen::Index) basisSet.GetNoCGFs(),
                                (Eigen::Index) basisSet.GetNoCGFs(),
@@ -325,7 +330,7 @@ namespace SCESS {
                             return {};
 
                     for (Eigen::Index l = 0; l < basisSet.GetNoCGFs(); l++) {
-                        returnTensor(i, j, k, l) = TwoElectronRepulsion(
+                        returnTensor(i, j, k, l) = ERI_CGF(
                             basisSet.Get(i),
                             basisSet.Get(j),
                             basisSet.Get(k),
@@ -339,8 +344,8 @@ namespace SCESS {
         return returnTensor;
     }
 
-    TEITensor Integrals::TwoElectronRepulsionTensorMultithread(const BasisSet &basisSet,
-                                                               const GEng::Thread *parentThread) {
+    TEITensor ERITensorMultithread(const BasisSet &basisSet,
+                                   const GEng::Thread *parentThread) {
         using IdxTuple = Eigen::Vector4<uint8_t>;
         using YoshMap_T = std::unordered_map<size_t, std::vector<IdxTuple> >;
 
@@ -395,11 +400,11 @@ namespace SCESS {
                         return;
 
                 const auto &indices = it->second[0];
-                integralResult[it->first] = TwoElectronRepulsion(basisSet.Get(indices.x()),
-                                                                 basisSet.Get(indices.y()),
-                                                                 basisSet.Get(indices.z()),
-                                                                 basisSet.Get(indices.w()),
-                                                                 bx, by, bz);
+                integralResult[it->first] = ERI_CGF(basisSet.Get(indices.x()),
+                                                    basisSet.Get(indices.y()),
+                                                    basisSet.Get(indices.z()),
+                                                    basisSet.Get(indices.w()),
+                                                    bx, by, bz);
                 ++it;
             }
         };
@@ -461,31 +466,31 @@ namespace SCESS {
         return teiTensor;
     }
 
-    double Integrals::TwoElectronRepulsion(const ContractedGaussian &c1, const ContractedGaussian &c2,
-                                           const ContractedGaussian &c3, const ContractedGaussian &c4,
-                                           BArray &bx, BArray &by, BArray &bz) {
+    double ERI_CGF(const CGF &c1, const CGF &c2,
+                   const CGF &c3, const CGF &c4,
+                   BArray &bx, BArray &by, BArray &bz) {
         double result = 0.0;
 
         for (size_t i = 0; i < c1.Size(); i++)
             for (size_t j = 0; j < c2.Size(); j++)
                 for (size_t k = 0; k < c3.Size(); k++)
                     for (size_t l = 0; l < c4.Size(); l++) {
-                        const Gaussian &g1 = c1.Get(i),
+                        const PGF &g1 = c1.Get(i),
                                 g2 = c2.Get(j),
                                 g3 = c3.Get(k),
                                 g4 = c4.Get(l);
 
                         result += g1.mNorm * g2.mNorm * g3.mNorm * g4.mNorm *
-                                g1.mCoeff * g2.mCoeff * g3.mCoeff * g4.mCoeff * TwoElectronRepulsion(
-                                    g1, g2, g3, g4, bx, by, bz);
+                                g1.mCoeff * g2.mCoeff * g3.mCoeff * g4.mCoeff *
+                                ERI_PGF(g1, g2, g3, g4, bx, by, bz);
                     }
 
         return result;
     }
-
-    double Integrals::TwoElectronRepulsion(const Gaussian &gto1, const Gaussian &gto2,
-                                           const Gaussian &gto3, const Gaussian &gto4,
-                                           BArray &bx, BArray &by, BArray &bz) {
+    //
+    double ERI_PGF(const PGF &gto1, const PGF &gto2,
+                   const PGF &gto3, const PGF &gto4,
+                   BArray &bx, BArray &by, BArray &bz) {
         constexpr double pi = std::numbers::pi_v<double>;
 
         const Eigen::Vector3d &a = gto1.mPosition;
@@ -550,10 +555,10 @@ namespace SCESS {
                exp(-alphac * alphad * rcd2 / gamma2) * sum;
     }
 
-    void Integrals::B_Array(BArray &bArray, int l1, int l2, int l3, int l4,
-                            double p, double a, double b, double q,
-                            double c, double d,
-                            double g1, double g2, double delta) {
+    void B_Array(BArray &bArray, int l1, int l2, int l3, int l4,
+                 double p, double a, double b, double q,
+                 double c, double d,
+                 double g1, double g2, double delta) {
         auto factRatio2 = [](int a, int b)-> double {
             return Factorial(a) / (Factorial(b) *
                                    Factorial(a - 2 * b));

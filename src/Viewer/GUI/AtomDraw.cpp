@@ -1,7 +1,11 @@
 #include "AtomDraw.h"
 #include<glm/glm.hpp>
 
-namespace SCESS {
+//
+//
+namespace SCESS::Viewer {
+    //
+    //
     std::unordered_map<std::string_view, AtomStyle> AtomStyle::sAtomStyle =
     {
         {"H", {{1.0f, 1.0f, 1.0f}, 1.0f}},
@@ -11,7 +15,7 @@ namespace SCESS {
         {"O", {{1.0f, 0.0f, 0.0f}, 1.1f}},
         {"B", {{0.100f, 0.714f, 0.757f}, 2.4f}}
     };
-
+    //
     glm::mat3 CalculateBondRotMatrix(const glm::vec3 &bondDirNorm, const glm::vec3 &startingDirNorm) {
         glm::vec3 v = glm::cross(bondDirNorm, startingDirNorm);
         float c = glm::dot(bondDirNorm, startingDirNorm);
@@ -24,5 +28,6 @@ namespace SCESS {
 
         return glm::mat3(1.0f) + vSkew + vSkew * vSkew / (1 + c);
     }
-
+    //
+    //
 }

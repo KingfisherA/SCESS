@@ -1,9 +1,12 @@
 #pragma once
 
-namespace SCESS::Res{
-class ShaderSources {
-public:
-    static const char *GetMoleculeColourDiffuseGLSL();
-    static const char* GetSolidColourGLSL();
-};
+//
+//
+namespace SCESS::Res::ShaderSources {
+    //
+    //
+    const char *GetMoleculeColourDiffuseGLSL();
+    const char *GetSolidColourGLSL();
+    //
+    //
 }

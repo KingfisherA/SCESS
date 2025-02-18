@@ -3,14 +3,20 @@
 #include<iostream>
 #include<fstream>
 
-namespace SCESS::Res {
-    using namespace boost;
 
+//
+//
+namespace SCESS::Res {
+    //
+    //
+    using namespace boost;
+    //
+    //
     AssetsFolder &AssetsFolder::Get() {
         static AssetsFolder instance;
         return instance;
     }
-
+    //
     bool AssetsFolder::Init(const char *settingsFile) {
         using namespace nlohmann;
 
@@ -36,4 +42,6 @@ namespace SCESS::Res {
         std::cout << "Found assets directory at " << mAssetsPath << "\n";
         return true;
     }
+    //
+    //
 }

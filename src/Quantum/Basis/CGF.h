@@ -1,23 +1,22 @@
 #pragma once
 #include<Eigen/Core>
-#include<numbers>
-#include<unordered_map>
 #include<boost/math/special_functions/factorials.hpp>
 #include<vector>
 
 namespace SCESS {
     class BasisSet;
+    class Molecule;
 }
 
 namespace SCESS {
-    class Molecule;
-
-    //Represents a single gaussian function with three polynomial components
-    class Gaussian {
+    //
+    //
+    //Represents a primitive gaussian function with three Cartesian harmonics
+    class PGF {
     public:
-        Gaussian(double exponent, double coeff, const Eigen::Vector3d &position = {0., 0., 0.},
-                 const Eigen::Vector3i &angular = {0, 0, 0}) : mPosition(position), mExponent(exponent),
-                                                               mAngular(angular), mCoeff(coeff), mNorm(1.0) {
+        PGF(double exponent, double coeff, const Eigen::Vector3d &position = {0., 0., 0.},
+            const Eigen::Vector3i &angular = {0, 0, 0}) : mPosition(position), mExponent(exponent),
+                                                          mAngular(angular), mCoeff(coeff), mNorm(1.0) {
         }
 
         void CalculateNormalisationConstant();
@@ -34,31 +33,31 @@ namespace SCESS {
         double mNorm;
     };
 
-
+    //
     //Represents a collection of Gaussian functions with the same position
     //which form the basis for a single atom
-    class ContractedGaussian {
+    class CGF {
     public:
-        ContractedGaussian() : mPosition({0.0, 0.0, 0.0}) {
+        CGF() : mPosition({0.0, 0.0, 0.0}) {
         }
 
-        ContractedGaussian(const ContractedGaussian &col) = default;
+        CGF(const CGF &col) = default;
 
-        explicit ContractedGaussian(const Eigen::Vector3d &position) : mPosition(position) {
+        explicit CGF(const Eigen::Vector3d &position) : mPosition(position) {
         }
 
-        [[nodiscard]] double Evaluate(const Eigen::Vector3d& pos) const;
-        [[nodiscard]] Eigen::Vector3d EvaluateGradient(const Eigen::Vector3d& pos) const;
+        [[nodiscard]] double Evaluate(const Eigen::Vector3d &pos) const;
+        [[nodiscard]] Eigen::Vector3d EvaluateGradient(const Eigen::Vector3d &pos) const;
 
-        Gaussian &Get(uint32_t i) {
+        PGF &Get(uint32_t i) {
             return mGaussians[i];
         }
 
-        const Gaussian &Get(uint32_t i) const {
+        const PGF &Get(uint32_t i) const {
             return mGaussians[i];
         }
 
-        void Add(const Eigen::Vector3i &angMom, const Gaussian &gaussianIn);
+        void Add(const Eigen::Vector3i &angMom, const PGF &gaussianIn);
 
         void UpdatePosition(const Eigen::Vector3d &pos) {
             mPosition = pos;
@@ -75,22 +74,21 @@ namespace SCESS {
             return mGaussians.size();
         }
 
-        std::vector<Gaussian> &GetGaussians() {
+        std::vector<PGF> &GetGaussians() {
             return mGaussians;
         }
 
-        const std::vector<Gaussian> &GetGaussians() const {
+        const std::vector<PGF> &GetGaussians() const {
             return mGaussians;
         }
 
     private:
         Eigen::Vector3d mPosition;
-        std::vector<Gaussian> mGaussians;
+        std::vector<PGF> mGaussians;
     };
-
+    //
     template<typename T>
     std::function<T(T, T, T)> GenerateMolecularWavefunction(const Eigen::VectorXd &coeffsIn,
                                                             const BasisSet &basisSet);
-
-
+    //
 }

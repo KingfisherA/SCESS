@@ -1,7 +1,9 @@
 #include "AssetFolder.h"
 #include "ShaderSources.h"
 
-namespace SCESS::Res {
+//
+//
+namespace SCESS::Res::ShaderSources {
     static const char *MOLECULE_COLOUR_DIFFUSE_GLSL = R"(#version 410
 
 #pragma remove
@@ -80,12 +82,15 @@ void main()
     fragColour = vec4(uColour, uOpacity);
 }
 #end(fShader))";
-
-    const char *ShaderSources::GetMoleculeColourDiffuseGLSL() {
+    //
+    //
+    const char *GetMoleculeColourDiffuseGLSL() {
         return MOLECULE_COLOUR_DIFFUSE_GLSL;
     }
-
-    const char *ShaderSources::GetSolidColourGLSL() {
+    //
+    const char *GetSolidColourGLSL() {
         return SOLID_COLOUR_GLSL;
     }
+    //
+    //
 }

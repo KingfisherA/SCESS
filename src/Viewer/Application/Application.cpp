@@ -1,9 +1,9 @@
+#include<Quantum/Q_PCH.h>
 #include "Viewer/Application/Application.h"
 #include <ImGui/imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "GraphicsEngine/Events/MouseEvents.h"
-#include "GraphicsEngine/Platform/Windows/Console.h"
 #include "GraphicsEngine/Platform/GPUContext.h"
 #include "GraphicsEngine/GUI/Display.h"
 #include "GraphicsEngine/3D/Texture.h"
@@ -15,8 +15,7 @@
 #include <filesystem>
 
 #include "xc.h"
-#include "Quantum/Basis/BasisSet.h"
-#include "Quantum/CC/CoupledCluster.h"
+#include "Quantum/CC/CC.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/AssetFolder.h"
 
@@ -35,7 +34,7 @@ int main(int argc, char **argv) {
 
     using namespace SCESS;
 
-    Application app;
+    Viewer::Application app;
 
     //Initilise libint2
     Integrals::LibInt::InitLibInt();
@@ -61,7 +60,7 @@ int main(int argc, char **argv) {
 
 #pragma endregion
 
-namespace SCESS {
+namespace SCESS::Viewer {
     using namespace GEng;
     // Constants
     constexpr float NEAR_PLANE = 0.1f;

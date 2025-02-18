@@ -1,11 +1,14 @@
 //Derived from DFTCXX
 //https://github.com/ifilot/dftcxx.git
-
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include "Quadrature.h"
 
-namespace SCESS {
-    double Quadrature::LEBEDEV_COEFFICIENTS[][4] = {
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
+    double LEBEDEV_COEFFICIENTS[][4] = {
         {1.000000000000, 0.000000000000, 0.000000000000, 0.166666666667},
         {-1.000000000000, 0.000000000000, 0.000000000000, 0.166666666667},
         {0.000000000000, 1.000000000000, 0.000000000000, 0.166666666667},
@@ -921,4 +924,6 @@ namespace SCESS {
         {0.525118572444, -0.836036015482, -0.159041710538, 0.005530248916},
         {-0.525118572444, -0.836036015482, -0.159041710538, 0.005530248916}
     };
+    //
+    //
 }

@@ -5,18 +5,21 @@
 
 //
 //
-namespace SCESS {
+namespace SCESS::Viewer {
+    //
+    //
     using namespace GEng;
-
+    //
+    //
 #pragma region Marching Cubes
-
+    //
     int MarchingCubes::CalculateCubeIndex(GridCell &cell, float isovalue) {
         int cubeIndex = 0;
         for (int i = 0; i < 8; i++)
             if (cell.value[i] < isovalue) cubeIndex |= (1 << i);
         return cubeIndex;
     }
-
+    //
     void MarchingCubes::GenerateIntersectionCoordinates(GridCell &cell, float isovalue) {
         int cubeIndex = CalculateCubeIndex(cell, isovalue);
         int intersectionsKey = edgeTable[cubeIndex];
@@ -33,7 +36,7 @@ namespace SCESS {
             intersectionsKey >>= 1;
         }
     }
-
+    //
     glm::vec3 MarchingCubes::Interpolate(glm::vec3 &v1, float val1, glm::vec3 &v2, float val2, float isovalue) {
         glm::vec3 interpolated;
         float mu = (isovalue - val1) / (val2 - val1);
@@ -44,7 +47,7 @@ namespace SCESS {
 
         return interpolated;
     }
-
+    //
     void MarchingCubes::TriangulateIntersections(std::vector<Triangle<float> > &triangles, int cubeIndex) {
         for (int i = 0; triangleTable[cubeIndex][i] != -1; i += 3) {
             Triangle<float> triangle;
@@ -53,24 +56,14 @@ namespace SCESS {
             triangles.push_back(triangle);
         }
     }
-
-    //void MarchingCubes::PrintTriangles(const std::vector<Triangle<float>>& triangles)
-    //{
-    //	for (int i = 0; i < (int)triangles.size(); i++)
-    //	{
-    //		for (int j = 0; j < 3; j++)
-    //			std::cout << triangles[i][j].x << ",\t" << triangles[i][j].y << ",\t" << triangles[i][j].z << "\n";
-    //		std::cout << "\n";
-    //	}
-    //}
-
+    //
     void MarchingCubes::TriangulateCell(std::vector<Triangle<float> > &trianglesOut,
                                         GridCell &cell, float isovalue) {
         int cubeIndex = CalculateCubeIndex(cell, isovalue);
         GenerateIntersectionCoordinates(cell, isovalue);
         TriangulateIntersections(trianglesOut, cubeIndex);
     }
-
+    //
     void MarchingCubes::TriangulateField(
         const ScalarField &field,
         float isovalue, std::vector<Triangle<float> > &trianglesOut, const Thread *thread) {
@@ -106,10 +99,11 @@ namespace SCESS {
             }
         }
     }
+    //
 #pragma endregion
-
+    //
 #pragma region Isosurface
-
+    //
     void ScalarField::Evaluate(bool useMultithreading) {
         auto workerFunc = [this](bool useMultithreading) {
             size_t resolution = mField.size();
@@ -142,7 +136,7 @@ namespace SCESS {
 
         mThread.Start(workerFunc, useMultithreading);
     }
-
+    //
     void TriSurf::Evaluate(bool useMultithreading) {
         auto workerFunc = [this]() {
             std::unique_ptr<MarchingCubes> marchingCubes = std::make_unique<MarchingCubes>();
@@ -176,7 +170,8 @@ namespace SCESS {
 
         mThread.Start(workerFunc);
     }
-
-
+    //
 #pragma endregion
+    //
+    //
 }

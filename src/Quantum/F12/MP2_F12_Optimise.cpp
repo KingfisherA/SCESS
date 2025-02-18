@@ -1,45 +1,28 @@
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include "F12.h"
-
+//
 #include "Tensor/TensorOperations.h"
 #include "Tensor/TensorSlice.h"
 #include "Tensor/TensorEinsum.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
-#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/HF/HF.h"
 
+//
+//
 namespace SCESS::F12 {
     using namespace Eigen;
-
-    // Tensor4 EvaluateVIntermediate(const TEITensor &f12Repulsion,
-    //                             const TEITensor &f12,
-    //                             const TEITensor &eri) {
-    //     //Make the V intermediate
-    //     //iiii
-    //     TEITensor V_ = Slice<Indices<I, I, I, I> >(idxs, f12Repulsion);
     //
-    //     //ijrs,klrs->ijkl
-    //     V_ -= Einsum<Indices<I, J, R, S>, Indices<K, L, R, S>, Indices<I, J, K, L> >(
-    //         Slice<Indices<I, J, R, S> >(idxs, eri),
-    //         Slice<Indices<K, L, R, S> >(idxs, f12));
     //
-    //     //ijxm,klxm->ijkl
-    //     V_ -= Einsum<Indices<I, J, X, M>, Indices<K, L, X, M>, Indices<I, J, K, L> >(
-    //         Slice<Indices<I, J, X, M> >(idxs, eri),
-    //         Slice<Indices<K, L, X, M> >(idxs, f12));
-    //
-    //     //ijmx,klmx->ijkl
-    //     V_ -= Einsum<Indices<I, J, M, X>, Indices<K, L, M, X>, Indices<I, J, K, L> >(
-    //         Slice<Indices<I, J, M, X> >(idxs, eri),
-    //         Slice<Indices<K, L, M, X> >(idxs, f12));
-    //
-    //     return V_;
-    // }
-
-    MP2::MP2F12Result MP2::MP2_F12_Optimise(const UHFWavefunction &refWfn,
-                                   const Integrals::MolInts &mints,
-                                   const Integrals::F12::F12Integrals &f12Ints) {
+    MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
+                                  const Integrals::MolInts &mints,
+                                  const Integrals::F12::F12Integrals &f12Ints,
+                                  F12Idxs f12Idxs,
+                                  Tensor2 *F_out,
+                                  TEITensor *V_out,
+                                  TEITensor *X_out,
+                                  TEITensor *B_out) {
         // * We assume that the reference wavefunction is actually a closed shell RHF hence alternating
         //      alpha and beta spins (fix this in the future to support open shell :( )
         // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
@@ -58,44 +41,30 @@ namespace SCESS::F12 {
             X, Y, Z, W
         };
 
-        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
-        constexpr Index nOBS = 2;
-        //Number of orbitals in the complementary auxiliary set
-        constexpr Index nCABS = 10;
-        //Total number of basis functions in the combined OBS and CABS basis sets
-        constexpr Index nbf = nOBS + nCABS;
-        //Number of spatial molecular orbitals equals the number of OBS used in normal Hartree-Fock
-        constexpr Index nMO = nOBS;
-        //Only one occupied spatial MO in hydrogen
-        constexpr Index nVirt = nMO - 1;
-        //Two spin orbitals are occupied in hydrogen and one spatial orbital
-        const Index nOcc = 1;
-        // std::distance(refWfn.OccupationAlpha.begin(),
-        //                              std::ranges::find(refWfn.OccupationAlpha, 0));;
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
-            {I, {0, nOcc}},
-            {J, {0, nOcc}},
-            {K, {0, nOcc}},
-            {L, {0, nOcc}},
-            {M, {0, nOcc}},
-            {N, {0, nOcc}},
-            {O, {0, nOcc}},
+            {I, {0, f12Idxs.nOcc}},
+            {J, {0, f12Idxs.nOcc}},
+            {K, {0, f12Idxs.nOcc}},
+            {L, {0, f12Idxs.nOcc}},
+            {M, {0, f12Idxs.nOcc}},
+            {N, {0, f12Idxs.nOcc}},
+            {O, {0, f12Idxs.nOcc}},
             //All virtual orbital indices
-            {A, {nOcc, nVirt}},
-            {B, {nOcc, nVirt}},
-            {C, {nOcc, nVirt}},
-            {D, {nOcc, nVirt}},
+            {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {B, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {C, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {D, {f12Idxs.nOcc, f12Idxs.nVirt}},
             //All OBS indices
-            {P, {0, nOBS}},
-            {Q, {0, nOBS}},
-            {R, {0, nOBS}},
-            {S, {0, nOBS}},
+            {P, {0, f12Idxs.nOBS}},
+            {Q, {0, f12Idxs.nOBS}},
+            {R, {0, f12Idxs.nOBS}},
+            {S, {0, f12Idxs.nOBS}},
             //CABS indices
-            {X, {nOBS, nCABS}},
-            {Y, {nOBS, nCABS}},
-            {Z, {nOBS, nCABS}},
-            {W, {nOBS, nCABS}}
+            {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {Y, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {Z, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {W, {f12Idxs.nOBS, f12Idxs.nCABS}}
         };
 
         //Extract out all the integral tensors we will need for this calculation
@@ -442,21 +411,21 @@ namespace SCESS::F12 {
         };
 
         TEITensor B_ = Slice<Indices<I, I, I, I> >(idxs, f12DelSq);
-        TEITensor C_(nOcc, nOcc, nVirt, nVirt);
+        TEITensor C_(f12Idxs.nOcc, f12Idxs.nOcc, f12Idxs.nVirt, f12Idxs.nVirt);
         C_.setZero();
         MakeB_C(B_, C_);
 
         //Calculate conventional MP2 energy
         double E_MP2 = 0.0;
 
-        const auto &epsilon = refWfn.EnergiesAlpha;
+        const auto &epsilon = refWfn.Ep_Alpha;
 
         //i and j run over the occupied orbitals
-        for (Index i = 0; i < nOcc; i++)
-            for (Index j = 0; j < nOcc; j++) {
+        for (Index i = 0; i < f12Idxs.nOcc; i++)
+            for (Index j = 0; j < f12Idxs.nOcc; j++) {
                 //a and b run over the virtual orbitals
-                for (Index a = nOcc; a < nVirt + nOcc; a++)
-                    for (Index b = nOcc; b < nVirt + nOcc; b++) {
+                for (Index a = f12Idxs.nOcc; a < f12Idxs.nVirt + f12Idxs.nOcc; a++)
+                    for (Index b = f12Idxs.nOcc; b < f12Idxs.nVirt + f12Idxs.nOcc; b++) {
                         //Integrals are in physicist's notation
                         double intIJAB = eri(i, j, a, b);
                         double intIJBA = eri(i, j, b, a);
@@ -471,19 +440,20 @@ namespace SCESS::F12 {
 
         //Makes the V tilde intermediate integrating out spin for a closed shell reference
         //&nOcc,&nVirt,
-        auto MakeVTildeSpin = [&eri, &V_, &C_, &F_](MatrixXd &V_AlphaAlpha,
-                                                    MatrixXd &V_AlphaBeta,
-                                                    Index i, Index j) {
-            TEITensor eri_oovv = eri.Slice4({0, 0, nOcc, nOcc},
-                                            {nOcc, nOcc, nVirt, nVirt});
+        auto MakeVTildeSpin = [&eri, &V_, &C_, &F_, &f12Idxs](MatrixXd &V_AlphaAlpha,
+                                                              MatrixXd &V_AlphaBeta,
+                                                              Index i, Index j) {
+            TEITensor eri_oovv = eri.Slice4({0, 0, f12Idxs.nOcc, f12Idxs.nOcc},
+                                            {f12Idxs.nOcc, f12Idxs.nOcc, f12Idxs.nVirt, f12Idxs.nVirt});
             Index col = 0;
-            for (Index k = 0; k < nOcc; k++)
-                for (Index l = 0; l < nOcc; l++, col++) {
+            for (Index k = 0; k < f12Idxs.nOcc; k++)
+                for (Index l = 0; l < f12Idxs.nOcc; l++, col++) {
                     double VAlphaBeta_kl = V_(k, l, i, j);
                     double VAlphaAlpha_kl = V_(k, l, i, j) - V_(l, k, i, j);
-                    for (Index a = 0; a < nVirt; a++)
-                        for (Index b = 0; b < nVirt; b++) {
-                            double D_ijab = F_(nOcc + a, nOcc + a) + F_(nOcc + b, nOcc + b)
+                    for (Index a = 0; a < f12Idxs.nVirt; a++)
+                        for (Index b = 0; b < f12Idxs.nVirt; b++) {
+                            double D_ijab = F_(f12Idxs.nOcc + a, f12Idxs.nOcc + a) + F_(
+                                                f12Idxs.nOcc + b, f12Idxs.nOcc + b)
                                             - F_(i, i) - F_(j, j);
                             double C_klab = C_(k, l, a, b);
                             double C_klba = C_(k, l, b, a);
@@ -511,15 +481,15 @@ namespace SCESS::F12 {
 
         //Makes the B tilde intermediate integrating out spin for a closed shell reference
         //&nOcc
-        auto MakeBTildeSpin = [&F_, &C_, &X_, &B_](MatrixXd &B_AlphaAlpha,
-                                                          MatrixXd &B_AlphaBeta,
-                                                          Index i, Index j) {
+        auto MakeBTildeSpin = [&F_, &C_, &X_, &B_, &f12Idxs](MatrixXd &B_AlphaAlpha,
+                                                             MatrixXd &B_AlphaBeta,
+                                                             Index i, Index j) {
             double epsilon_ij = F_(i, i) + F_(j, j);
             Index row = 0, col = 0;
-            for (Index k = 0; k < nOcc; k++)
-                for (Index l = 0; l < nOcc; l++, row++) {
-                    for (Index m = 0; m < nOcc; m++)
-                        for (Index n = 0; n < nOcc; n++, col++) {
+            for (Index k = 0; k < f12Idxs.nOcc; k++)
+                for (Index l = 0; l < f12Idxs.nOcc; l++, row++) {
+                    for (Index m = 0; m < f12Idxs.nOcc; m++)
+                        for (Index n = 0; n < f12Idxs.nOcc; n++, col++) {
                             double B_AlphaBeta_klmn = B_(k, l, m, n)
                                                       - epsilon_ij * X_(k, l, m, n);
                             double B_AlphaAlpha_klmn = 0.0;
@@ -531,9 +501,10 @@ namespace SCESS::F12 {
                                         - epsilon_ij * X_(k, l, m, n)
                                         + epsilon_ij * X_(k, l, n, m);
 
-                            for (Index a = 0; a < nVirt; a++)
-                                for (Index b = 0; b < nVirt; b++) {
-                                    double D_ijab = F_(nOcc + a, nOcc + a) + F_(nOcc + b, nOcc + b) - F_(
+                            for (Index a = 0; a < f12Idxs.nVirt; a++)
+                                for (Index b = 0; b < f12Idxs.nVirt; b++) {
+                                    double D_ijab = F_(f12Idxs.nOcc + a, f12Idxs.nOcc + a) + F_(
+                                                        f12Idxs.nOcc + b, f12Idxs.nOcc + b) - F_(
                                                         i, i) - F_(j, j);
                                     double C_klab = C_(k, l, a, b);
                                     double C_klba = C_(k, l, b, a);
@@ -560,12 +531,14 @@ namespace SCESS::F12 {
         double E_F12 = 0.0;
 
         //Loop over pairs of electrons
-        for (Index i = 0; i < nOcc; i++)
-            for (Index j = 0; j < nOcc; j++) {
-                MatrixXd V_AlphaAlpha = MatrixXd::Zero(1, nOcc * nOcc);
-                MatrixXd V_AlphaBeta = MatrixXd::Zero(1, nOcc * nOcc);
-                MatrixXd B_AlphaAlpha = MatrixXd::Zero(nOcc * nOcc, nOcc * nOcc * nVirt * nVirt);
-                MatrixXd B_AlphaBeta = MatrixXd::Zero(nOcc * nOcc, nOcc * nOcc * nVirt * nVirt);
+        for (Index i = 0; i < f12Idxs.nOcc; i++)
+            for (Index j = 0; j < f12Idxs.nOcc; j++) {
+                MatrixXd V_AlphaAlpha = MatrixXd::Zero(1, f12Idxs.nOcc * f12Idxs.nOcc);
+                MatrixXd V_AlphaBeta = MatrixXd::Zero(1, f12Idxs.nOcc * f12Idxs.nOcc);
+                MatrixXd B_AlphaAlpha = MatrixXd::Zero(f12Idxs.nOcc * f12Idxs.nOcc,
+                                                       f12Idxs.nOcc * f12Idxs.nOcc * f12Idxs.nVirt * f12Idxs.nVirt);
+                MatrixXd B_AlphaBeta = MatrixXd::Zero(f12Idxs.nOcc * f12Idxs.nOcc,
+                                                      f12Idxs.nOcc * f12Idxs.nOcc * f12Idxs.nVirt * f12Idxs.nVirt);
 
                 MakeVTildeSpin(V_AlphaAlpha, V_AlphaBeta, i, j);
                 MakeBTildeSpin(B_AlphaAlpha, B_AlphaBeta, i, j);
@@ -587,6 +560,17 @@ namespace SCESS::F12 {
             }
 
 
+        if (F_out)
+            *F_out = F_;
+        if (V_out)
+            *V_out = V_;
+        if (X_out)
+            *X_out = X_;
+        if (B_out)
+            *B_out = B_;
+
         return {E_MP2, E_F12};
     }
+    //
+    //
 }

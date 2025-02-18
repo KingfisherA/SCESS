@@ -1,81 +1,132 @@
-#include<Quantum/QuantumPCH.h>
+#include<Quantum/Q_PCH.h>
 #include "F12.h"
-
+//
 #include "Tensor/TensorOperations.h"
 #include "Tensor/TensorSlice.h"
 #include "Tensor/TensorEinsum.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
-#include "Quantum/HF/HartreeFock.h"
+#include "Quantum/HF/HF.h"
 
+//
+//
 namespace SCESS::F12 {
     using namespace Eigen;
+    //-- Indices --
+    enum {
+        //Complete virtual space orbitals
+        alpha, beta,
+        //Occupied orbitals
+        I, J, K, L, M, N, O,
+        //OBS Virtual orbitals
+        A, B, C, D,
+        //All OBS orbitals
+        P, Q, R, S,
+        //CABS virtual orbitals
+        X, Y, Z, W
+    };
+    //
+    //
+    Tensor4 EvaluateW(const Tensor4 &f12, F12Idxs f12Idxs) {
+        TensorSliceIndices idxs = {
+            //All Occupied orbital indices
+            {I, {0, f12Idxs.nOcc}},
+            {J, {0, f12Idxs.nOcc}},
+            //
+            {alpha, {f12Idxs.nOcc, f12Idxs.nVirt + f12Idxs.nCABS}},
+            {beta, {f12Idxs.nOcc, f12Idxs.nVirt + f12Idxs.nCABS}}
+        };
 
-    MP2::MP2F12Result MP2::MP2_F12_Fixed(const UHFWavefunction &refWfn,
-                                         const Integrals::MolInts &mints,
-                                         const Integrals::F12::F12Integrals &f12Ints,
-                                         Tensor2 *F_out,
-                                         TEITensor *V_out,
-                                         TEITensor *X_out,
-                                         TEITensor *B_out) {
+        Tensor4 W = (3.0 / 8.0) * Slice<Indices<alpha, beta, I, J> >(idxs, f12);
+        W -= (1.0 / 8.0) * Slice<Indices<alpha, beta, I, J> >(idxs, f12);
+
+        return W;
+    }
+    //
+    Tensor4 EvaluateVab(const Tensor4 &f12Repulsion,
+                        const Tensor4 &f12,
+                        const Tensor4 &eri,
+                        F12Idxs f12Idxs) {
+
+        TensorSliceIndices idxs = {
+            //All Occupied orbital indices
+            {M, {0, f12Idxs.nOcc}},
+            //All virtual orbital indices
+            {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {B, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {C, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {D, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            //All OBS indices
+            {R, {0, f12Idxs.nOBS}},
+            {S, {0, f12Idxs.nOBS}},
+            //CABS indices
+            {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
+        };
+
+        //Make the Vab intermediate
+        //aaaa
+        Tensor4 Vab_ = Slice<Indices<A, A, A, A> >(idxs, f12Repulsion);
+
+        //abrs,cdrs->abcd
+        Vab_ -= Einsum<Indices<A, B, R, S>, Indices<C, D, R, S>, Indices<A, B, C, D> >(
+            Slice<Indices<A, B, R, S> >(idxs, eri),
+            Slice<Indices<C, D, R, S> >(idxs, f12));
+
+        //abxm,cdxm->abcd
+        Vab_ -= Einsum<Indices<A, B, X, M>, Indices<C, D, X, M>, Indices<A, B, C, D> >(
+            Slice<Indices<A, B, X, M> >(idxs, eri),
+            Slice<Indices<C, D, X, M> >(idxs, f12));
+
+        //abmx,cdmx->abcd
+        Vab_ -= Einsum<Indices<A, B, M, X>, Indices<C, D, M, X>, Indices<A, B, C, D> >(
+            Slice<Indices<A, B, M, X> >(idxs, eri),
+            Slice<Indices<C, D, M, X> >(idxs, f12));
+
+        return Vab_;
+    }
+    //
+    //
+    MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
+                               const Integrals::MolInts &mints,
+                               const Integrals::F12::F12Integrals &f12Ints,
+                               F12Idxs f12Idxs,
+                               Tensor2 *F_out,
+                               TEITensor *V_out,
+                               TEITensor *X_out,
+                               TEITensor *B_out) {
         // * We assume that the reference wavefunction is actually a closed shell RHF hence alternating
         //      alpha and beta spins (fix this in the future to support open shell :( )
         // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
         // * All calculations are done in SPIN ORBITALS so we need to integrate spin out the spin!
         // * All EVEN indices are spin alpha and ODD are spin beta
 
-        //-- Indices --
-        enum {
-            //Occupied orbitals
-            I, J, K, L, M, N, O,
-            //OBS Virtual orbitals
-            A, B, C, D,
-            //All OBS orbitals
-            P, Q, R, S,
-            //CABS virtual orbitals
-            X, Y, Z, W
-        };
-
-        //Number of orbitals in the ordinary basis set. Also the index for the beginning of the CABS
-        constexpr Index nOBS = 2;
-        //Number of orbitals in the complementary auxiliary set
-        constexpr Index nCABS = 10;
-        //Total number of basis functions in the combined OBS and CABS basis sets
-        constexpr Index nbf = nOBS + nCABS;
-        //Number of spatial molecular orbitals equals the number of OBS used in normal Hartree-Fock
-        constexpr Index nMO = nOBS;
-        //Only one occupied spatial MO in hydrogen
-        constexpr Index nVirt = nMO - 1;
-        //Two spin orbitals are occupied in hydrogen and one spatial orbital
-        const Index nOcc = 1;
-        // std::distance(refWfn.OccupationAlpha.begin(),
-        //                              std::ranges::find(refWfn.OccupationAlpha, 0));;
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
-            {I, {0, nOcc}},
-            {J, {0, nOcc}},
-            {K, {0, nOcc}},
-            {L, {0, nOcc}},
-            {M, {0, nOcc}},
-            {N, {0, nOcc}},
-            {O, {0, nOcc}},
+            {I, {0, f12Idxs.nOcc}},
+            {J, {0, f12Idxs.nOcc}},
+            {K, {0, f12Idxs.nOcc}},
+            {L, {0, f12Idxs.nOcc}},
+            {M, {0, f12Idxs.nOcc}},
+            {N, {0, f12Idxs.nOcc}},
+            {O, {0, f12Idxs.nOcc}},
             //All virtual orbital indices
-            {A, {nOcc, nVirt}},
-            {B, {nOcc, nVirt}},
-            {C, {nOcc, nVirt}},
-            {D, {nOcc, nVirt}},
+            {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {B, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {C, {f12Idxs.nOcc, f12Idxs.nVirt}},
+            {D, {f12Idxs.nOcc, f12Idxs.nVirt}},
             //All OBS indices
-            {P, {0, nOBS}},
-            {Q, {0, nOBS}},
-            {R, {0, nOBS}},
-            {S, {0, nOBS}},
+            {P, {0, f12Idxs.nOBS}},
+            {Q, {0, f12Idxs.nOBS}},
+            {R, {0, f12Idxs.nOBS}},
+            {S, {0, f12Idxs.nOBS}},
             //CABS indices
-            {X, {nOBS, nCABS}},
-            {Y, {nOBS, nCABS}},
-            {Z, {nOBS, nCABS}},
-            {W, {nOBS, nCABS}}
+            {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {Y, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {Z, {f12Idxs.nOBS, f12Idxs.nCABS}},
+            {W, {f12Idxs.nOBS, f12Idxs.nCABS}}
         };
+
 
         //Extract out all the integral tensors we will need for this calculation
         //These integrals have been canonicalised and transformed into the CABS/OBS MO basis set
@@ -158,7 +209,7 @@ namespace SCESS::F12 {
         Tensor<double, 2> F_K = F_ + K_;
 
         //Makes the B and C intermediate tensors
-        //, &idxs, &nOcc, &nOBS, &nCABS]
+        //, &idxs, &f12Idxs.nOcc, &f12Idxs.nOBS, &f12Idxs.nCABS]
         auto MakeB_C = [&f12Sq, &f12, &F_, &F_K, &K_, &idxs]
         (TEITensor &B_, TEITensor &C_)-> void {
             //-- F12 Contributions --
@@ -421,21 +472,21 @@ namespace SCESS::F12 {
         };
 
         TEITensor B_ = Slice<Indices<I, I, I, I> >(idxs, f12DelSq);
-        TEITensor C_(nOcc, nOcc, nVirt, nVirt);
+        TEITensor C_(f12Idxs.nOcc, f12Idxs.nOcc, f12Idxs.nVirt, f12Idxs.nVirt);
         C_.setZero();
         MakeB_C(B_, C_);
 
         //Calculate conventional MP2 energy
         double E_MP2 = 0.0;
 
-        const auto &epsilon = refWfn.EnergiesAlpha;
+        const auto &epsilon = refWfn.Ep_Alpha;
 
         //i and j run over the occupied orbitals
-        for (Index i = 0; i < nOcc; i++)
-            for (Index j = 0; j < nOcc; j++) {
+        for (Index i = 0; i < f12Idxs.nOcc; i++)
+            for (Index j = 0; j < f12Idxs.nOcc; j++) {
                 //a and b run over the virtual orbitals
-                for (Index a = nOcc; a < nVirt + nOcc; a++)
-                    for (Index b = nOcc; b < nVirt + nOcc; b++) {
+                for (Index a = f12Idxs.nOcc; a < f12Idxs.nVirt + f12Idxs.nOcc; a++)
+                    for (Index b = f12Idxs.nOcc; b < f12Idxs.nVirt + f12Idxs.nOcc; b++) {
                         //Integrals are in physicist's notation
                         double intIJAB = eri(i, j, a, b);
                         double intIJBA = eri(i, j, b, a);
@@ -452,10 +503,9 @@ namespace SCESS::F12 {
         double E_F12_B = 0.0;
         double E_F12_V = 0.0;
 
-
         //Loop over pairs of electrons
-        for (Index i = 0; i < nOcc; i++)
-            for (Index j = 0; j < nOcc; j++) {
+        for (Index i = 0; i < f12Idxs.nOcc; i++)
+            for (Index j = 0; j < f12Idxs.nOcc; j++) {
                 E_F12_V += (5.0 / 8.0) * V_(i, j, i, j);
                 E_F12_V -= (1.0 / 8.0) * V_(j, i, i, j);
                 E_F12_X += (F_(i, i) + F_(j, j)) * (7.0 / 32.0) * X_(i, j, i, j);
@@ -479,20 +529,21 @@ namespace SCESS::F12 {
 
         return {E_MP2, E_F12};
     }
-
-    double MP2::CalculateMP2_F12_FixedEnergyElectronPair(long i, long j, const Tensor2 &F, const TEITensor &V,
-                                             const TEITensor &X, const TEITensor &B) {
-        double E_F12_X = 0.0;
-        double E_F12_B = 0.0;
-        double E_F12_V = 0.0;
-
-        E_F12_V += (5.0 / 8.0) * V(i, j, i, j);
+    //
+    double CalculateMP2_F12_FixedEnergyElectronPair(long i, long j,
+                                                    const Tensor2 &F, const TEITensor &V,
+                                                    const TEITensor &X, const TEITensor &B) {
+        double E_F12_V = (5.0 / 8.0) * V(i, j, i, j);
         E_F12_V -= (1.0 / 8.0) * V(j, i, i, j);
-        E_F12_X += (F(i, i) + F(j, j)) * (7.0 / 32.0) * X(i, j, i, j);
+
+        double E_F12_X = (F(i, i) + F(j, j)) * (7.0 / 32.0) * X(i, j, i, j);
         E_F12_X += (F(i, i) + F(j, j)) * (1.0 / 32.0) * X(i, j, j, i);
-        E_F12_B += (7.0 / 32.0) * B(i, j, i, j);
+
+        double E_F12_B = (7.0 / 32.0) * B(i, j, i, j);
         E_F12_B += (1.0 / 32.0) * B(i, j, j, i);
 
         return 2.0 * E_F12_V + E_F12_B - E_F12_X;
     }
+    //
+    //
 }

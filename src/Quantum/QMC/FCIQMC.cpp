@@ -1,45 +1,55 @@
-#include "Quantum/QMC/QMC.h"
-#include "Quantum/CI/ConfigurationInteraction.h"
-#include "Utilities/Utilities.h"
-
-#include "GraphicsEngine/Tools/Threading.h"
-
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
 #include <GraphicsEngine/Tools/Threading.h>
-
+//
+#include "Quantum/QMC/QMC.h"
+#include "Quantum/CI/CI.h"
+#include "Utilities/Utilities.h"
+#include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
+#include "Quantum/HF/HF.h"
+#include "GraphicsEngine/Tools/Threading.h"
 
-namespace SCESS {
-    double QMC::FCIQMC(const RHFWavefunction &rhfWavefunction, double Vnn,
-                                     const GEng::Thread *thread,
-                                     std::stringstream *console,
-                                     boost::circular_buffer<glm::vec2> *projEnergyGraph) {
-        using namespace Eigen;
 
+//
+//
+namespace SCESS::QMC::FCI {
+    using namespace Eigen;
+    //
+    //
+    double FCIQMC(const HF_Wfn &rhfWfn,
+                  const Integrals::MolInts &mints,
+                  double Vnn,
+                  const GEng::Thread *thread,
+                  std::stringstream *console,
+                  boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         if (console) (*console) << "--- Full CI Quantum Monte Carlo ---\n";
 
         //Evaluate the Full CI  Hamiltonian matrix
-        uint32_t nElectrons = std::distance(rhfWavefunction.Occupation.begin(),
-                                            std::ranges::find(rhfWavefunction.Occupation, 0)) * 2,
-                nSpatialOrbitals = rhfWavefunction.Occupation.size(),
+        uint32_t nElectrons = std::distance(rhfWfn.Occ_Alpha.begin(),
+                                            std::ranges::find(rhfWfn.Occ_Alpha, 0)) * 2,
+                nSpatialOrbitals = rhfWfn.Occ_Alpha.size(),
                 nSpinOrbs = nSpatialOrbitals * 2;
 
-        std::vector<CIDeterminant> determinants = ConfigurationInteraction::GenerateAllDeterminants(
-            nSpinOrbs, nElectrons);
+        std::vector<SlaterDet> determinants = CI::EnumerateDet(nSpinOrbs, nElectrons);
 
         MatrixXd H_FCI = MatrixXd::Zero((Eigen::Index) determinants.size(),
                                         (Eigen::Index) determinants.size()); {
-            MatrixXd HSpin = ConfigurationInteraction::GenerateOneElectronHamiltonianSpin(rhfWavefunction.Hcore, rhfWavefunction.C);
+            auto h = mints.T + mints.V;
+            MatrixXd HSpin = CI::GenerateHCoreSpinTransform(
+                h, rhfWfn.C_Alpha);
             TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                Integrals::Transforms::TransformTEI(rhfWavefunction.Integrals.eri, rhfWavefunction.C));
+                Integrals::Transforms::TransformTEI(mints.eri, rhfWfn.C_Alpha));
 
             for (uint32_t i = 0; i < H_FCI.rows(); i++)
                 for (uint32_t j = i; j < H_FCI.cols(); j++)
                     H_FCI(i, j) = H_FCI(j, i) =
-                                  ConfigurationInteraction::CalculateHamiltonianElement(determinants[i],
-                                      determinants[j], nSpatialOrbitals, nSpatialOrbitals, HSpin, moSpinTEI);
+                                  CalculateHamiltonianElement(determinants[i],
+                                                              determinants[j],
+                                                              nSpatialOrbitals,
+                                                              nSpatialOrbitals,
+                                                              HSpin, moSpinTEI);
         }
 
 
@@ -85,9 +95,8 @@ namespace SCESS {
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
-
-                if(thread)
-                    if(thread->ShouldStop())
+                if (thread)
+                    if (thread->ShouldStop())
                         return 0.0;
 
                 for (Particle &p: spawnPopulations)
@@ -129,7 +138,7 @@ namespace SCESS {
                         }
 
                     //Death cloning stage
-                    double pCloneDeath = abs(currentWalker) * tau * (Hii - rhfWavefunction.Energy - shift);
+                    double pCloneDeath = abs(currentWalker) * tau * (Hii - rhfWfn.E_HF - shift);
                     int nKill = int(pCloneDeath);
                     pCloneDeath = pCloneDeath - nKill;
 
@@ -154,7 +163,7 @@ namespace SCESS {
                     walkerPopulations[I] += spawnPopulations[I];
             }
 
-            double projEnergy = rhfWavefunction.Energy;
+            double projEnergy = rhfWfn.E_HF;
 
             if (walkerPopulations[0] != 0)
                 for (uint32_t I = 1; I < walkerPopulations.size(); I++) {
@@ -195,4 +204,6 @@ namespace SCESS {
 
         return averageEnergy;
     }
+    //
+    //
 } // SCESS

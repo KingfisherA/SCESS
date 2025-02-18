@@ -1,24 +1,25 @@
-#include<Quantum/QuantumPCH.h>
-
+#include<Quantum/Q_PCH.h>
+#include <boost/filesystem.hpp>
+//
 #include "Resources/AssetFolder.h"
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2/basis.h>
-
+//
 #include "Quantum/Molecule.h"
 #include "Quantum/Basis/BasisSet.h"
-#include "Quantum/HF/HartreeFock.h"
-#include <boost/filesystem.hpp>
-
+#include "Quantum/HF/HF.h"
 #include "Utilities/Utilities.h"
 
 
 //
 //
 namespace SCESS {
+    //
+    //
     BasisSet::BasisSet(const std::string &basisSetName, const Molecule &mol) {
         LoadAndAddBasisSet(basisSetName, mol);
     }
-
+    //
     std::unordered_set<std::string> BasisSet::ListBasisSets() {
         namespace fs = boost::filesystem;
         std::unordered_set<std::string> basisSets;
@@ -39,7 +40,7 @@ namespace SCESS {
 
         return basisSets;
     }
-
+    //
     void BasisSet::LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol) {
         std::string jsonFilePath = Res::AssetsFolder::Get().GetResourcePath("Basis")
                 .append(basisSetName + ".json").string();
@@ -85,14 +86,14 @@ namespace SCESS {
                     nlohmann::json coefficients = shell["coefficients"];
 
                     for (const Eigen::Vector3i &angMom: angularMomenta) {
-                        ContractedGaussian cgf(a.GetPos());
+                        CGF cgf(a.GetPos());
                         for (nlohmann::json &coeffCollection: coefficients) {
                             for (size_t k = 0; k < coeffCollection.size(); k++) {
                                 double coefficient = std::stod(coeffCollection[k].get<std::string>());
                                 if (coefficient == 0.0)
                                     continue;
                                 double exponent = std::stod(exponents[k].get<std::string>());
-                                cgf.Add(angMom, Gaussian(exponent, coefficient));
+                                cgf.Add(angMom, PGF(exponent, coefficient));
                             }
                         }
                         mBasisFuncs.push_back(cgf);
@@ -101,21 +102,20 @@ namespace SCESS {
             }
         }
     }
-
-    void BasisSet::AddCGF(const ContractedGaussian &cgf) {
+    //
+    void BasisSet::AddCGF(const CGF &cgf) {
         mBasisFuncs.push_back(cgf);
     }
-
+    //
     size_t BasisSet::GetNoPrimitives() const {
         size_t numPrimitives = 0;
 
-        for (const ContractedGaussian &cgf: mBasisFuncs)
+        for (const CGF &cgf: mBasisFuncs)
             numPrimitives += cgf.Size();
 
         return numPrimitives;
     }
-
-
+    //
     void F12BasisSet::AddBasisSets(const std::string &hfBasisSetName, const std::string &cabsBasisSetName,
                                    const std::vector<libint2::Atom> &molecule) {
         mHFShellsStartIdx = mShells.size();
@@ -138,7 +138,7 @@ namespace SCESS {
                 mMaxL = std::max(c.l, mMaxL);
         }
     }
-
+    //
     std::vector<size_t> F12BasisSet::ShellToBasisIdx() const {
         std::vector<size_t> result(mShells.size(), 0);
 
@@ -150,4 +150,6 @@ namespace SCESS {
 
         return result;
     }
+    //
+    //
 }

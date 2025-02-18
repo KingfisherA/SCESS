@@ -1,13 +1,17 @@
 #pragma once
-
 #include<vector>
 #include<Eigen/Core>
-
 #include "GridPoint.h"
 
 namespace SCESS {
     class Atom;
+}
 
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
     //Bragg radii for atoms
     static constexpr double BRAGG_RADII[] = {
         0.35,
@@ -31,7 +35,7 @@ namespace SCESS {
         2.03,
         1.76
     };
-
+    //
     //Omegab97-v
     class AtomicGrid {
     public:
@@ -72,4 +76,6 @@ namespace SCESS {
 
         Eigen::VectorXd mRadialPoints;
     };
+    //
+    //
 } // SCESS

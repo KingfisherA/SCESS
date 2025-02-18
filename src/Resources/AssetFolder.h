@@ -1,8 +1,12 @@
 #pragma once
-
 #include <boost/filesystem.hpp>
 
+
+//
+//
 namespace SCESS::Res {
+    //
+    //
     class AssetsFolder {
     public:
         static constexpr const char *SETTINGS_FILE = "./settings.json";
@@ -21,4 +25,6 @@ namespace SCESS::Res {
     private:
         boost::filesystem::path mAssetsPath = "./Assets";
     };
+    //
+    //
 }

@@ -1,11 +1,14 @@
 #include "Utilities.h"
-
 #include <iomanip>
 #include <iostream>
 #include <Eigen/src/Core/util/Meta.h>
 
-namespace SCESS {
 
+//
+//
+namespace SCESS {
+    //
+    //
     void Utilities::PrintMatrix(const Eigen::MatrixXd &matrix) {
         std::cout << std::fixed << std::setprecision(2);
         for (Eigen::Index row = 0; row < matrix.rows(); ++row) {
@@ -20,7 +23,7 @@ namespace SCESS {
             std::cout << " |\n";
         }
     }
-
+    //
     void Utilities::PrintMatrix(const Eigen::MatrixXd &matrix, std::stringstream &ss) {
         for (Eigen::Index row = 0; row < matrix.rows(); ++row) {
             ss << "| ";
@@ -30,7 +33,7 @@ namespace SCESS {
             ss << " |\n";
         }
     }
-
+    //
     void Utilities::PrintTensorMatrix(const Eigen::Tensor<double, 2> &matrix) {
         std::cout << std::fixed << std::setprecision(2);
         for (Eigen::Index row = 0; row < matrix.dimension(0); ++row) {
@@ -41,4 +44,6 @@ namespace SCESS {
             std::cout << " |\n";
         }
     }
+    //
+    //
 }

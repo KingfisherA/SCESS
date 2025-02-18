@@ -8,20 +8,25 @@
 #include "GraphicsEngine/Utilities/Memory.h"
 #include "Quantum/Molecule.h"
 #include "Tensor/TensorOperations.h"
-#include "Tensor/TensorEinsum.h"
-#include "Quantum/HF/HartreeFock.h"
-#include "Quantum/DFT/DensityFunctional.h"
-#include "Quantum/CC/CoupledCluster.h"
-#include "Quantum/CI/ConfigurationInteraction.h"
+#include "Quantum/HF/HF.h"
+#include "Quantum/DFT/DFT.h"
+#include "Quantum/CC/CC.h"
+#include "Quantum/CI/CI.h"
 #include "Quantum/QMC/QMC.h"
 #include "Utilities/Utilities.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Quantum/Basis/BasisSet.h"
+#include "Quantum/Basis/CGF.h"
 #include "Quantum/F12/F12.h"
+#include "Quantum/F12_QMC/F12_QMC.h"
 
+//
+//
 namespace SCESS::Tests {
+    //
+    //
     void ProfileMolInts() {
         Molecule hydrogen = Molecule::GenerateWaterMolecule();
 
@@ -43,17 +48,17 @@ namespace SCESS::Tests {
         long timeDifference = std::chrono::duration_cast<std::chrono::microseconds>(tp2 - tp1).count();
         std::cout << "Time to evaluate 1E6 molecular integrals: " << timeDifference << '\n';
     }
-
+    //
     void TestMolecularInts() {
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
         BasisSet basisSet("sto-3g", hydrogenMolecule);
 
         Integrals::MolInts ints = Integrals::EvaluateMolecularIntegrals(basisSet, hydrogenMolecule.GetAtoms());
 
-        const Gaussian &pgf1 = basisSet.GetCGFs()[0].Get(0);
+        const PGF &pgf1 = basisSet.GetCGFs()[0].Get(0);
 
         std::vector<double> Bx, By, Bz;
-        double primIntegral = Integrals::TwoElectronRepulsion(pgf1, pgf1, pgf1, pgf1, Bx, By, Bz);
+        double primIntegral = Integrals::ERI_PGF(pgf1, pgf1, pgf1, pgf1, Bx, By, Bz);
 
         double val = boost::math::tgamma_lower(0.5, 1E-8);
 
@@ -65,7 +70,7 @@ namespace SCESS::Tests {
 
         std::cin.get();
     }
-
+    //
     void TestDFT() {
         std::cout << "--- Performing DFT Calculation on water ---\n";
 
@@ -75,15 +80,15 @@ namespace SCESS::Tests {
         BasisSet basisSet(BASIS_SET_NAME, waterMolecule);
 
         std::stringstream console;
-        uRef<KSWavefunction> ksWavefunction = DensityFunctional::KohnShamDFT(waterMolecule, basisSet,
-                                                                             MolecularGrid::MEDIUM_RES, nullptr,
-                                                                             &console);
+        DFT::KS_Wfn ksWavefunction = DFT::KS_DFT(waterMolecule, basisSet,
+                                                 Quadrature::MolGrid::MEDIUM_RES, nullptr,
+                                                 &console);
         std::cout << console.str() << '\n';
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestCoupledCluster() {
         std::cout << "---Performing CCSD Calculation on Hydrogen---\n";
 
@@ -92,28 +97,30 @@ namespace SCESS::Tests {
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
         BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
 
+        Integrals::MolInts mints;
+
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-                                                           basisSet,
-                                                           1e-05,
-                                                           100,
-                                                           nullptr,
-                                                           &ss,
-                                                           BASIS_SET_NAME);
+        HF::HF_Wfn rhfWfn = HF::RHF(hydrogenMolecule,
+                                    basisSet,
+                                    1e-05,
+                                    100,
+                                    &mints,
+                                    nullptr,
+                                    &ss);
         std::cout << ss.str();
         ss.clear();
         ss.str("");
 
-        uRef<CCSDWavefunction> ccsd = CoupledCluster::CCSD(*rhfResult, nullptr, &ss);
+        CC::CCSD_Wfn ccsdWfn = CC::CCSD(rhfWfn, mints, nullptr, &ss);
 
         std::cout << ss.str() << '\n';
 
-        std::cout << "\n\nE(CCSD Correlation) = " << ccsd->ccsdCorrelationEnergy << '\n';
-        std::cout << "E(Total) = " << ccsd->ccsdCorrelationEnergy + rhfResult->Energy << '\n';
+        std::cout << "\n\nE(CCSD Correlation) = " << ccsdWfn.E_CCSD << '\n';
+        std::cout << "E(Total) = " << ccsdWfn.E_CCSD + rhfWfn.E_HF << '\n';
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestFullCI() {
         std::cout << "---Performing Hartree Fock Calculation on Hydrogen ---\n";
 
@@ -122,24 +129,27 @@ namespace SCESS::Tests {
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
         BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
 
+        Integrals::MolInts mints;
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-                                                           basisSet,
-                                                           1e-05,
-                                                           100,
-                                                           nullptr,
-                                                           &ss,
-                                                           BASIS_SET_NAME);
-        HartreeFock::MP2ClosedShell(*rhfResult, nullptr, &ss);
+        HF::HF_Wfn rhfWfn = HF::RHF(hydrogenMolecule,
+                                    basisSet,
+                                    1e-05,
+                                    100,
+                                    &mints,
+                                    nullptr,
+                                    &ss);
+        HF::MP2_RHF_ClosedShellAO(rhfWfn, mints.eri, nullptr, &ss);
 
         std::cout << ss.str();
         ss.clear();
         ss.str("");
 
 
-        uRef<CIWavefunction> ciResult = ConfigurationInteraction::FCI(
-            *rhfResult,
-            hydrogenMolecule.CalculateNuclearRepulsion(),
+        CI::CI_Wfn ciWfn = CI::CI(
+            rhfWfn,
+            mints,
+            hydrogenMolecule.CalculateVnn(),
+            -1,
             nullptr,
             &ss);
         std::cout << ss.str();
@@ -149,60 +159,63 @@ namespace SCESS::Tests {
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestFCIQMC() {
-        std::cout << "Performing FCIQMC calculation on hydrogen diatomic\n";
+        std::cout << "Performing FCI calculation on hydrogen diatomic\n";
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
         BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
 
+        Integrals::MolInts mints;
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-                                                           basisSet,
-                                                           1e-05,
-                                                           100,
-                                                           nullptr,
-                                                           &ss,
-                                                           BASIS_SET_NAME);
-
-        std::cout << ss.str() << '\n';
-
-        double energy = QMC::FCIQMC(*rhfResult,
-                                    hydrogenMolecule.CalculateNuclearRepulsion(),
+        HF::HF_Wfn rhfWfn = HF::RHF(hydrogenMolecule,
+                                    basisSet,
+                                    1e-05,
+                                    100,
+                                    &mints,
                                     nullptr,
                                     &ss);
 
+        std::cout << ss.str() << '\n';
+
+        double energy = QMC::FCI::FCIQMC(rhfWfn,
+                                         mints,
+                                         hydrogenMolecule.CalculateVnn(),
+                                         nullptr,
+                                         &ss);
+
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestCCQMC() {
-        std::cout << "Performing CCQMC calculation on hydrogen diatomic\n";
+        std::cout << "Performing CC calculation on hydrogen diatomic\n";
 
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
         BasisSet basisSet(BASIS_SET_NAME, hydrogenMolecule);
 
+        Integrals::MolInts mints;
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfResult = HartreeFock::RHF(hydrogenMolecule,
-                                                           basisSet,
-                                                           1e-08,
-                                                           100,
-                                                           nullptr,
-                                                           &ss,
-                                                           BASIS_SET_NAME);
+        HF::HF_Wfn rhfWfn = HF::RHF(hydrogenMolecule,
+                                    basisSet,
+                                    1e-05,
+                                    100,
+                                    &mints,
+                                    nullptr,
+                                    &ss);
 
         std::cout << ss.str() << '\n';
 
-        double energy = QMC::CCQMC(*rhfResult, hydrogenMolecule.CalculateNuclearRepulsion());
+        double energy = QMC::CC::CCQMC(rhfWfn, mints);
 
-        std::cout << "Final CCQMC energy: " << energy << " hartrees\n";
+        std::cout << "Final CC energy: " << energy << " hartrees\n";
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestHelium() {
         constexpr const char *BASIS_SET_NAME = "def2-TZVP";
         std::cout << "Performing calculation on helium in a" << BASIS_SET_NAME << " basis set\n";
@@ -211,27 +224,28 @@ namespace SCESS::Tests {
         heliumMolecule.AddAtom(Atom("He", 2, {0, 0, 0}));
         BasisSet basisSet(BASIS_SET_NAME, heliumMolecule);
 
+        Integrals::MolInts mints;
         std::stringstream ss;
-        uRef<RHFWavefunction> rhfWfn = HartreeFock::RHF(heliumMolecule,
-                                                        basisSet,
-                                                        1e-08,
-                                                        100,
-                                                        nullptr,
-                                                        &ss,
-                                                        BASIS_SET_NAME);
+        HF::HF_Wfn rhfWfn = HF::RHF(heliumMolecule,
+                                    basisSet,
+                                    1e-05,
+                                    100,
+                                    &mints,
+                                    nullptr,
+                                    &ss);
 
         std::cout << ss.str() << '\n';
         ss.str("");
         ss.clear();
 
-        auto ciWfn = ConfigurationInteraction::FCI(*rhfWfn, 0.0, nullptr, &ss);
+        CI::CI_Wfn ciWfn = CI::CI(rhfWfn, mints, 0.0, -1, nullptr, &ss);
 
         std::cout << ss.str() << '\n';
 
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestF12Integrals() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -243,15 +257,15 @@ namespace SCESS::Tests {
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(
+        HF::HF_Wfn uhfWfn = HF::UHF(
             Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
             1,
             1,
-            hydrogenMolecule.CalculateNuclearRepulsion(),
+            hydrogenMolecule.CalculateVnn(),
             std::numeric_limits<double>::epsilon());
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn->DensityAlpha,
-                                                 uhfWfn->CAlpha,
+                                                 uhfWfn.D_Alpha,
+                                                 uhfWfn.C_Alpha,
                                                  configInts,
                                                  f12Ints);
 
@@ -297,36 +311,7 @@ namespace SCESS::Tests {
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
-    void TestCCSD_F12() {
-        constexpr const char *BASIS_SET_NAME = "sto-3g";
-        constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
-        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
-
-        auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
-
-        F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-
-        uRef<UHFWavefunction> uhfWfn = HartreeFock::UHF(configInts,
-                                                        1,
-                                                        1,
-                                                        hydrogenMolecule.CalculateNuclearRepulsion(),
-                                                        std::numeric_limits<double>::epsilon());
-        double ECABSSingles = -0.009972302139;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn->DensityAlpha,
-                                                 uhfWfn->CAlpha,
-                                                 configInts,
-                                                 f12Ints);
-
-        double ccsdF12Energy = F12::CCSD::CCSD_F12(*uhfWfn, f12Ints);
-
-        std::cout << "Press any key to continue..\n";
-        std::cin.get();
-    }
-
+    //
     void TestMP2_F12_Optimise() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -338,18 +323,19 @@ namespace SCESS::Tests {
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn =
-                HartreeFock::UHF(
-                    Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
-                    1,
-                    1,
-                    hydrogenMolecule.CalculateNuclearRepulsion(),
-                    std::numeric_limits<double>::epsilon());
+        HF::HF_Wfn uhfWfn = HF::UHF(
+            Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+            1,
+            1,
+            hydrogenMolecule.CalculateVnn(),
+            std::numeric_limits<double>::epsilon());
+
+        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
 
         Eigen::MatrixXd F;
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn->DensityAlpha,
-                                                 uhfWfn->CAlpha,
+                                                 uhfWfn.D_Alpha,
+                                                 uhfWfn.C_Alpha,
                                                  configInts,
                                                  f12Ints,
                                                  true,
@@ -357,16 +343,16 @@ namespace SCESS::Tests {
 
         //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
+        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
 
         //configInts.eri = eriImported;
-        auto f12Result = F12::MP2::MP2_F12_Optimise(*uhfWfn, configInts, f12Ints);
+        auto f12Result = F12::MP2_F12_Optimise(uhfWfn, configInts, f12Ints, f12Idxs);
 
         std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
         std::cout << " --- Geminal amplitudes are optimised --- \n";
         std::cout << "  Molecule = Hydrogen (H2)\n";
         //Should be -1.117505880245 hartrees
-        std::cout << "  E(HF) = " << uhfWfn->Energy << " hartrees\n";
+        std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
         //Should be -0.009972302139 hartrees
         std::cout << "  E(CABS singles correction) = " << ECABSSingles << " hartrees\n";
         //Should be -0.012503809116 hartrees
@@ -375,7 +361,7 @@ namespace SCESS::Tests {
         std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
         //Should be -1.160991857744 hartrees
         std::cout << "  E(Total) = " <<
-                uhfWfn->Energy +
+                uhfWfn.E_HF +
                 ECABSSingles +
                 f12Result.E_MP2 +
                 f12Result.E_F12_MP2 << " hartrees\n\n";
@@ -383,7 +369,7 @@ namespace SCESS::Tests {
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
+    //
     void TestMP2_F12_Fixed() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
@@ -395,18 +381,19 @@ namespace SCESS::Tests {
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn =
-                HartreeFock::UHF(
-                    Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
-                    1,
-                    1,
-                    hydrogenMolecule.CalculateNuclearRepulsion(),
-                    std::numeric_limits<double>::epsilon());
+        HF::HF_Wfn uhfWfn = HF::UHF(
+            Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+            1,
+            1,
+            hydrogenMolecule.CalculateVnn(),
+            std::numeric_limits<double>::epsilon());
+
+        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
 
         Eigen::MatrixXd F;
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn->DensityAlpha,
-                                                 uhfWfn->CAlpha,
+                                                 uhfWfn.D_Alpha,
+                                                 uhfWfn.C_Alpha,
                                                  configInts,
                                                  f12Ints,
                                                  true,
@@ -414,16 +401,16 @@ namespace SCESS::Tests {
 
         //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
+        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
 
         //configInts.eri = eriImported;
-        auto f12Result = F12::MP2::MP2_F12_Fixed(*uhfWfn, configInts, f12Ints);
+        auto f12Result = F12::MP2_F12_Fixed(uhfWfn, configInts, f12Ints, f12Idxs);
 
         std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
         std::cout << " --- Fixed amplitude approximation used --- \n";
         std::cout << "  Molecule = Hydrogen (H2)\n";
         //Should be -1.117505880245 hartrees
-        std::cout << "  E(HF) = " << uhfWfn->Energy << " hartrees\n";
+        std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
         //Should be -0.009972302139 hartrees
         std::cout << "  E(CABS singles correction) = " << ECABSSingles << " hartrees\n";
         //Should be -0.012503809116 hartrees
@@ -432,7 +419,7 @@ namespace SCESS::Tests {
         std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
         //Should be -1.160991857744 hartrees
         std::cout << "  E(Total) = " <<
-                uhfWfn->Energy +
+                uhfWfn.E_HF +
                 ECABSSingles +
                 f12Result.E_MP2 +
                 f12Result.E_F12_MP2 << " hartrees\n\n";
@@ -440,8 +427,8 @@ namespace SCESS::Tests {
         std::cout << "Press any key to continue..\n";
         std::cin.get();
     }
-
-    void TestCCQMC_F12() {
+    //
+    void TestCCQMC_MP2_F12() {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
@@ -452,18 +439,19 @@ namespace SCESS::Tests {
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
 
-        uRef<UHFWavefunction> uhfWfn =
-                HartreeFock::UHF(
-                    Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
-                    1,
-                    1,
-                    hydrogenMolecule.CalculateNuclearRepulsion(),
-                    std::numeric_limits<double>::epsilon());
+        HF::HF_Wfn uhfWfn = HF::UHF(
+            Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
+            1,
+            1,
+            hydrogenMolecule.CalculateVnn(),
+            std::numeric_limits<double>::epsilon());
+
+        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
 
         Eigen::MatrixXd F;
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn->DensityAlpha,
-                                                 uhfWfn->CAlpha,
+                                                 uhfWfn.D_Alpha,
+                                                 uhfWfn.C_Alpha,
                                                  configInts,
                                                  f12Ints,
                                                  true,
@@ -472,16 +460,16 @@ namespace SCESS::Tests {
         //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
 
-        double ECABSSingles = F12::EvaluateSinglesCorrectionEnergy(MatrixToTensor(F));
+        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
 
-        double ECCQMC_F12 = F12::QMC::CCQMC_MP2_F12(*uhfWfn, configInts, f12Ints);
-        double ECorrelation = ECCQMC_F12 - uhfWfn->Energy;
+        double ECCQMC_F12 = F12_QMC::CCQMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
+        double ECorrelation = ECCQMC_F12 - uhfWfn.E_HF;
 
-        std::cout << "\n\n--- CCQMC F12 Single Point Energy ---\n";
+        std::cout << "\n\n--- CC F12 Single Point Energy ---\n";
         std::cout << " --- Fixed amplitude approximation used --- \n";
         std::cout << "  Molecule = Hydrogen (H2)\n";
         //Should be -1.117505880245 hartrees
-        std::cout << "  E(HF) = " << uhfWfn->Energy << " hartrees\n";
+        std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
         //Should be -0.009972302139 hartrees
         std::cout << "  E(CABS singles correction) = " << ECABSSingles << " hartrees\n";
         //Should be -0.012503809116 hartrees
@@ -489,11 +477,13 @@ namespace SCESS::Tests {
         //Should be -0.021009866243 hartrees
         //Should be -1.160991857744 hartrees
         std::cout << "  E(Total) = " <<
-                uhfWfn->Energy +
+                uhfWfn.E_HF +
                 ECABSSingles +
                 ECorrelation << " hartrees\n\n";
 
         std::cout << "\nPress any key to continue..\n";
         std::cin.get();
     }
+    //
+    //
 }

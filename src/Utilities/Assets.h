@@ -1,8 +1,11 @@
 #pragma once
-
 #include <boost/filesystem.hpp>
 
+//
+//
 namespace SCESS {
+    //
+    //
     class Assets {
     public:
         //Relative Assets: "./Assets"
@@ -17,4 +20,6 @@ namespace SCESS {
             return ASSETS_PATH "/Fonts/Ubuntu-Light.ttf";
         }
     };
+    //
+    //
 }

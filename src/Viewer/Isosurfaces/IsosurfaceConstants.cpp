@@ -1,14 +1,17 @@
 #include "Isosurfaces.h"
 
-
-namespace SCESS {
+//
+//
+namespace SCESS::Viewer {
+    //
+    //
     const std::pair<int, int> MarchingCubes::edgeToVertices[] =
     {
         {0, 1}, {1, 2}, {2, 3}, {0, 3},
         {4, 5}, {5, 6}, {6, 7}, {4, 7},
         {0, 4}, {1, 5}, {2, 6}, {3, 7}
     };
-
+    //
     const int MarchingCubes::edgeTable[] =
     {
         0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
@@ -304,4 +307,6 @@ namespace SCESS {
         {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
     };
+    //
+    //
 }

@@ -1,9 +1,12 @@
-#pragma once
-
 //Derived from DFTCXX
 //https://github.com/ifilot/dftcxx.git
+#pragma once
 
-namespace SCESS {
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
     //Define Lebedev orders
     enum class LebedevOrder :int {
         LEBEDEV_6 = 0,
@@ -18,21 +21,21 @@ namespace SCESS {
         LEBEDEV_170 = 9,
         LEBEDEV_194 = 10
     };
+    //
+    //
+    //Number of coefficients per order
+    constexpr std::array<uint32_t, 11> nLebedevPoints = {6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194};
 
-    namespace Quadrature {
-        //Number of coefficients per order
-        constexpr std::array<uint32_t, 11> nLebedevPoints = {6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194};
+    // Total size of lebedev_coefficient matrix
+    constexpr uint32_t nLebedevCoefficients = []() constexpr {
+        uint32_t sum = 0;
+        for (uint32_t nLebedevPoint: nLebedevPoints)
+            sum += nLebedevPoint;
 
-        // Total size of lebedev_coefficient matrix
-        constexpr uint32_t nLebedevCoefficients = []() constexpr {
-            uint32_t sum = 0;
-            for (uint32_t nLebedevPoint: nLebedevPoints)
-                sum += nLebedevPoint;
+        return sum;
+    }();
 
-            return sum;
-        }();
-
-        // Define Lebedev coefficients
-        extern double LEBEDEV_COEFFICIENTS[nLebedevCoefficients][4];
-    };
-}
+    // Define Lebedev coefficients
+    extern double LEBEDEV_COEFFICIENTS[nLebedevCoefficients][4];
+    //
+};

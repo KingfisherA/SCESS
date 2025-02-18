@@ -1,12 +1,17 @@
 #pragma once
-
 #include <Eigen/Core>
 
 namespace SCESS {
     class Atom;
     class Molecule;
     class BasisSet;
+}
 
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
     class GridPoint {
     public:
         GridPoint(const Eigen::Vector3d &absolutePos,
@@ -85,4 +90,6 @@ namespace SCESS {
         Eigen::VectorXd mBasisAmplitudes;
         Eigen::MatrixXd mBasisGradients;
     };
+    //
+    //
 } // SCESS

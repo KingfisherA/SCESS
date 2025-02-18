@@ -1,19 +1,23 @@
-#include<Quantum/QuantumPCH.h>
-
-#include "MolecularGrid.h"
-
+#include <Quantum/Q_PCH.h>
+#include "MolGrid.h"
 #include "Quantum/Basis/BasisSet.h"
-#include  "Quantum/Molecule.h"
-#include  "Quantum/Integrals/Grid/Quadrature.h"
+#include "Quantum/Molecule.h"
+#include "Quantum/Integrals/Grid/Quadrature.h"
 
-namespace SCESS {
+
+//
+//
+namespace SCESS::Quadrature {
+    //
+    //
     using namespace Eigen;
-
-    MolecularGrid::MolecularGrid(const Molecule *molecule, const BasisSet *basisSet): mMolecule(molecule),
+    //
+    //
+    MolGrid::MolGrid(const Molecule *molecule, const BasisSet *basisSet): mMolecule(molecule),
         mBasisSet(basisSet) {
     }
-
-    void MolecularGrid::Create(Resolution res) {
+    //
+    void MolGrid::Create(Resolution res) {
         mAngularPoints = Quadrature::nLebedevPoints[(int) res.lebedevOrder];
 
         // The Lebedev coefficients and radial points are stored in a large matrix.
@@ -62,8 +66,8 @@ namespace SCESS {
             mAtomicGrids[i].SetBeckeWeights(beckeWeightCoeffs);
         }
     }
-
-    VectorXd MolecularGrid::GetWeights() const {
+    //
+    VectorXd MolGrid::GetWeights() const {
         VectorXd weights = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
@@ -75,8 +79,8 @@ namespace SCESS {
 
         return weights;
     }
-
-    VectorXd MolecularGrid::GetDensities() const {
+    //
+    VectorXd MolGrid::GetDensities() const {
         VectorXd densities = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
         uint32_t idx = 0;
 
@@ -88,8 +92,8 @@ namespace SCESS {
 
         return densities;
     }
-
-    MatrixXd MolecularGrid::GetAmplitudes() const {
+    //
+    MatrixXd MolGrid::GetAmplitudes() const {
         MatrixXd amplitudes = MatrixXd::Zero(
             static_cast<Eigen::Index>(mBasisSet->GetNoCGFs()),
             static_cast<Eigen::Index>(mGridSize));
@@ -107,8 +111,8 @@ namespace SCESS {
 
         return amplitudes;
     }
-
-    void MolecularGrid::CorrectDensities() {
+    //
+    void MolGrid::CorrectDensities() {
         double sum = 0.0;
         double charge = 0.0;
 
@@ -122,13 +126,13 @@ namespace SCESS {
         for (AtomicGrid &grid: mAtomicGrids)
             grid.ScaleDensity(correctionFactor);
     }
-
-    void MolecularGrid::SetDensity(const Eigen::MatrixXd &D) {
+    //
+    void MolGrid::SetDensity(const Eigen::MatrixXd &D) {
         for (AtomicGrid &grid: mAtomicGrids)
             grid.SetDensity(D);
     }
-
-    double MolecularGrid::CalculateDensity() const {
+    //
+    double MolGrid::CalculateDensity() const {
         double sum = 0.0;
 
         for (const AtomicGrid &grid: mAtomicGrids)
@@ -136,8 +140,8 @@ namespace SCESS {
 
         return sum;
     }
-
-    double MolecularGrid::GetBeckeWeight(uint32_t i, const Eigen::Vector3d &p0) const {
+    //
+    double MolGrid::GetBeckeWeight(uint32_t i, const Eigen::Vector3d &p0) const {
         auto fK = [](uint32_t k, double mu) {
             for (uint32_t i = 0; i < k; i++)
                 mu = 3.0 / 2.0 * mu - 0.5 * std::pow(mu, 3.0);
@@ -174,4 +178,6 @@ namespace SCESS {
 
         return wprod;
     }
+    //
+    //
 } // SCESS
