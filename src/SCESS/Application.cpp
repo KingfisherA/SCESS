@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
     //Tests::TestMP2_F12_Fixed();
     //Tests::TestFCIQMC();
-    //Tests::TestCCQMC_MP2_F12();
+    Tests::TestCCQMC_MP2_F12();
     //Tests::TestFullCI();
     //Tests::TestMolecularInts();
     //Tests::TestF12Integrals();

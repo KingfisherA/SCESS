@@ -58,8 +58,8 @@ namespace SCESS::F12 {
     //
     //
     double EvaluateCABSSinglesCorrection(const Tensor2 &F,
-                                           F12Idxs f12Idxs,
-                                           Tensor2 *t1Amps = nullptr);
+                                         F12Idxs f12Idxs,
+                                         Tensor2 *t1Amps = nullptr);
     //
     //
     MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
@@ -91,6 +91,18 @@ namespace SCESS::F12 {
                                                     const TEITensor &V,
                                                     const TEITensor &X,
                                                     const TEITensor &B);
+    //
+    void EvaluatePerturbative_CC_F12Intermediates(
+        const HF_Wfn &refWfn,
+        const Integrals::MolInts &mints,
+        const Integrals::F12::F12Integrals &f12Ints,
+        F12Idxs f12Idxs,
+        Tensor2 *F_pq_out,
+        TEITensor *V_pqrs_out,
+        TEITensor *C_pqrs_out,
+        TEITensor *B_pqrs_out,
+        TEITensor *X_pqrs_out
+    );
     //
     //
 }

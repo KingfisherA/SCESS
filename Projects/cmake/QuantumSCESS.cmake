@@ -48,6 +48,7 @@ add_library("QuantumSCESS" SHARED
   "${SCESS_SRC_DIR}/Quantum/F12_QMC/F12_QMC.h"
   "${SCESS_SRC_DIR}/Quantum/F12_QMC/CCQMC_MP2_F12.cpp"
   "${SCESS_SRC_DIR}/Quantum/CI/CI.cpp"
+        "${SCESS_SRC_DIR}/Quantum/F12/F12_Intermediates.cpp"
 )
 
 set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER 

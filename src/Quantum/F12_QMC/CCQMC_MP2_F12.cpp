@@ -32,11 +32,36 @@ namespace SCESS::F12_QMC {
 #pragma region CCQMC(MP2-F12) Utilities
     //
     //
-    double EvaluateGeminalElement(SlaterDet Dj,
-                                  const Tensor4 &Vij,
-                                  const Tensor4 &Vab,
+    std::vector<Excitor> MakeGeminalExcitors(uint32_t nSpinOrbs) {
+        return CI::EnumerateDet(nSpinOrbs, 2);
+    }
+    //
+    std::pair<int, int> GetGeminalExcitorElecs(Excitor D_gem, uint32_t nSpatialOrbs) {
+        //The index of the electron pair the geminal electrons were put back into
+        int x = -1, y = -1;
+        for (int i = 0; i < nSpatialOrbs; i++)
+            if (D_gem.GetAlphaOrbitals() & (1 << i))
+                if (x == -1)
+                    x = i;
+                else
+                    y = i;
+
+        if (y == -1)
+            for (int i = 0; i < nSpatialOrbs; i++)
+                if (D_gem.GetBetaOrbitals() & (1 << i)) {
+                    y = i;
+                    break;
+                }
+
+        return {x, y};
+    }
+    //
+    double EvaluateGeminalElement(Excitor Di_gem,
+                                  SlaterDet Dj,
+                                  const TEITensor &V_pqrs,
+                                  const TEITensor &C_pqrs,
                                   uint32_t nOcc) {
-        size_t numOfAlphaOrbitals = 2, numOfBetaOrbitals = 2;
+        size_t numOfAlphaOrbitals = 2, numOfBetaOrbitals = 2, nSpatialOrbs = 2;
 
         // if (numOfAlphaOrbitals != numOfBetaOrbitals)
         //     throw std::runtime_error(
@@ -54,35 +79,36 @@ namespace SCESS::F12_QMC {
         SlaterDet::CalculateDifferences(D0, Dj, numOfAlphaOrbitals, numOfBetaOrbitals,
                                         uniqueI, uniqueJ, commonIJ, sign);
 
-        switch (uniqueI.size()) {
-            case 0: {
-                double sum = 0.0;
 
-                for (uint32_t i = 0; i < commonIJ.size() / 2; ++i)
-                    sum += Vij(commonIJ[i], commonIJ[i], commonIJ[i], commonIJ[i]);
+        auto [x,y] = GetGeminalExcitorElecs(Di_gem, nSpatialOrbs);
 
-                return sum;
-            }
+        if (uniqueI.size() == 1)
+            return 0.0;
 
-            case 1: {
-                return 0.0;
-            }
-            case 2: {
-                double sum = 0.0;
-                for (uint32_t i = 0; i < uniqueJ.size() / 2; ++i) {
-                    int a = int(uniqueJ[i * 2 + 0]) / 2 - nOcc;
-                    int b = int(uniqueJ[i * 2 + 1]) / 2 - nOcc;
-
-                    sum += Vab(a, b, b, a);
-                }
-
-                return sum;
-            }
-
-            default: {
-                return 0.0;
-            }
+        if (uniqueI.size() == 0) {
+            return V_pqrs(0, 0, x, y) + C_pqrs(0, 0, x, y);
         }
+
+        uint32_t a = uniqueJ[0], b = uniqueJ[1];
+        return V_pqrs(a, b, x, y) + C_pqrs(a, b, x, y);
+    }
+    //
+    double EvaluateF12PairEnergy(
+        long p, long q,
+        const Tensor2 &F_pq,
+        const TEITensor &V_pqrs,
+        const TEITensor &B_pqrs,
+        const TEITensor &X_pqrs) {
+        double E_F12_V = (5.0 / 8.0) * V_pqrs(p, q, p, q);
+        E_F12_V -= (1.0 / 8.0) * V_pqrs(q, p, p, q);
+
+        double E_F12_X = (F_pq(p, p) + F_pq(q, q)) * (7.0 / 32.0) * X_pqrs(p, q, p, q);
+        E_F12_X += (F_pq(p, p) + F_pq(q, q)) * (1.0 / 32.0) * X_pqrs(p, q, q, p);
+
+        double E_F12_B = (7.0 / 32.0) * B_pqrs(p, q, p, q);
+        E_F12_B += (1.0 / 32.0) * B_pqrs(p, q, q, p);
+
+        return 2.0 * E_F12_V + E_F12_B - E_F12_X;
     }
     //
     //
@@ -128,10 +154,17 @@ namespace SCESS::F12_QMC {
 
         //Tensor4 W_ = EvaluateW(f12Ints.f12);
 
-        Tensor2 F_;
-        TEITensor Vij_, X_, B_;
-        F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_, &Vij_, &X_, &B_);
-        TEITensor Vab_ = F12::EvaluateVab(f12Ints.f12Repulsion, f12Ints.f12, mints.eri, f12Idxs);
+        // Tensor2 F_;
+        // TEITensor Vij_, X_, B_;
+        // F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_, &Vij_, &X_, &B_);
+        // TEITensor Vab_ = F12::EvaluateVab(f12Ints.f12Repulsion, f12Ints.f12, mints.eri, f12Idxs);
+
+        Tensor2 F_pq;
+        TEITensor V_pqrs, C_pqrs, B_pqrs, X_pqrs;
+        F12::EvaluatePerturbative_CC_F12Intermediates(refWfn, mints, f12Ints, f12Idxs,
+                                                      &F_pq, &V_pqrs, &C_pqrs, &B_pqrs, &X_pqrs);
+
+        double val = EvaluateF12PairEnergy(0, 0, F_pq, V_pqrs, B_pqrs, X_pqrs);
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
@@ -162,6 +195,8 @@ namespace SCESS::F12_QMC {
         std::vector<int64_t> cumulativeWalkers(excitors.size(), 0);
         std::vector<int64_t> excitorSpawn(excitors.size(), 0);
 
+        std::vector<Excitor> geminalExcitors = MakeGeminalExcitors(nSpinOrbs);
+
         //Make the Hamiltonian matrix
         MatrixXd H_CI = MatrixXd::Zero(excitors.size(), excitors.size());
         for (uint32_t i = 0; i < H_CI.rows(); i++)
@@ -174,11 +209,8 @@ namespace SCESS::F12_QMC {
                                  HSpin,
                                  spinERI);
 
-        //Add the geminal excitor
-        excitors.push_back(MakeGeminalExcitor());
-
         //The cumulative 1/2^(s+1) probability distribution
-        std::vector<double> cumulativeClusterProb = GenerateCumulativeClusterProb(nElectrons);
+        std::vector<double> cumulativeClusterProb = GenerateCumulativeClusterProb(nElectrons + geminalExcitors.size());
 
         double shift = 0.0;
         double tau = 0.1;
@@ -231,13 +263,14 @@ namespace SCESS::F12_QMC {
                     //Probability of selecting given excitors
                     double pClust = 1.0;
                     //Need to be able to select the same thing twice
-                    std::unordered_set<uint32_t> selectedExcitorIndices;
+                    //Negative indices indicate geminal excitors
+                    std::unordered_set<int> selectedExcitorIndices;
                     if (s > 0) {
-                        uniform_int_distribution<uint32_t> excitorIdxDist(1, excitors.size() - 1);
-                        uniform_01<mt19937> geminalExcitor(randGenerator);
+                        uniform_int_distribution<int>
+                                excitorIdxDist(-(geminalExcitors.size() - 1), excitors.size() - 1);
                         selectedExcitorIndices.reserve(s);
                         while (selectedExcitorIndices.size() != s) {
-                            uint32_t newIndx = excitorIdxDist(randGenerator);
+                            int newIndx = excitorIdxDist(randGenerator);
                             if (selectedExcitorIndices.contains(newIndx)) {
                                 //This attempt has failed given we can't choose the same index twice but we cannot just
                                 //choose another index to ensure we can calculate the probability of selecting this
@@ -248,7 +281,8 @@ namespace SCESS::F12_QMC {
                             }
                             selectedExcitorIndices.insert(newIndx);
                         }
-                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / excitors.size(), s);
+                        pClust = Integrals::Utils::Factorial(s) *
+                                 pow(1.0 / (excitors.size() + geminalExcitors.size()), s);
                     } else
                         selectedExcitorIndices.insert(0);
 
@@ -257,10 +291,20 @@ namespace SCESS::F12_QMC {
                     collapsedExcitor.GetSign() = 1.0;
                     double excitorAmplitude = 1.0;
                     bool isGeminal = false;
+                    Excitor geminalExcitor;
 
-                    for (uint32_t idx: selectedExcitorIndices) {
-                        if (IsGeminalExcitor(excitors[idx])) {
+                    for (uint32_t i = 0; i < nSpatialOrbitals; i++) {
+                        geminalExcitor.GetAlphaOrbitals() |= 1 << i;
+                        geminalExcitor.GetBetaOrbitals() |= 1 << i;
+                    }
+
+                    for (int idx: selectedExcitorIndices) {
+                        if (idx < 0) {
                             isGeminal = true;
+                            geminalExcitor.GetAlphaOrbitals() =
+                                    geminalExcitors[abs(idx)].GetAlphaOrbitals() & geminalExcitor.GetAlphaOrbitals();
+                            geminalExcitor.GetBetaOrbitals() =
+                                    geminalExcitors[abs(idx)].GetBetaOrbitals() & geminalExcitor.GetBetaOrbitals();
                             continue;
                         }
 
@@ -270,6 +314,9 @@ namespace SCESS::F12_QMC {
 
                         excitorAmplitude *= ((double) excitorWalkers[idx] / (double) D0_Population);
                     }
+
+                    // if (geminalExcitor.GetAlphaOrbitals() == 0 && geminalExcitor.GetBetaOrbitals() == 0)
+                    //     continue;
 
                     //Generate determinant by applying new excitor to the HF determinant
                     SlaterDet Di;
@@ -309,19 +356,20 @@ namespace SCESS::F12_QMC {
                     DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
 
                     //Update the projected energy
-                    if (DiIdx != 0) {
+                    if (isGeminal) {
+                        // auto orbIdxs = FindOrbitalIdxs(Di);
+                        //Add contributions for each pair of electrons in the determinant
+
+                        auto [x,y] = GetGeminalExcitorElecs(geminalExcitor, nSpatialOrbitals);
+
+                        double H0i = EvaluateF12PairEnergy(0,0, F_pq, V_pqrs, B_pqrs, X_pqrs);
+                        EProjCluster += 1.0 * H0i / (pClust*Na);
+                    }
+                    else if (DiIdx != 0) {
                         double H0i = H_CI(0, DiIdx);
                         //static_cast<double>(Di.GetSign()) *
                         EProjCluster +=
                                 excitorAmplitude * H0i / (pClust);
-                    }
-
-                    if (isGeminal && DiIdx == 0) {
-                        // auto orbIdxs = FindOrbitalIdxs(Di);
-                        //Add contributions for each pair of electrons in the determinant
-                        double H0i = F12::CalculateMP2_F12_FixedEnergyElectronPair(
-                            0, 0, F_, Vij_, X_, B_);
-                        EProjCluster += (excitorAmplitude / pClust) * H0i;
                     }
 
                     // -- Spawning --
@@ -334,13 +382,13 @@ namespace SCESS::F12_QMC {
                         Dj.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
                         double Hij = 0.0;
-                        if (isGeminal)
-                            Hij = EvaluateGeminalElement(Dj, Vij_, Vab_, nOccupied);
-                        else
-                            Hij = H_CI(DiIdx, DjIdx);
+                        //  if (isGeminal)
+                        //     Hij = EvaluateGeminalElement(geminalExcitor, Dj, V_pqrs, C_pqrs, nOccupied);
+                        // else
+                        Hij = H_CI(DiIdx, DjIdx);
 
                         //1.2 *
-                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //*2.0
+                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize * 10.0); //*2.0
                         auto nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
@@ -384,7 +432,7 @@ namespace SCESS::F12_QMC {
 
                 EProjCluster /= (double) (Na);
 
-                if (reportCycle < 20)
+                if (reportCycle < 2)
                     EProjCluster = 0.0;
 
                 EProjCycle += EProjCluster;
@@ -417,7 +465,7 @@ namespace SCESS::F12_QMC {
             if (reportCycle == 50)
                 shift = refWfn.E_HF;
 
-            if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
+            if (reportCycle > 15 && nExcipsLast != 0 && nExcips != 0)
                 shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
 
             std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<

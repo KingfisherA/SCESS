@@ -26,16 +26,6 @@ namespace SCESS::F12_QMC {
     double EvaluateGeminalElement(SlaterDet Dj,
                                   const Tensor4 &Vij,
                                   const Tensor4 &Vab);
-    inline Excitor MakeGeminalExcitor() {
-        Excitor ex = {0, 0};
-        ex.GetAlphaOrbitals() |= ((unsigned long) (1) << 63);
-        ex.GetBetaOrbitals() |= ((unsigned long) (1) << 63);
-        return ex;
-    }
-    inline bool IsGeminalExcitor(Excitor ex) {
-        return (ex.GetAlphaOrbitals() & ((unsigned long) (1) << 63)) && (
-                   ex.GetBetaOrbitals() & ((unsigned long) (1) << 63));
-    }
     //
     //
     double CCQMC_MP2_F12(const HF::HF_Wfn &refWfn,
