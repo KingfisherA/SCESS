@@ -17,16 +17,17 @@ int main(int argc, char *argv[]) {
 
     Integrals::LibInt::InitLibInt();
 
-    std::cout << "\n"
+    std::cout << "\n\n\n"
             "--- Command Line Arguments ---\n"
-            "\t- \"f12ints\" = Calculate a test set of f12 integrals and transform the basis set\n"
+            "\t- \"f12ints\" = Calculate a test set of f12 integrals and transforms the basis set\n"
             "\t- \"mp2f12-opt\" = Perform an MP2-F12 optimised amplitude calculation on a hydrogen molecule.\n"
             "\t- \"mp2f12-fixed\" = Perform an MP2-F12 fixed amplitude calculation on a hydrogen molecule.\n"
             "\t- \"ccsd\" = Perform a CCSD calculation on hydrogen\n"
             "\t- \"dft\" = Perform a test KS-DFT calculation on water with the LDA exchange and VWD correlation functional.\n"
             "\t- \"fci\" = Perform a test full configuration interaction calculation on hydrogen.\n"
             "\t- \"fciqmc\" = Perform a test Full-CI Quantum Monte Carlo procedure on hydrogen.\n"
-            "\t- \"ccqmc-mp2-f12\" = Perform a CCSD Quantum Monte Carlo with a second-order geminal excitor operator T2' in the T expansion (new theory). \n";
+            "\t- \"ccqmc-mp2-f12\" = Perform a CCSD Quantum Monte Carlo with a second-order geminal excitor operator T2' in the T expansion (new theory)."
+            "\n\n\n";
 
     //Tests::TestMP2_F12_Fixed();
     //Tests::TestFCIQMC();

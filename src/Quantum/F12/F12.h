@@ -58,8 +58,8 @@ namespace SCESS::F12 {
     //
     //
     double EvaluateCABSSinglesCorrection(const Tensor2 &F,
-                                           F12Idxs f12Idxs,
-                                           Tensor2 *t1Amps = nullptr);
+                                         F12Idxs f12Idxs,
+                                         Tensor2 *t1Amps = nullptr);
     //
     //
     MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
@@ -75,10 +75,11 @@ namespace SCESS::F12 {
                                const Integrals::MolInts &configIntegrals,
                                const Integrals::F12::F12Integrals &f12Ints,
                                F12Idxs f12Idxs,
-                               Tensor2 *F_out = nullptr,
-                               TEITensor *V_out = nullptr,
-                               TEITensor *X_out = nullptr,
-                               TEITensor *B_out = nullptr);
+                               Tensor2 *F_pq_out = nullptr,
+                               TEITensor *V_ijxy_out = nullptr,
+                               TEITensor *C_xyab_out = nullptr,
+                               TEITensor *X_xywz_out = nullptr,
+                               TEITensor *B_xywz_out = nullptr);
     //
     Tensor4 EvaluateW(const Tensor4 &f12Int, F12Idxs f12Idxs);
     Tensor4 EvaluateVab(const Tensor4 &f12Repulsion,

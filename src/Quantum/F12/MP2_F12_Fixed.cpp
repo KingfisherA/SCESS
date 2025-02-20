@@ -48,7 +48,6 @@ namespace SCESS::F12 {
                         const Tensor4 &f12,
                         const Tensor4 &eri,
                         F12Idxs f12Idxs) {
-
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
             {M, {0, f12Idxs.nOcc}},
@@ -91,10 +90,11 @@ namespace SCESS::F12 {
                                const Integrals::MolInts &mints,
                                const Integrals::F12::F12Integrals &f12Ints,
                                F12Idxs f12Idxs,
-                               Tensor2 *F_out,
-                               TEITensor *V_out,
-                               TEITensor *X_out,
-                               TEITensor *B_out) {
+                               Tensor2 *F_pq_out,
+                               TEITensor *V_ijxy_out,
+                               TEITensor *C_xyab_out,
+                               TEITensor *X_xywz_out,
+                               TEITensor *B_xywz_out) {
         // * We assume that the reference wavefunction is actually a closed shell RHF hence alternating
         //      alpha and beta spins (fix this in the future to support open shell :( )
         // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta are stored alternating)
@@ -518,14 +518,16 @@ namespace SCESS::F12 {
         //Calculate the F12 contribution to the MP2 energy
         double E_F12 = 2.0 * E_F12_V + E_F12_B - E_F12_X;
 
-        if (F_out)
-            *F_out = F_;
-        if (V_out)
-            *V_out = V_;
-        if (X_out)
-            *X_out = X_;
-        if (B_out)
-            *B_out = B_;
+        if (F_pq_out)
+            *F_pq_out = F_;
+        if (V_ijxy_out)
+            *V_ijxy_out = V_;
+        if (X_xywz_out)
+            *X_xywz_out = X_;
+        if (B_xywz_out)
+            *B_xywz_out = B_;
+        if (C_xyab_out)
+            *C_xyab_out = C_;
 
         return {E_MP2, E_F12};
     }

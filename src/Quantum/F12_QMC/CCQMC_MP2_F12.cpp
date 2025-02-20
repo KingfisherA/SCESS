@@ -33,8 +33,9 @@ namespace SCESS::F12_QMC {
     //
     //
     double EvaluateGeminalElement(SlaterDet Dj,
-                                  const Tensor4 &Vij,
-                                  const Tensor4 &Vab,
+                                  const Tensor4 &V_ijxy,
+                                  const Tensor4 &V_abxy,
+                                  const Tensor4 &C_xyab,
                                   uint32_t nOcc) {
         size_t numOfAlphaOrbitals = 2, numOfBetaOrbitals = 2;
 
@@ -59,7 +60,7 @@ namespace SCESS::F12_QMC {
                 double sum = 0.0;
 
                 for (uint32_t i = 0; i < commonIJ.size() / 2; ++i)
-                    sum += Vij(commonIJ[i], commonIJ[i], commonIJ[i], commonIJ[i]);
+                    sum += V_ijxy(commonIJ[i], commonIJ[i], commonIJ[i], commonIJ[i]);
 
                 return sum;
             }
@@ -73,7 +74,7 @@ namespace SCESS::F12_QMC {
                     int a = int(uniqueJ[i * 2 + 0]) / 2 - nOcc;
                     int b = int(uniqueJ[i * 2 + 1]) / 2 - nOcc;
 
-                    sum += Vab(a, b, b, a);
+                    sum += V_abxy(a, b, b, a) + C_xyab(a, b, b, a);
                 }
 
                 return sum;
@@ -83,6 +84,18 @@ namespace SCESS::F12_QMC {
                 return 0.0;
             }
         }
+    }
+    //
+    void PrintCCQMCWavefunction(const std::vector<int64_t> &excitorWalkers) {
+        double D0_pop = (double) excitorWalkers[0];
+
+        std::cout << "--- CCQMC Wavefunction ---\n";
+        std::cout << std::setprecision(15);
+        for (uint32_t i = 0; i < excitorWalkers.size(); ++i) {
+            double amplitude = double(excitorWalkers[i]) / D0_pop;
+            std::cout << "  - c" << i << " = " << amplitude << '\n';
+        }
+        std::cout << "\n\n";
     }
     //
     //
@@ -128,10 +141,10 @@ namespace SCESS::F12_QMC {
 
         //Tensor4 W_ = EvaluateW(f12Ints.f12);
 
-        Tensor2 F_;
-        TEITensor Vij_, X_, B_;
-        F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_, &Vij_, &X_, &B_);
-        TEITensor Vab_ = F12::EvaluateVab(f12Ints.f12Repulsion, f12Ints.f12, mints.eri, f12Idxs);
+        Tensor2 F_pq;
+        TEITensor V_ijxy, C_xyab, X_xywz, B_xywz;
+        F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_pq, &V_ijxy, &C_xyab, &X_xywz, &B_xywz);
+        TEITensor V_abxy = F12::EvaluateVab(f12Ints.f12Repulsion, f12Ints.f12, mints.eri, f12Idxs);
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
@@ -234,7 +247,7 @@ namespace SCESS::F12_QMC {
                     std::unordered_set<uint32_t> selectedExcitorIndices;
                     if (s > 0) {
                         uniform_int_distribution<uint32_t> excitorIdxDist(1, excitors.size() - 1);
-                        uniform_01<mt19937> geminalExcitor(randGenerator);
+                        //uniform_01<mt19937> geminalExcitor(randGenerator);
                         selectedExcitorIndices.reserve(s);
                         while (selectedExcitorIndices.size() != s) {
                             uint32_t newIndx = excitorIdxDist(randGenerator);
@@ -260,6 +273,9 @@ namespace SCESS::F12_QMC {
 
                     for (uint32_t idx: selectedExcitorIndices) {
                         if (IsGeminalExcitor(excitors[idx])) {
+                            s = 1.0;
+                            pClust = 1.0 / excitors.size();
+                            pSize = 1.0 / 2.0;
                             isGeminal = true;
                             continue;
                         }
@@ -309,19 +325,17 @@ namespace SCESS::F12_QMC {
                     DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
 
                     //Update the projected energy
-                    if (DiIdx != 0) {
-                        double H0i = H_CI(0, DiIdx);
-                        //static_cast<double>(Di.GetSign()) *
-                        EProjCluster +=
-                                excitorAmplitude * H0i / (pClust);
-                    }
-
-                    if (isGeminal && DiIdx == 0) {
+                    if (isGeminal) {
                         // auto orbIdxs = FindOrbitalIdxs(Di);
                         //Add contributions for each pair of electrons in the determinant
                         double H0i = F12::CalculateMP2_F12_FixedEnergyElectronPair(
-                            0, 0, F_, Vij_, X_, B_);
-                        EProjCluster += (excitorAmplitude / pClust) * H0i;
+                            0, 0, F_pq, V_ijxy, X_xywz, B_xywz);
+                        //excitorAmplitude * H0i / pClustGeminal
+                        EProjCluster += 1.0 * H0i / pClust;
+                    } else if (DiIdx != 0) {
+                        double H0i = H_CI(0, DiIdx);
+                        //static_cast<double>(Di.GetSign()) *
+                        EProjCluster += excitorAmplitude * H0i / pClust;
                     }
 
                     // -- Spawning --
@@ -335,7 +349,7 @@ namespace SCESS::F12_QMC {
 
                         double Hij = 0.0;
                         if (isGeminal)
-                            Hij = EvaluateGeminalElement(Dj, Vij_, Vab_, nOccupied);
+                            Hij = EvaluateGeminalElement(Dj, V_ijxy, V_abxy, C_xyab, nOccupied);
                         else
                             Hij = H_CI(DiIdx, DjIdx);
 
@@ -355,6 +369,9 @@ namespace SCESS::F12_QMC {
                             }
                         }
                     }
+
+                    if (isGeminal)
+                        continue;
 
                     double Hii = H_CI(DiIdx, DiIdx);
 
@@ -426,12 +443,14 @@ namespace SCESS::F12_QMC {
                     nExcips
                     << " E(Proj) Average = " << EProjAverage / double(reportCycle - 50) << '\n';
 
-            std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Pop Dj = " << excitorWalkers.back() << '\n';
+            std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Num Excips " << nExcips << '\n';
 
             nExcipsLast = nExcips;
         }
         EProjAverage /= double(NUM_REPORT_CYCLES - 50);
 
+        std::cout << "\n\n";
+        PrintCCQMCWavefunction(excitorWalkers);
 
         return EProjAverage;
     }

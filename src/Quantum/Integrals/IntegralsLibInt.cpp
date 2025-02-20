@@ -19,7 +19,7 @@ namespace SCESS::Integrals {
 #pragma region LibInt Init
     //
     void LibInt::InitLibInt() {
-        libint2::initialize(true);
+        libint2::initialize(false);
     }
     //
     void LibInt::CloseLibInt() {
