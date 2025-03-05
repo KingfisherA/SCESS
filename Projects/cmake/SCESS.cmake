@@ -27,6 +27,7 @@ target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
 target_link_libraries("SCESS" PRIVATE
+  fmt
   QuantumSCESS
   ${GENG_TOOLS_LIBRARIES}
   Boost::filesystem

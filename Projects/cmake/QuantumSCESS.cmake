@@ -90,6 +90,7 @@ target_include_directories("QuantumSCESS" PRIVATE
 )
 
 target_link_libraries("QuantumSCESS" PRIVATE
+  fmt
   LAPACK::LAPACK
   ${LIB_LAPACKE}
   BLAS::BLAS

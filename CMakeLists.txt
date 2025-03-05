@@ -41,6 +41,7 @@ if(NOT Boost_FOUND)
     find_package(Boost COMPONENTS REQUIRED filesystem locale)
 endif()
 
+find_package(fmt CONFIG REQUIRED)
 find_package(Libxc CONFIG REQUIRED)
 find_package(libint2 CONFIG REQUIRED)
 

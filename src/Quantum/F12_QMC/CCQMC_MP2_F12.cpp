@@ -1,10 +1,10 @@
 #include <Quantum/Q_PCH.h>
 #include "F12_QMC.h"
 #include "Quantum/F12/F12.h"
+#include<fmt/format.h>
 //
 #include "Tensor/TensorOperations.h"
 #include "Tensor/TensorSlice.h"
-#include "Tensor/TensorEinsum.h"
 #include "Quantum/QMC/QMC.h"
 #include "Quantum/CI/CI.h"
 //
@@ -16,8 +16,6 @@
 //
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
-#include "Quantum/F12/F12.h"
-#include "Utilities/Utilities.h"
 
 
 //
@@ -59,8 +57,12 @@ namespace SCESS::F12_QMC {
             case 0: {
                 double sum = 0.0;
 
-                for (uint32_t i = 0; i < commonIJ.size() / 2; ++i)
-                    sum += V_ijxy(commonIJ[i], commonIJ[i], commonIJ[i], commonIJ[i]);
+                for (uint32_t n = 0; n < commonIJ.size() / 2; ++n) {
+                    uint32_t i = n * 2 + 0;
+                    uint32_t j = n * 2 + 1;
+                    sum += (3.0 / 8.0) * V_ijxy(commonIJ[i], commonIJ[j], commonIJ[i], commonIJ[j])
+                            + (1.0 / 8.0) * V_ijxy(commonIJ[i], commonIJ[j], commonIJ[j], commonIJ[i]);
+                }
 
                 return sum;
             }
@@ -74,7 +76,8 @@ namespace SCESS::F12_QMC {
                     int a = int(uniqueJ[i * 2 + 0]) / 2 - nOcc;
                     int b = int(uniqueJ[i * 2 + 1]) / 2 - nOcc;
 
-                    sum += V_abxy(a, b, b, a) + C_xyab(a, b, b, a);
+                    sum += (3.0 / 8.0) * (V_abxy(a, b, a, b) + C_xyab(a, b, a, b))
+                            + (1.0 / 8.0) * (V_abxy(a, b, b, a) + C_xyab(a, b, b, a));
                 }
 
                 return sum;
@@ -201,15 +204,19 @@ namespace SCESS::F12_QMC {
 
         double EProjCycle = 0.0;
         double EProjAverage = 0.0;
+        double EProjCycle_F12 = 0.0;
+        double EProjAverage_F12 = 0.0;
         //Current total population of excips in the system
         int64_t nExcips = 0;
         int64_t nExcipsLast = 0;
 
+        uint32_t nF12EContribs = 0;
+        uint32_t nNormalEContribs = 0;
+
+
         int64_t D0_Population = excitorWalkers[0];
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
-            EProjCycle = 0.0;
-
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
                 for (auto &val: excitorSpawn)
                     val = 0;
@@ -217,6 +224,7 @@ namespace SCESS::F12_QMC {
 
 
                 double EProjCluster = 0.0;
+                double EProjCluster_F12 = 0.0;
                 Na = nExcips;
 
                 for (size_t cluster = 0; cluster < Na; cluster++) {
@@ -261,7 +269,7 @@ namespace SCESS::F12_QMC {
                             }
                             selectedExcitorIndices.insert(newIndx);
                         }
-                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / excitors.size(), s);
+                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / (double)excitors.size(), s);
                     } else
                         selectedExcitorIndices.insert(0);
 
@@ -274,7 +282,7 @@ namespace SCESS::F12_QMC {
                     for (uint32_t idx: selectedExcitorIndices) {
                         if (IsGeminalExcitor(excitors[idx])) {
                             s = 1.0;
-                            pClust = 1.0 / excitors.size();
+                            pClust = 1.0 / (double)excitors.size();
                             pSize = 1.0 / 2.0;
                             isGeminal = true;
                             continue;
@@ -331,17 +339,22 @@ namespace SCESS::F12_QMC {
                         double H0i = F12::CalculateMP2_F12_FixedEnergyElectronPair(
                             0, 0, F_pq, V_ijxy, X_xywz, B_xywz);
                         //excitorAmplitude * H0i / pClustGeminal
-                        EProjCluster += 1.0 * H0i / pClust;
+                        EProjCluster_F12 += 1.0 * H0i / pClust;
+                        nF12EContribs++;
                     } else if (DiIdx != 0) {
                         double H0i = H_CI(0, DiIdx);
                         //static_cast<double>(Di.GetSign()) *
                         EProjCluster += excitorAmplitude * H0i / pClust;
+                        nNormalEContribs++;
                     }
 
                     // -- Spawning --
                     // A random single or double excitation of |Di> is performed to generate |Dj>
                     // We now spawn a particle onto |Dj> with probability proportional to Hij which corresponds to
                     // <Di | H | Dj>. The sign of the particle is equal to Hij
+
+                    if (isGeminal)
+                        continue;
 
                     //Cannot spawn onto itself and check J is valid
                     if (DiIdx != DjIdx && DjIdx != excitors.size()) {
@@ -354,7 +367,7 @@ namespace SCESS::F12_QMC {
                             Hij = H_CI(DiIdx, DjIdx);
 
                         //1.2 *
-                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //*2.0
+                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
                         auto nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
@@ -400,11 +413,15 @@ namespace SCESS::F12_QMC {
                 }
 
                 EProjCluster /= (double) (Na);
+                EProjCluster_F12 /= (double) (Na);
 
-                if (reportCycle < 20)
+                if (reportCycle < 20) {
                     EProjCluster = 0.0;
+                    EProjCluster_F12 = 0.0;
+                }
 
                 EProjCycle += EProjCluster;
+                EProjCycle_F12 += EProjCluster_F12;
                 // -- Annihilation --
                 // Pairs of particles with opposite signs on the same excitor are removed
                 for (uint32_t I = 0; I < excitorWalkers.size(); I++)
@@ -418,18 +435,15 @@ namespace SCESS::F12_QMC {
             }
 
             double EProj = (EProjCycle / NUM_CYCLES) + refWfn.E_HF;
+            double EProj_F12 = (EProjCycle_F12 / NUM_CYCLES);
 
-            // double EProj = refWfn.Energy;
-            //
-            // for (uint32_t I = 1; I < excitorWalkers.size(); I++) {
-            //     EProj += H_FCI(0, I) * double(excitorWalkers[I]) / double(excitorWalkers[0]);
-            // }
-
+            EProjCycle = 0.0;
+            EProjCycle_F12 = 0.0;
 
             if (reportCycle >= 50) {
                 EProjAverage += EProj;
+                EProjAverage_F12 += EProj_F12;
             }
-
 
             if (reportCycle == 50)
                 shift = refWfn.E_HF;
@@ -437,22 +451,29 @@ namespace SCESS::F12_QMC {
             if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
                 shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
 
-            std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<
-                    " Shift = " << shift <<
-                    " Population = " <<
-                    nExcips
-                    << " E(Proj) Average = " << EProjAverage / double(reportCycle - 50) << '\n';
+            fmt::print("");
+            // std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<
+            //         " E(Proj F12) = " << EProj_F12 <<
+            //         " n(E) = " << nNormalEContribs <<
+            //         " n(E F12) = " << nF12EContribs <<
+            //         " Shift = " << shift <<
+            //         " Population = " <<
+            //         nExcips <<'\n';
+
+            nNormalEContribs = 0;
+            nF12EContribs = 0;
 
             std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Num Excips " << nExcips << '\n';
 
             nExcipsLast = nExcips;
         }
         EProjAverage /= double(NUM_REPORT_CYCLES - 50);
+        EProjAverage_F12 /= double(NUM_REPORT_CYCLES - 50);
 
         std::cout << "\n\n";
         PrintCCQMCWavefunction(excitorWalkers);
 
-        return EProjAverage;
+        return EProjAverage + EProjAverage_F12;
     }
     //
     //

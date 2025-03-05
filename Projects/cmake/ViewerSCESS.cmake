@@ -58,6 +58,7 @@ target_include_directories("ViewerSCESS" PRIVATE
 )
 
 target_link_libraries("ViewerSCESS" PRIVATE
+  fmt
   QuantumSCESS
   ${GENG_LIBRARIES}
   ImPlot

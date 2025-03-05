@@ -321,7 +321,7 @@ namespace SCESS::F12 {
                 Slice<Indices<N, M, J, X> >(idxs, f12),
                 tmp);
 
-            //-- Y contributions --
+            //-- Y Contributions --
             //xp,lkbp->klxb
             tmp = Einsum<Indices<X, P>, Indices<L, K, B, P>, Indices<K, L, X, B> >(
                 Slice<Indices<X, P> >(idxs, K_),
