@@ -478,7 +478,7 @@ namespace SCESS::QMC::CC {
                         double Hij = H_FCI(DiIdx, DjIdx);
 
                         //1.2 *
-                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //
+                        double pSpawn = 4.0 * tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize); //
                         auto nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())

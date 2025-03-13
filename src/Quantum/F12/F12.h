@@ -72,7 +72,7 @@ namespace SCESS::F12 {
                                   TEITensor *B_out = nullptr);
     //
     MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
-                               const Integrals::MolInts &configIntegrals,
+                               const Integrals::MolInts &mints,
                                const Integrals::F12::F12Integrals &f12Ints,
                                F12Idxs f12Idxs,
                                Tensor2 *F_pq_out = nullptr,
@@ -82,10 +82,13 @@ namespace SCESS::F12 {
                                TEITensor *B_xywz_out = nullptr);
     //
     Tensor4 EvaluateW(const Tensor4 &f12Int, F12Idxs f12Idxs);
-    Tensor4 EvaluateVab(const Tensor4 &f12Repulsion,
-                        const Tensor4 &f12,
-                        const Tensor4 &eri,
-                        F12Idxs f12Idxs);
+    void EvaluateAdditionalMP2Intermediates(
+        const Integrals::MolInts &configIntegrals,
+        const Integrals::F12::F12Integrals &f12Ints,
+        F12Idxs f12Idxs,
+        TEITensor *V_abxy_out = nullptr,
+        TEITensor *h_apxy_out = nullptr
+    );
     //
     double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,
                                                     const Tensor2 &F,

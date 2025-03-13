@@ -22,7 +22,7 @@ namespace SCESS::F12 {
         //OBS Virtual orbitals
         A, B, C, D,
         //All OBS orbitals
-        P, Q, R, S,
+        P, Q, R, S, T, U,
         //CABS virtual orbitals
         X, Y, Z, W
     };
@@ -44,12 +44,16 @@ namespace SCESS::F12 {
         return W;
     }
     //
-    Tensor4 EvaluateVab(const Tensor4 &f12Repulsion,
-                        const Tensor4 &f12,
-                        const Tensor4 &eri,
-                        F12Idxs f12Idxs) {
+    void EvaluateAdditionalMP2Intermediates(const Integrals::MolInts &mints,
+                                            const Integrals::F12::F12Integrals &f12Ints,
+                                            F12Idxs f12Idxs,
+                                            TEITensor *V_pqxy_out,
+                                            TEITensor *h_apxy_out
+    ) {
         TensorSliceIndices idxs = {
             //All Occupied orbital indices
+            {I, {0, f12Idxs.nOcc}},
+            {J, {0, f12Idxs.nOcc}},
             {M, {0, f12Idxs.nOcc}},
             //All virtual orbital indices
             {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
@@ -57,32 +61,60 @@ namespace SCESS::F12 {
             {C, {f12Idxs.nOcc, f12Idxs.nVirt}},
             {D, {f12Idxs.nOcc, f12Idxs.nVirt}},
             //All OBS indices
+            {P, {0, f12Idxs.nOBS}},
+            {Q, {0, f12Idxs.nOBS}},
             {R, {0, f12Idxs.nOBS}},
             {S, {0, f12Idxs.nOBS}},
+            {T, {0, f12Idxs.nOBS}},
+            {U, {0, f12Idxs.nOBS}},
             //CABS indices
             {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
         };
 
-        //Make the Vab intermediate
-        //aaaa
-        Tensor4 Vab_ = Slice<Indices<A, A, A, A> >(idxs, f12Repulsion);
+        const TEITensor &eri = mints.eri;
+        const TEITensor &f12 = f12Ints.f12;
+        const TEITensor &f12Sq = f12Ints.f12Sq;
+        const TEITensor &f12DelSq = f12Ints.f12DelSq;
+        const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
 
-        //abrs,cdrs->abcd
-        Vab_ -= Einsum<Indices<A, B, R, S>, Indices<C, D, R, S>, Indices<A, B, C, D> >(
-            Slice<Indices<A, B, R, S> >(idxs, eri),
-            Slice<Indices<C, D, R, S> >(idxs, f12));
-
-        //abxm,cdxm->abcd
-        Vab_ -= Einsum<Indices<A, B, X, M>, Indices<C, D, X, M>, Indices<A, B, C, D> >(
-            Slice<Indices<A, B, X, M> >(idxs, eri),
-            Slice<Indices<C, D, X, M> >(idxs, f12));
+        //Make the V_pqxy intermediate
+        //Note that i=x and j=y as fixed amplitude approximation employed
+        Tensor4 V_pqij = Slice<Indices<P, Q, I, J> >(idxs, f12Repulsion);
 
         //abmx,cdmx->abcd
-        Vab_ -= Einsum<Indices<A, B, M, X>, Indices<C, D, M, X>, Indices<A, B, C, D> >(
-            Slice<Indices<A, B, M, X> >(idxs, eri),
-            Slice<Indices<C, D, M, X> >(idxs, f12));
+        V_pqij -= Einsum<Indices<P, Q, M, X>, Indices<M, X, I, J>, Indices<P, Q, I, J> >(
+            Slice<Indices<P, Q, M, X> >(idxs, eri),
+            Slice<Indices<M, X, I, J> >(idxs, f12));
 
-        return Vab_;
+        //abxm,cdxm->abcd
+        V_pqij -= Einsum<Indices<P, Q, X, M>, Indices<X, M, I, J>, Indices<P, Q, I, J> >(
+            Slice<Indices<P, Q, X, M> >(idxs, eri),
+            Slice<Indices<X, M, I, J> >(idxs, f12));
+
+
+        V_pqij -= Einsum<Indices<P, Q, R, S>, Indices<R, S, I, J>, Indices<P, Q, I, J> >(
+            Slice<Indices<P, Q, R, S> >(idxs, eri),
+            Slice<Indices<R, S, I, J> >(idxs, f12));
+
+        Tensor2 h_xp = Slice<Indices<X, A> >(idxs, MatrixToTensor(mints.T + mints.V));
+
+        Tensor4 h_apxy =
+                Einsum<Indices<A, X, I, J>, Indices<X, P>, Indices<A, P, I, J> >(
+                    Slice<Indices<A, X, I, J> >(idxs, f12),
+                    h_xp
+                );
+
+        h_apxy += Einsum<Indices<X, A, I, J>, Indices<X, P>, Indices<A, P, I, J> >(
+            Slice<Indices<X, A, I, J> >(idxs, f12),
+            h_xp
+        );
+
+
+        if (V_pqxy_out)
+            *V_pqxy_out = V_pqij;
+
+        if (h_apxy_out)
+            *h_apxy_out = h_apxy;
     }
     //
     //

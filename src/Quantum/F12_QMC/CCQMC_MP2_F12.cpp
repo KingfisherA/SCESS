@@ -31,9 +31,8 @@ namespace SCESS::F12_QMC {
     //
     //
     double EvaluateGeminalElement(SlaterDet Dj,
-                                  const Tensor4 &V_ijxy,
-                                  const Tensor4 &V_abxy,
-                                  const Tensor4 &C_xyab,
+                                  const Tensor4 &V_pqxy,
+                                  const Tensor4 &h_apxy,
                                   uint32_t nOcc) {
         size_t numOfAlphaOrbitals = 2, numOfBetaOrbitals = 2;
 
@@ -60,24 +59,33 @@ namespace SCESS::F12_QMC {
                 for (uint32_t n = 0; n < commonIJ.size() / 2; ++n) {
                     uint32_t i = n * 2 + 0;
                     uint32_t j = n * 2 + 1;
-                    sum += (3.0 / 8.0) * V_ijxy(commonIJ[i], commonIJ[j], commonIJ[i], commonIJ[j])
-                            + (1.0 / 8.0) * V_ijxy(commonIJ[i], commonIJ[j], commonIJ[j], commonIJ[i]);
+                    sum += (3.0 / 8.0) * V_pqxy(commonIJ[i], commonIJ[j], 0, 0)
+                            + (1.0 / 8.0) * V_pqxy(commonIJ[i], commonIJ[j], 0, 0);
                 }
 
                 return sum;
             }
 
             case 1: {
-                return 0.0;
+                double sum = 0.0;
+                for (uint32_t i = 0; i < uniqueJ.size() / 2; ++i) {
+                    int a = int(uniqueJ[i * 2 + 0]) / 2;
+                    int b = int(uniqueJ[i * 2 + 1]) / 2;
+
+                    sum += (3.0 / 8.0) * (V_pqxy(a, b, 0, 0) + h_apxy(a - nOcc, b, 0, 0))
+                            + (1.0 / 8.0) * (V_pqxy(a, b, 0, 0) + h_apxy(a - nOcc, b, 0, 0));
+                }
+
+                return sum;
             }
             case 2: {
                 double sum = 0.0;
                 for (uint32_t i = 0; i < uniqueJ.size() / 2; ++i) {
-                    int a = int(uniqueJ[i * 2 + 0]) / 2 - nOcc;
-                    int b = int(uniqueJ[i * 2 + 1]) / 2 - nOcc;
+                    int a = int(uniqueJ[i * 2 + 0]) / 2;
+                    int b = int(uniqueJ[i * 2 + 1]) / 2;
 
-                    sum += (3.0 / 8.0) * (V_abxy(a, b, a, b) + C_xyab(a, b, a, b))
-                            + (1.0 / 8.0) * (V_abxy(a, b, b, a) + C_xyab(a, b, b, a));
+                    sum += (3.0 / 8.0) * (V_pqxy(a, b, 0, 0) + h_apxy(a - nOcc, b, 0, 0))
+                            + (1.0 / 8.0) * (V_pqxy(a, b, 0, 0) + h_apxy(a - nOcc, b, 0, 0));
                 }
 
                 return sum;
@@ -132,7 +140,8 @@ namespace SCESS::F12_QMC {
         uint32_t Na = 200;
         constexpr size_t NUM_REPORT_CYCLES = 400;
 
-        std::cout << "--- Coupled Cluster Quantum Monte Carlo F12 ---\n";
+        fmt::print("\n\n--- Coupled Cluster Quantum Monte Carlo F12 ---\n\n");
+
 
         TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
             Slice<Indices<P, Q, R, S> >(idxs,
@@ -144,10 +153,14 @@ namespace SCESS::F12_QMC {
 
         //Tensor4 W_ = EvaluateW(f12Ints.f12);
 
+        fmt::print("Evaluating F12 T2'(1) Intermediates...\n");
         Tensor2 F_pq;
         TEITensor V_ijxy, C_xyab, X_xywz, B_xywz;
         F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_pq, &V_ijxy, &C_xyab, &X_xywz, &B_xywz);
-        TEITensor V_abxy = F12::EvaluateVab(f12Ints.f12Repulsion, f12Ints.f12, mints.eri, f12Idxs);
+        TEITensor V_pqxy, h_apxy;
+        F12::EvaluateAdditionalMP2Intermediates(mints, f12Ints, f12Idxs,
+                                                &V_pqxy, &h_apxy);
+        fmt::print("Done!\n");
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
@@ -216,6 +229,10 @@ namespace SCESS::F12_QMC {
 
         int64_t D0_Population = excitorWalkers[0];
 
+        fmt::print("\n\n| Cycle No.      | E(Proj)/Eh     | E(Proj_F12)/Eh | n(E)           "
+            "| n(E_F12)       | E(S)/Eh        | n(Excips)      | n(Excips D0)   |\n");
+        //fmt::print("{:-<137}\n", "");
+
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
             for (size_t cycle = 0; cycle < NUM_CYCLES; cycle++) {
                 for (auto &val: excitorSpawn)
@@ -269,7 +286,7 @@ namespace SCESS::F12_QMC {
                             }
                             selectedExcitorIndices.insert(newIndx);
                         }
-                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / (double)excitors.size(), s);
+                        pClust = Integrals::Utils::Factorial(s) * pow(1.0 / (double) excitors.size(), s);
                     } else
                         selectedExcitorIndices.insert(0);
 
@@ -282,7 +299,7 @@ namespace SCESS::F12_QMC {
                     for (uint32_t idx: selectedExcitorIndices) {
                         if (IsGeminalExcitor(excitors[idx])) {
                             s = 1.0;
-                            pClust = 1.0 / (double)excitors.size();
+                            pClust = 1.0 / (double) excitors.size();
                             pSize = 1.0 / 2.0;
                             isGeminal = true;
                             continue;
@@ -353,21 +370,18 @@ namespace SCESS::F12_QMC {
                     // We now spawn a particle onto |Dj> with probability proportional to Hij which corresponds to
                     // <Di | H | Dj>. The sign of the particle is equal to Hij
 
-                    if (isGeminal)
-                        continue;
-
                     //Cannot spawn onto itself and check J is valid
                     if (DiIdx != DjIdx && DjIdx != excitors.size()) {
                         Dj.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
                         double Hij = 0.0;
                         if (isGeminal)
-                            Hij = EvaluateGeminalElement(Dj, V_ijxy, V_abxy, C_xyab, nOccupied);
+                            Hij = EvaluateGeminalElement(Dj, V_pqxy, h_apxy, nOccupied);
                         else
                             Hij = H_CI(DiIdx, DjIdx);
 
                         //1.2 *
-                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
+                        double pSpawn = 0.7 * tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
                         auto nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
@@ -382,9 +396,6 @@ namespace SCESS::F12_QMC {
                             }
                         }
                     }
-
-                    if (isGeminal)
-                        continue;
 
                     double Hii = H_CI(DiIdx, DiIdx);
 
@@ -451,7 +462,17 @@ namespace SCESS::F12_QMC {
             if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
                 shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
 
-            fmt::print("");
+            //" Cycle({}); E(Proj) = {:.8} Eh E(Proj F12) = {:.8} Eh "
+            //"n(E) = {} n(E F12) = {} S = {} Pop. = {} Pop D0 = {}
+            fmt::print(" {:<16} {:<16.8} {:<16.8} {:<16} {:<16} {:<16.8} {:<16} {:<16} \n",
+                       reportCycle,
+                       EProj,
+                       EProj_F12,
+                       nNormalEContribs,
+                       nF12EContribs,
+                       shift,
+                       nExcips,
+                       excitorWalkers[0]);
             // std::cout << "  Cycle(" << reportCycle << "); E(Proj) = " << EProj <<
             //         " E(Proj F12) = " << EProj_F12 <<
             //         " n(E) = " << nNormalEContribs <<
@@ -463,7 +484,7 @@ namespace SCESS::F12_QMC {
             nNormalEContribs = 0;
             nF12EContribs = 0;
 
-            std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Num Excips " << nExcips << '\n';
+            //std::cout << "  Pop D0 = " << excitorWalkers[0] << "  Num Excips " << nExcips << '\n';
 
             nExcipsLast = nExcips;
         }

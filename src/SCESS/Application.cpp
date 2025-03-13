@@ -4,20 +4,23 @@
 #include "Tests.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Resources/AssetFolder.h"
+#include<fmt/format.h>
+#include<fmt/color.h>
 
 
 //
 //
 int main(int argc, char *argv[]) {
     using namespace SCESS;
-    std::cout <<
-            "Schrodinger's Cat's Electronic System Solver; Terminal Edition\n    By Charlie Wheelwright (cspw2) \n    Meow!\n\n";
+    fmt::print(fmt::emphasis::bold, "Schrodinger's Cat's Electronic System Solver; Terminal Edition\n"
+               "    By Charlie Wheelwright (cspw2)"
+               "\n    Meow!\n\n");
     if (!Res::AssetsFolder::Get().Init())
         return 1;
 
     Integrals::LibInt::InitLibInt();
 
-    std::cout << "\n\n\n"
+    fmt::print(fmt::emphasis::italic, "\n\n\n"
             "--- Command Line Arguments ---\n"
             "\t- \"f12ints\" = Calculate a test set of f12 integrals and transforms the basis set\n"
             "\t- \"mp2f12-opt\" = Perform an MP2-F12 optimised amplitude calculation on a hydrogen molecule.\n"
@@ -27,10 +30,11 @@ int main(int argc, char *argv[]) {
             "\t- \"fci\" = Perform a test full configuration interaction calculation on hydrogen.\n"
             "\t- \"fciqmc\" = Perform a test Full-CI Quantum Monte Carlo procedure on hydrogen.\n"
             "\t- \"ccqmc-mp2-f12\" = Perform a CCSD Quantum Monte Carlo with a second-order geminal excitor operator T2' in the T expansion (new theory)."
-            "\n\n\n";
+            "\n\n\n");
 
     //Tests::TestMP2_F12_Fixed();
     //Tests::TestFCIQMC();
+    //Tests::TestCCQMC();
     Tests::TestCCQMC_MP2_F12();
     //Tests::TestFullCI();
     //Tests::TestMolecularInts();

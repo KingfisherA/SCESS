@@ -4,6 +4,8 @@
 #include "Resources/AssetFolder.h"
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2/basis.h>
+#include<fmt/format.h>
+#include<fmt/color.h>
 
 #include "GraphicsEngine/Utilities/Memory.h"
 #include "Quantum/Molecule.h"
@@ -21,6 +23,7 @@
 #include "Quantum/Basis/CGF.h"
 #include "Quantum/F12/F12.h"
 #include "Quantum/F12_QMC/F12_QMC.h"
+
 
 //
 //
@@ -407,7 +410,7 @@ namespace SCESS::Tests {
                                                  true,
                                                  &F);
 
-        std::cout <<"Evaluating CABS singles correction...\n";
+        std::cout << "Evaluating CABS singles correction...\n";
         //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
         double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
@@ -433,7 +436,8 @@ namespace SCESS::Tests {
                 f12Result.E_MP2 +
                 f12Result.E_F12_MP2 << " hartrees\n\n";
 
-        std::cout << "Press any key to continue..\n";
+        fmt::print(fg(fmt::color::dark_green),
+                   "\nPress any key to continue..\n");
         std::cin.get();
     }
     //
@@ -446,15 +450,15 @@ namespace SCESS::Tests {
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
 
-        std::cout << "Evaluating overlap, kinetic, nuclear & eri integrals...\n";
+        fmt::print("Evaluating overlap, kinetic, nuclear & eri integrals...\n");
         Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-        std::cout << "Done!\n";
+        fmt::print(fg(fmt::color::green), "Done!\n");
 
-        std::cout << "Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n";
+        fmt::print("Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n");
         Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-        std::cout << "Done!\n";
+        fmt::print(fg(fmt::color::green), "Done!\n");
 
-        std::cout << "Obtaining UHF reference...\n";
+        fmt::print("Obtaining UHF reference...\n");
         HF::HF_Wfn uhfWfn = HF::UHF(
             Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
             1,
@@ -464,7 +468,7 @@ namespace SCESS::Tests {
 
         F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
 
-        std::cout << "Canonicalising f12 integrals...\n";
+        fmt::print("Canonicalising f12 integrals...\n");
         Eigen::MatrixXd F;
         Integrals::Transforms::TransformF12Basis(f12BasisSet,
                                                  uhfWfn.D_Alpha,
@@ -474,7 +478,7 @@ namespace SCESS::Tests {
                                                  true,
                                                  &F);
 
-        std::cout <<"Evaluating CABS singles correction...\n";
+        fmt::print("Evaluating CABS singles correction...\n");
         //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
         double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
@@ -482,23 +486,27 @@ namespace SCESS::Tests {
         double ECCQMC_F12 = F12_QMC::CCQMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
         double ECorrelation = ECCQMC_F12 - uhfWfn.E_HF;
 
-        std::cout << "\n\n--- CCSD QMC F12 Single Point Energy ---\n";
-        std::cout << " --- Fixed amplitude approximation used --- \n";
-        std::cout << "  Molecule = Hydrogen (H2)\n";
+        fmt::print(fg(fmt::color::white), "\n\n--- CCSD QMC F12 Single Point Energy ---\n");
+        fmt::print(fg(fmt::color::white), " --- Fixed amplitude approximation used --- \n");
+        fmt::print(fg(fmt::color::white), "  Molecule = Hydrogen (H2)\n");
         //Should be -1.117505880245 hartrees
-        std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
+        fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n",
+                   uhfWfn.E_HF);
         //Should be -0.009972302139 hartrees
-        std::cout << "  E(CABS singles correction) = " << ECABSSingles << " hartrees\n";
+        fmt::print(fg(fmt::color::white), "  E(CABS singles correction) = {:.8} hartrees\n",
+                   ECABSSingles);
         //Should be -0.012503809116 hartrees
-        std::cout << "  E(CCQMC_F12) = " << ECorrelation << " hartrees\n";
+        fmt::print(fg(fmt::color::white), "  E(CCQMC_F12) = {:.8} hartrees\n",
+                   ECorrelation);
         //Should be -0.021009866243 hartrees
         //Should be -1.160991857744 hartrees
-        std::cout << "  E(Total) = " <<
-                uhfWfn.E_HF +
-                ECABSSingles +
-                ECorrelation << " hartrees\n\n";
+        fmt::print(bg(fmt::color::light_blue), "  E(Total) = {:.8} hartrees\n\n",
+                   uhfWfn.E_HF +
+                   ECABSSingles +
+                   ECorrelation);
 
-        std::cout << "\nPress any key to continue..\n";
+        fmt::print(fg(fmt::color::dark_green),
+                   "\nPress any key to continue..\n");
         std::cin.get();
     }
     //
