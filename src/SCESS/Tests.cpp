@@ -378,6 +378,11 @@ namespace SCESS::Tests {
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
 
+        auto &hAtom = hydrogenMolecule.GetAtoms().back();
+        auto hPos = hAtom.GetPos();
+        hPos.x() = 1000.0;
+        hAtom.SetPos(hPos);
+
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
         F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
@@ -392,9 +397,10 @@ namespace SCESS::Tests {
 
         std::cout << "Obtaining UHF reference...\n";
         HF::HF_Wfn uhfWfn = HF::UHF(
-            Integrals::F12::ExtractHFIntegrals(configInts, 0, 2),
-            1,
-            1,
+            Integrals::F12::ExtractHFIntegrals(configInts, 0,
+                                               f12BasisSet.GetNoHFFuncs()),
+            hydrogenMolecule.GetNoElectrons() / 2,
+            hydrogenMolecule.GetNoElectrons() / 2,
             hydrogenMolecule.CalculateVnn(),
             std::numeric_limits<double>::epsilon());
 
@@ -445,6 +451,11 @@ namespace SCESS::Tests {
         constexpr const char *BASIS_SET_NAME = "sto-3g";
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+
+        // auto &hAtom = hydrogenMolecule.GetAtoms().back();
+        // auto hPos = hAtom.GetPos();
+        // hPos.x() = 3.0;
+        // hAtom.SetPos(hPos);
 
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
@@ -500,7 +511,7 @@ namespace SCESS::Tests {
                    ECorrelation);
         //Should be -0.021009866243 hartrees
         //Should be -1.160991857744 hartrees
-        fmt::print(bg(fmt::color::light_blue), "  E(Total) = {:.8} hartrees\n\n",
+        fmt::print(fg(fmt::color::green), "  E(Total) = {:.8} hartrees\n\n",
                    uhfWfn.E_HF +
                    ECABSSingles +
                    ECorrelation);
@@ -508,6 +519,29 @@ namespace SCESS::Tests {
         fmt::print(fg(fmt::color::dark_green),
                    "\nPress any key to continue..\n");
         std::cin.get();
+    }
+    //
+    void TestUHF() {
+        Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
+
+        auto &hAtom = hydrogenMolecule.GetAtoms().back();
+        auto hPos = hAtom.GetPos();
+        hPos.x() = 3.0;
+        hAtom.SetPos(hPos);
+
+        auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
+
+        libint2::BasisSet basisSet("cc-pVDZ", h2Atoms);
+
+        Integrals::MolInts mints =
+                Integrals::LibInt::EvaluateMolecularIntegrals(basisSet, h2Atoms);
+
+        HF::HF_Wfn uhfWfn = HF::UHF(mints,
+                                    hydrogenMolecule.GetNoElectrons() / 2,
+                                    hydrogenMolecule.GetNoElectrons() / 2,
+                                    hydrogenMolecule.CalculateVnn());
+
+        fmt::print("E(UHF) = {} hartrees\n", uhfWfn.E_HF);
     }
     //
     //

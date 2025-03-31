@@ -1,10 +1,12 @@
 ﻿add_executable("SCESS"
-  "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
-  "${SCESS_SRC_DIR}/Resources/AssetFolder.h"
-  "${SCESS_SRC_DIR}/SCESS/Application.cpp"
-  "${SCESS_SRC_DIR}/SCESS/Tests.cpp"
-  "${SCESS_SRC_DIR}/SCESS/Tests.h"
-        "${SCESS_SRC_DIR}/SCESS/TestEinsum.cpp"
+    "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
+    "${SCESS_SRC_DIR}/Resources/AssetFolder.h"
+    "${SCESS_SRC_DIR}/SCESS/Application.cpp"
+    "${SCESS_SRC_DIR}/SCESS/Tests.cpp"
+    "${SCESS_SRC_DIR}/SCESS/Tests.h"
+    "${SCESS_SRC_DIR}/SCESS/TestEinsum.cpp"
+    "${SCESS_SRC_DIR}/SCESS/Driver.cpp"
+    "${SCESS_SRC_DIR}/SCESS/Driver.h"
 )
 
 add_dependencies("SCESS"

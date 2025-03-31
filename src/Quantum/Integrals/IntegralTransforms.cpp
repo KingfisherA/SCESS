@@ -122,7 +122,7 @@ namespace SCESS::Integrals::Transforms {
         MatrixXd sInvSqrt = MatrixXd::Zero(s.rows(), s.rows());
 
         for (Index i = 0; i < s.rows(); ++i)
-            if (s(i) != 0.0)
+            if (abs(s(i)) > 1E-8)
                 sInvSqrt(i, i) = 1.0 / std::sqrt(s(i));
 
         MatrixXd X = U * sInvSqrt;

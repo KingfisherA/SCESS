@@ -24,7 +24,7 @@ namespace SCESS::Integrals::LibInt {
     void InitLibInt();
     void CloseLibInt();
     //
-    MolInts CalculateConfiguration(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
+    MolInts EvaluateMolecularIntegrals(const libint2::BasisSet &basisSet, const AtomListLI &atoms);
     //
     Eigen::MatrixXd CalculateOverlapMatrix(const libint2::BasisSet &basisSet);
     Eigen::MatrixXd CalculateNuclearMatrix(const libint2::BasisSet &basisSet, const AtomListLI &atoms);

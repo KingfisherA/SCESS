@@ -259,7 +259,7 @@ namespace SCESS::Integrals {
     //
 #pragma region IntegralsLibInt
     //
-    MolInts LibInt::CalculateConfiguration(const libint2::BasisSet &basisSet,
+    MolInts LibInt::EvaluateMolecularIntegrals(const libint2::BasisSet &basisSet,
                                            const AtomListLI &atoms) {
         MolInts mints;
 

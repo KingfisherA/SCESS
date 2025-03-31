@@ -101,7 +101,8 @@ namespace SCESS::HF {
         MatrixXd D_Beta = MatrixXd::Zero(dimensions, dimensions);
         MatrixXd D_AlphaOld, D_BetaOld;
         MatrixXd F_Alpha, F_Beta;
-        MatrixXd G_Alpha = MatrixXd::Zero(dimensions, dimensions), G_Beta = MatrixXd::Zero(dimensions, dimensions);
+        MatrixXd G_Alpha = MatrixXd::Zero(dimensions, dimensions);
+        MatrixXd G_Beta = MatrixXd::Zero(dimensions, dimensions);
         MatrixXd C_Alpha, C_Beta;
         VectorXd Ep_Alpha, Ep_Beta;
 

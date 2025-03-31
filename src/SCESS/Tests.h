@@ -18,6 +18,8 @@ namespace SCESS::Tests {
     void TestMP2_F12_Fixed();
     void TestCCQMC_MP2_F12();
     //
+    void TestUHF();
+    //
     void TestTensorEinsum();
     //
     //

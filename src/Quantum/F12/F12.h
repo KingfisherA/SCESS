@@ -45,8 +45,8 @@ namespace SCESS::F12 {
         return F12Idxs{
             (int) f12BasisSet.GetNoHFFuncs(),
             (int) f12BasisSet.GetNoCABSFuncs(),
-            alphaOcc,
-            (int) f12BasisSet.GetNoHFFuncs() - alphaOcc
+            (int) f12BasisSet.GetNoHFFuncs() - alphaOcc,
+            alphaOcc
         };
     }
     //
