@@ -14,6 +14,8 @@
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_int.hpp>
 //
+#include<cppitertools/combinations.hpp>
+//
 #include "Quantum/Integrals/IntegralsF12.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
@@ -29,13 +31,15 @@ namespace SCESS::F12_QMC {
     //
 #pragma region CCQMC(MP2-F12) Utilities
     //
-    using ElectronPair = std::pair<uint32_t, uint32_t>;
+    using ElectronPair = std::pair<int, int>;
     //
     //
     double EvaluateGeminalElement(SlaterDet Dj,
                                   ElectronPair gemPair,
                                   const Tensor4 &V_pqxy,
                                   const Tensor4 &h_apxy,
+                                  uint32_t nAlphaElectrons,
+                                  uint32_t nBetaElectrons,
                                   uint32_t nOcc,
                                   uint32_t numOfAlphaOrbitals,
                                   uint32_t numOfBetaOrbitals) {
@@ -44,25 +48,32 @@ namespace SCESS::F12_QMC {
         //         "Only RHF determinants with equal numbers of alpha and beta number of electrons are supported currently");
 
 
-        std::vector<uint32_t> uniqueI, uniqueJ, commonIJ;
-        uniqueI.reserve(numOfAlphaOrbitals);
-        uniqueJ.reserve(numOfAlphaOrbitals);
-        commonIJ.reserve(numOfAlphaOrbitals);
+        auto *uniqueI = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        auto *uniqueJ = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        auto *commonIJ = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        uint16_t uniqueISize, uniqueJSize, commonIJSize;
+        int8_t sign;
 
-        SlaterDet D0 = SlaterDet::MakeReference(numOfAlphaOrbitals, numOfBetaOrbitals);
+        SlaterDet D0 = SlaterDet::MakeReference(nAlphaElectrons, nBetaElectrons);
 
-        int8_t sign = 1;
-        SlaterDet::CalculateDifferences(D0, Dj, numOfAlphaOrbitals, numOfBetaOrbitals,
-                                        uniqueI, uniqueJ, commonIJ, sign);
+        SlaterDet::CalculateDifferences(D0, Dj,
+                                        numOfAlphaOrbitals, numOfBetaOrbitals,
+                                        uniqueI, &uniqueISize,
+                                        uniqueJ, &uniqueJSize,
+                                        commonIJ, &commonIJSize,
+                                        &sign);
 
         //Geminal electron 1 and 2
         auto [g1, g2] = gemPair;
 
-        switch (uniqueI.size()) {
+        switch (uniqueISize) {
             case 0: {
                 double sum = 0.0;
 
-                for (uint32_t n = 0; n < commonIJ.size() / 2; ++n) {
+                for (uint32_t n = 0; n < commonIJSize / 2; ++n) {
                     uint32_t i = n * 2 + 0;
                     uint32_t j = n * 2 + 1;
                     sum += (3.0 / 8.0) * V_pqxy(commonIJ[i], commonIJ[j], g1, g2)
@@ -74,7 +85,7 @@ namespace SCESS::F12_QMC {
 
             case 1: {
                 double sum = 0.0;
-                for (uint32_t i = 0; i < uniqueJ.size() / 2; ++i) {
+                for (uint32_t i = 0; i < uniqueJSize / 2; ++i) {
                     int a = int(uniqueJ[i * 2 + 0]) / 2;
                     int b = int(uniqueJ[i * 2 + 1]) / 2;
 
@@ -86,7 +97,7 @@ namespace SCESS::F12_QMC {
             }
             case 2: {
                 double sum = 0.0;
-                for (uint32_t i = 0; i < uniqueJ.size() / 2; ++i) {
+                for (uint32_t i = 0; i < uniqueJSize / 2; ++i) {
                     int a = int(uniqueJ[i * 2 + 0]) / 2;
                     int b = int(uniqueJ[i * 2 + 1]) / 2;
 
@@ -115,18 +126,28 @@ namespace SCESS::F12_QMC {
         std::cout << "\n\n";
     }
     //
-    std::pair<uint32_t, uint32_t> GetGeminalElectronPair(Excitor gemExcitor) {
-        std::pair<uint32_t, uint32_t> gemPair;
-        for (int i = 0; i < 64; i++)
+    std::pair<int, int> GetGeminalElectronPair(Excitor gemExcitor,
+                                               uint32_t nAlphaOrbitals, uint32_t nBetaOrbitals) {
+        std::pair<uint32_t, uint32_t> gemPair = {-1, -1};
+
+        for (int i = 0; i < nAlphaOrbitals; i++)
             if ((0x1 << i) & gemExcitor.GetAlphaOrbitals()) {
-                gemPair.first = i;
-                break;
+                if (gemPair.first == -1)
+                    gemPair.first = i;
+                else {
+                    gemPair.second = i;
+                    return gemPair;
+                }
             }
 
-        for (int i = 0; i < 64; i++)
+        for (int i = 0; i < nBetaOrbitals; i++)
             if ((0x1 << i) & gemExcitor.GetBetaOrbitals()) {
-                gemPair.second = i;
-                break;
+                if (gemPair.first == -1)
+                    gemPair.first = i;
+                else {
+                    gemPair.second = i;
+                    return gemPair;
+                }
             }
 
         return gemPair;
@@ -139,10 +160,10 @@ namespace SCESS::F12_QMC {
 #pragma region CCQMC(MP2-F12) Implementation
     //
     //
-    double CCQMC_MP2_F12(const HF::HF_Wfn &refWfn,
-                         const Integrals::MolInts &mints,
-                         const Integrals::F12::F12Integrals &f12Ints,
-                         F12::F12Idxs f12Idxs) {
+    double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
+                            const Integrals::MolInts &mints,
+                            const Integrals::F12::F12Integrals &f12Ints,
+                            F12::F12Idxs f12Idxs) {
         enum {
             //All OBS orbitals
             P, Q, R, S
@@ -160,10 +181,10 @@ namespace SCESS::F12_QMC {
         //Number of cycles
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts
-        uint32_t Na = 200;
+        int64_t Na = 200;
         constexpr size_t NUM_REPORT_CYCLES = 400;
 
-        fmt::print("\n\n--- Coupled Cluster Quantum Monte Carlo F12 ---\n\n");
+        fmt::print("\n\n--- Coupled Cluster Quantum Monte Carlo MP2 F12 ---\n\n");
 
 
         TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
@@ -190,7 +211,9 @@ namespace SCESS::F12_QMC {
         //quantity.
         uint32_t nOccupied = std::distance(refWfn.Occ_Alpha.begin(),
                                            std::ranges::find(refWfn.Occ_Alpha, 0));
-        uint32_t nElectrons = nOccupied * 2;
+        uint32_t nAlphaElectrons = nOccupied;
+        uint32_t nBetaElectrons = nOccupied;
+        uint32_t nElectrons = nAlphaElectrons + nBetaElectrons;
         uint32_t nSpatialOrbitals = refWfn.Occ_Alpha.size();
         uint32_t nSpinOrbs = nSpatialOrbitals * 2;
 
@@ -204,10 +227,11 @@ namespace SCESS::F12_QMC {
 
         //The reference determinant
         const SlaterDet D0 = SlaterDet::MakeReference(nOccupied, nOccupied);
-        //Generate all possible excitors in this full CC
+        //Generate all single and double excitors for CCSD
         //The first "nAnnihilationBits" bits are the annihilators and the
         //remaining "nCreationBits" are the creation operators
-        std::vector<Excitor> excitors = EnumerateExcitors(D0, nSpinOrbs, nElectrons);
+        //nElectrons
+        std::vector<Excitor> excitors = EnumerateExcitors(D0, nSpinOrbs, nOccupied, nOccupied, 2);
         //The populations of walkers on each of the excitors generated above
         std::vector<int64_t> excitorWalkers(excitors.size(), 0);
         excitorWalkers[0] = 100;
@@ -226,14 +250,37 @@ namespace SCESS::F12_QMC {
                                  HSpin,
                                  spinERI);
 
+
+        uint32_t nGeminalExcitors = 0;
         //Add the geminal excitors
-        for (uint32_t i = 0; i < nOccupied; i++)
-            for (uint32_t j = 0; j < nOccupied; j++) {
+        {
+            std::unordered_set<uint32_t> occupiedSpinOrbs;
+            for (uint32_t i = 0; i < nAlphaElectrons; i++) {
+                occupiedSpinOrbs.insert(2 * i);
+            }
+            for (uint32_t i = 0; i < nBetaElectrons; i++) {
+                occupiedSpinOrbs.insert(2 * i + 1);
+            }
+
+            //Find all pairs of electrons
+            for (auto &spinOrbComb: iter::combinations(occupiedSpinOrbs, 2)) {
                 Excitor gemExcitor = MakeGeminalExcitor();
-                gemExcitor.GetAlphaOrbitals() |= 1 << i;
-                gemExcitor.GetBetaOrbitals() |= 1 << j;
+
+                for (const auto spinOrbIdx: spinOrbComb) {
+                    if (spinOrbIdx % 2 == 0) {
+                        // If even then alpha spin
+                        gemExcitor.GetAlphaOrbitals() |= 1 << (spinOrbIdx / 2);
+                    } else {
+                        // If odd then beta spin
+                        gemExcitor.GetBetaOrbitals() |= 1 << (spinOrbIdx / 2);
+                    }
+                }
+
+                nGeminalExcitors++;
                 excitors.push_back(gemExcitor);
             }
+        }
+
 
         //The cumulative 1/2^(s+1) probability distribution
         std::vector<double> cumulativeClusterProb = GenerateCumulativeClusterProb(nElectrons);
@@ -258,8 +305,8 @@ namespace SCESS::F12_QMC {
 
         int64_t D0_Population = excitorWalkers[0];
 
-        fmt::print("\n\n| Cycle No.      | E(Proj)/Eh     | E(Proj_F12)/Eh | n(E)           "
-            "| n(E_F12)       | E(S)/Eh        | n(Excips)      | n(Excips D0)   |\n");
+        fmt::print("\n\n| Cycle No.      | E(Proj_CCSD)/Eh| E(Proj_F12)/Eh | E(Proj Tot)/Eh "
+            "| n(E)           | n(E_F12)       | E(S)/Eh        | n(Excips)      | n(Excips D0)   |\n");
         //fmt::print("{:-<137}\n", "");
 
         for (size_t reportCycle = 0; reportCycle < NUM_REPORT_CYCLES; reportCycle++) {
@@ -305,7 +352,8 @@ namespace SCESS::F12_QMC {
                         selectedExcitorIndices.reserve(s);
                         while (selectedExcitorIndices.size() != s) {
                             uint32_t newIndx = excitorIdxDist(randGenerator);
-                            if (selectedExcitorIndices.contains(newIndx)) {
+                            if (selectedExcitorIndices.contains(newIndx) ||
+                                (IsGeminalExcitor(excitors[newIndx]) && s > 1)) {
                                 //This attempt has failed given we can't choose the same index twice but we cannot just
                                 //choose another index to ensure we can calculate the probability of selecting this
                                 //precise cluster
@@ -329,12 +377,9 @@ namespace SCESS::F12_QMC {
                     for (uint32_t idx: selectedExcitorIndices) {
                         if (IsGeminalExcitor(excitors[idx])) {
                             collapsedExcitor = excitors[idx];
-                            gemPair = GetGeminalElectronPair(excitors[idx]);
-                            s = 1.0;
-                            pClust = 1.0 / (double) excitors.size();
-                            pSize = 1.0 / 2.0;
+                            gemPair = GetGeminalElectronPair(excitors[idx], nAlphaElectrons, nBetaElectrons);
                             isGeminal = true;
-                            continue;
+                            break;
                         }
 
                         collapsedExcitor.GetAlphaOrbitals() |= excitors[idx].GetAlphaOrbitals();
@@ -345,19 +390,21 @@ namespace SCESS::F12_QMC {
                     }
 
                     //Generate determinant by applying new excitor to the HF determinant
-                    SlaterDet Di;
-                    Di.GetAlphaOrbitals() = collapsedExcitor.GetAlphaOrbitals() ^ D0.GetAlphaOrbitals();
-                    Di.GetBetaOrbitals() = collapsedExcitor.GetBetaOrbitals() ^ D0.GetBetaOrbitals();
-                    Di.GetSign() = collapsedExcitor.GetSign();
-                    // Di.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
+                    SlaterDet Di = D0;
 
-                    uint32_t numAlphaElecs = CountNumElecs(Di.GetAlphaOrbitals(), nSpatialOrbitals);
-                    uint32_t numBetaElecs = CountNumElecs(Di.GetBetaOrbitals(), nSpatialOrbitals);
+                    if (!isGeminal) {
+                        Di.GetAlphaOrbitals() = collapsedExcitor.GetAlphaOrbitals() ^ D0.GetAlphaOrbitals();
+                        Di.GetBetaOrbitals() = collapsedExcitor.GetBetaOrbitals() ^ D0.GetBetaOrbitals();
+                        Di.GetSign() = collapsedExcitor.GetSign();
+                        // Di.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
-                    //We have formed a cluster
-                    if (numAlphaElecs + numBetaElecs > nElectrons)
-                        continue;
-                    //goto CLUSTER_LOOP_BEGIN;
+                        uint32_t numAlphaElecs = CountNumElecs(Di.GetAlphaOrbitals(), nSpatialOrbitals);
+                        uint32_t numBetaElecs = CountNumElecs(Di.GetBetaOrbitals(), nSpatialOrbitals);
+
+                        //We have formed an invalid  cluster
+                        if (numAlphaElecs + numBetaElecs > nElectrons)
+                            continue;
+                    }
 
                     uint32_t DiIdx = FindExcitorIdx(Di ^ D0, excitors);
                     if (DiIdx == excitors.size()) continue;
@@ -368,18 +415,25 @@ namespace SCESS::F12_QMC {
                     //Probability of generating j given we have i
                     //Half chance of selecting a single excitation and half chance of selecting a double
                     double pExcit = 1.0; //0.5;
-                    if (randomNumber() < 0.5) {
-                        //Perform a single excitation/de-excitation
-                        Dj = RandomSingleExcite(Di, randGenerator,
-                                                nSpatialOrbitals, nSpinOrbs, nElectrons,
-                                                nAnnihilationBits, nCreationBits, pExcit);
+                    if (isGeminal) {
+                        pExcit = 1.0 / double(excitors.size() - nGeminalExcitors);
+                        uniform_int_distribution<uint32_t> excitorIdxDist(1, excitors.size() - nGeminalExcitors - 1);
+                        DjIdx = excitorIdxDist(randGenerator);
+                        Dj = excitors[DjIdx] ^ D0;
                     } else {
-                        //Perform a double excitation/de-excitation
-                        Dj = RandomDoubleExcite(Di, randGenerator,
-                                                nSpatialOrbitals, nSpinOrbs, nElectrons,
-                                                nAnnihilationBits, nCreationBits, pExcit);
+                        if (randomNumber() < 0.5) {
+                            //Perform a single excitation/de-excitation
+                            Dj = RandomSingleExcite(Di, randGenerator,
+                                                    nSpatialOrbitals, nSpinOrbs, nElectrons,
+                                                    nAnnihilationBits, nCreationBits, pExcit);
+                        } else {
+                            //Perform a double excitation/de-excitation
+                            Dj = RandomDoubleExcite(Di, randGenerator,
+                                                    nSpatialOrbitals, nSpinOrbs, nElectrons,
+                                                    nAnnihilationBits, nCreationBits, pExcit);
+                        }
+                        DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
                     }
-                    DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
 
                     //Update the projected energy
                     if (isGeminal) {
@@ -404,20 +458,27 @@ namespace SCESS::F12_QMC {
                     // <Di | H | Dj>. The sign of the particle is equal to Hij
 
                     //Cannot spawn onto itself and check J is valid
-                    if (DiIdx != DjIdx && DjIdx != excitors.size()) {
+                    if ((isGeminal || DiIdx != DjIdx) && DjIdx != excitors.size()) {
                         Dj.CalculateSign(D0, nSpatialOrbitals, nSpatialOrbitals);
 
                         double Hij = 0.0;
                         if (isGeminal)
-                            Hij = EvaluateGeminalElement(Dj, gemPair,
-                                                         V_pqxy, h_apxy, nOccupied,
-                                                         nSpatialOrbitals, nSpatialOrbitals);
+                            continue;
+                            // Hij = EvaluateGeminalElement(Dj,
+                            //                              gemPair,
+                            //                              V_pqxy,
+                            //                              h_apxy,
+                            //                              nAlphaElectrons,
+                            //                              nBetaElectrons,
+                            //                              nOccupied,
+                            //                              nSpatialOrbitals,
+                            //                              nSpatialOrbitals);
                         else
                             Hij = H_CI(DiIdx, DjIdx);
 
-                        //1.2 *
-                        double pSpawn = 0.7 * tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
-                        auto nSpawn = static_cast<int64_t>(pSpawn);
+                        //1.2 * 0.7 *
+                        double pSpawn =  tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
+                        int64_t nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
                             nSpawn++;
@@ -442,8 +503,8 @@ namespace SCESS::F12_QMC {
                     // to the parent
                     double pCloneDeath = tau * abs(excitorAmplitude) * (Hii - shift) / (Na * pClust);
                     //*pSize
-                    auto nKill = static_cast<int64_t>(pCloneDeath);
-                    pCloneDeath = pCloneDeath - (double) nKill;
+                    int64_t nKill = static_cast<int64_t>(pCloneDeath);
+                    pCloneDeath = pCloneDeath - static_cast<double>(nKill);
                     if (abs(pCloneDeath) > randomNumber()) {
                         if (pCloneDeath > 0.0)
                             nKill++;
@@ -498,14 +559,16 @@ namespace SCESS::F12_QMC {
                 shift = refWfn.E_HF;
 
             if (reportCycle > 50 && nExcipsLast != 0 && nExcips != 0)
-                shift = shift - (100.0 / (tau * 1000.0)) * log((double) nExcips / (double) nExcipsLast);
+                //(100.0 / (tau * 1000.0))
+                shift = shift - (100.0 / (1.0 * tau)) * log((double) nExcips / (double) nExcipsLast);
 
             //" Cycle({}); E(Proj) = {:.8} Eh E(Proj F12) = {:.8} Eh "
             //"n(E) = {} n(E F12) = {} S = {} Pop. = {} Pop D0 = {}
-            fmt::print(" {:<16} {:<16.8} {:<16.8} {:<16} {:<16} {:<16.8} {:<16} {:<16} \n",
+            fmt::print(" {:<16} {:<16.8} {:<16.8} {:<16.8} {:<16} {:<16} {:<16.8} {:<16} {:<16} \n",
                        reportCycle,
                        EProj,
                        EProj_F12,
+                       EProj + EProj_F12,
                        nNormalEContribs,
                        nF12EContribs,
                        shift,

@@ -72,23 +72,27 @@ namespace SCESS::CI {
             return {mAlphaOrbs ^ other.mAlphaOrbs, mBetaOrbs ^ other.mBetaOrbs};
         }
         //
-        static SlaterDet MakeReference(uint32_t nAlphaOcc, uint32_t nBetaOcc);
+        static SlaterDet MakeReference(uint16_t nAlphaOcc, uint16_t nBetaOcc);
         //
-        static void CalculateDifferences(
-            SlaterDet I,
-            SlaterDet J,
-            size_t numOfAlphaOrbitals,
-            size_t numOfBetaOrbitals,
-            std::vector<uint32_t> &uniqueI,
-            std::vector<uint32_t> &uniqueJ,
-            std::vector<uint32_t> &commonIJ,
-            int8_t &sign);
+        static void CalculateDifferences(SlaterDet I,
+                                         SlaterDet J,
+                                         uint16_t numOfAlphaOrbitals,
+                                         uint16_t numOfBetaOrbitals,
+                                         uint16_t *uniqueIArray,
+                                         uint16_t *uniqueISize,
+                                         uint16_t *uniqueJArray,
+                                         uint16_t *uniqueJSize,
+                                         uint16_t *commonIJArray,
+                                         uint16_t *commonIJSize,
+                                         int8_t *sign);
         //
-        static int8_t CalculateSign(SlaterDet I, SlaterDet J, size_t numOfAlphaOrbitals,
-                                    size_t numOfBetaOrbitals);
+        static int8_t CalculateSign(SlaterDet I, SlaterDet J,
+                                    uint16_t numOfAlphaOrbitals,
+                                    uint16_t numOfBetaOrbitals);
         //
-        void CalculateSign(SlaterDet I, size_t numOfAlphaOrbitals,
-                           size_t numOfBetaOrbitals) {
+        void CalculateSign(SlaterDet I,
+                           uint16_t numOfAlphaOrbitals,
+                           uint16_t numOfBetaOrbitals) {
             mSign = CalculateSign(I, *this, numOfAlphaOrbitals, numOfBetaOrbitals);
         }
         //
@@ -140,7 +144,9 @@ namespace SCESS::CI {
                               OrbBitStr betaList,
                               size_t numBeta);
     //
-    std::vector<SlaterDet> EnumerateDet(uint32_t nSpinOrbs, uint32_t excitorLevel);
+    std::vector<SlaterDet> EnumerateDet(uint32_t nSpinOrbs, uint32_t nAlphaElectrons,
+                                        uint32_t nBetaElectrons, uint32_t excitorLevel);
+    std::vector<SlaterDet> EnumerateAllDet(uint32_t nSpinOrbs, uint32_t nElectrons);
     //
     size_t GetNumOccOrbs(OrbBitStr orbitalBitStr, size_t numOfOrbitals);
     //

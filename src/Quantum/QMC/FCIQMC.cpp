@@ -32,7 +32,7 @@ namespace SCESS::QMC::FCI {
                 nSpatialOrbitals = rhfWfn.Occ_Alpha.size(),
                 nSpinOrbs = nSpatialOrbitals * 2;
 
-        std::vector<SlaterDet> determinants = CI::EnumerateDet(nSpinOrbs, nElectrons);
+        std::vector<SlaterDet> determinants = CI::EnumerateAllDet(nSpinOrbs, nElectrons);
 
         MatrixXd H_FCI = MatrixXd::Zero((Eigen::Index) determinants.size(),
                                         (Eigen::Index) determinants.size()); {

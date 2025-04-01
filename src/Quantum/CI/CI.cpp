@@ -18,9 +18,9 @@ namespace SCESS::CI {
 #pragma region Slater Determinant Code
     //
     //
-    SlaterDet SlaterDet::MakeReference(uint32_t nAlphaOcc, uint32_t nBetaOcc) {
+    SlaterDet SlaterDet::MakeReference(uint16_t nAlphaOcc, uint16_t nBetaOcc) {
         SlaterDet reference;
-        uint32_t i = 0;
+        uint16_t i = 0;
 
         for (; i < nAlphaOcc; i++)
             reference.GetAlphaOrbitals() |= 0x1 << i;
@@ -31,7 +31,7 @@ namespace SCESS::CI {
         return reference;
     }
     //
-    static uint32_t CountSetBits(uint64_t bitStr, uint32_t nBits) {
+    static uint16_t CountSetBits(uint64_t bitStr, uint32_t nBits) {
         uint32_t nBitsSet = 0;
         for (uint32_t i = 0; i < nBits; i++)
             if ((0x1 << i) & bitStr)
@@ -42,25 +42,37 @@ namespace SCESS::CI {
     //
     void SlaterDet::CalculateDifferences(SlaterDet I,
                                          SlaterDet J,
-                                         size_t numOfAlphaOrbitals,
-                                         size_t numOfBetaOrbitals,
-                                         std::vector<uint32_t> &uniqueI,
-                                         std::vector<uint32_t> &uniqueJ,
-                                         std::vector<uint32_t> &commonIJ,
-                                         int8_t &sign) {
-        uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+                                         uint16_t numOfAlphaOrbitals,
+                                         uint16_t numOfBetaOrbitals,
+                                         uint16_t *uniqueIArray,
+                                         uint16_t *uniqueISize,
+                                         uint16_t *uniqueJArray,
+                                         uint16_t *uniqueJSize,
+                                         uint16_t *commonIJArray,
+                                         uint16_t *commonIJSize,
+                                         int8_t *sign) {
+        //Arrays for uniqueIArray, uniqueJArray and commonIJArray must be at least as larger as
+        //max(numOfAlphaOrbitals, numOfBetaOrbitals) in size
+
+        uint16_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                               CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
-        uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+        uint16_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                                  CountSetBits(I.GetBetaOrbitals() ^ J.GetBetaOrbitals(), numOfBetaOrbitals);
 
-        uint32_t shift = nElectrons - excitationLvl;
+        uint16_t shift = nElectrons - excitationLvl;
+        uint16_t flips = 0;
 
-        uint32_t flips = 0;
+        uint16_t commonIJPtr = 0,
+                uniqueIPtr = 0,
+                uniqueJPtr = 0;
 
-        auto CalcDifferences = [&flips, &shift, &commonIJ, &uniqueI, &uniqueJ](OrbBitStr I,
-                                                                               OrbBitStr J,
-                                                                               size_t numOfOrbs,
-                                                                               uint8_t (*func)(uint8_t)) {
+        auto CalcDifferences = [&flips, &shift,
+                    &commonIJArray, &commonIJPtr,
+                    &uniqueIArray, &uniqueIPtr,
+                    &uniqueJArray, &uniqueJPtr](OrbBitStr I,
+                                                OrbBitStr J,
+                                                size_t numOfOrbs,
+                                                uint8_t (*func)(uint8_t)) {
             uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
 
             for (uint32_t i = 0; i < numOfOrbs; i++) {
@@ -72,13 +84,17 @@ namespace SCESS::CI {
                     iel1++;
                     //Occupied in J
                     if ((0x1 << i) & J) {
-                        commonIJ.push_back(func(i));
+                        if (commonIJArray)
+                            commonIJArray[commonIJPtr++] = func(i);
+                        //commonIJArray.push_back(func(i));
                     }
                     //Not occupied in J
                     else {
                         iexcit1++;
                         flips += (shift - iel1 + iexcit1);
-                        uniqueI.push_back(func(i));
+                        // uniqueIArray.push_back(func(i));
+                        if (uniqueIArray)
+                            uniqueIArray[uniqueIPtr++] = func(i);
                     }
                 }
                 //Not occupied in I
@@ -86,8 +102,10 @@ namespace SCESS::CI {
                     //Occupied in J
                     if ((0x1 << i) & J) {
                         iexcit2++;
-                        uniqueJ.push_back(func(i));
+                        //uniqueJArray.push_back(func(i));
                         flips += (shift - iel2 + iexcit2);
+                        if (uniqueJArray)
+                            uniqueJArray[uniqueJPtr++] = func(i);
                     }
                 }
             }
@@ -99,28 +117,36 @@ namespace SCESS::CI {
         CalcDifferences(I.GetBetaOrbitals(), J.GetBetaOrbitals(), numOfBetaOrbitals,
                         [](uint8_t i)-> uint8_t { return i * 2 + 1; });
 
-        sign = 1;
-        if (flips % 2 == 1)
-            sign = -1;
-    }
+        if (commonIJSize)
+            *commonIJSize = commonIJPtr;
+        if (uniqueISize)
+            *uniqueISize = uniqueIPtr;
+        if (uniqueJSize)
+            *uniqueJSize = uniqueJPtr;
 
-    int8_t SlaterDet::CalculateSign(SlaterDet I, SlaterDet J, size_t numOfAlphaOrbitals,
-                                    size_t numOfBetaOrbitals) {
-        uint32_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+        if (sign) {
+            *sign = 1;
+            if (flips % 2 == 1)
+                *sign = -1;
+        }
+    }
+    //
+    int8_t SlaterDet::CalculateSign(SlaterDet I, SlaterDet J,
+                                    uint16_t numOfAlphaOrbitals, uint16_t numOfBetaOrbitals) {
+        uint16_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                               CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
-        uint32_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
+        uint16_t excitationLvl = CountSetBits(I.GetAlphaOrbitals() ^ J.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                                  CountSetBits(I.GetBetaOrbitals() ^ J.GetBetaOrbitals(), numOfBetaOrbitals);
 
-        uint32_t shift = nElectrons - excitationLvl;
-
-        uint32_t flips = 0;
+        uint16_t shift = nElectrons - excitationLvl;
+        uint16_t flips = 0;
 
         auto CalcSign = [&flips, &shift](OrbBitStr I,
                                          OrbBitStr J,
                                          size_t numOfOrbs) {
-            uint32_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
+            uint16_t iel1 = 0, iel2 = 0, iexcit1 = 0, iexcit2 = 0;
 
-            for (uint32_t i = 0; i < numOfOrbs; i++) {
+            for (uint16_t i = 0; i < numOfOrbs; i++) {
                 //Occupied in J
                 if ((0x1 << i) & J) iel2++;
 
@@ -216,41 +242,56 @@ namespace SCESS::CI {
             throw std::runtime_error(
                 "Only RHF determinants with equal numbers of alpha and beta number of electrons are supported currently");
 
-        std::vector<uint32_t> uniqueI, uniqueJ, commonIJ;
-        uniqueI.reserve(numOfAlphaOrbitals);
-        uniqueJ.reserve(numOfAlphaOrbitals);
-        commonIJ.reserve(numOfAlphaOrbitals);
+        // std::vector<uint32_t> uniqueI, uniqueJ, commonIJ;
+        // uniqueI.reserve(numOfAlphaOrbitals);
+        // uniqueJ.reserve(numOfAlphaOrbitals);
+        // commonIJ.reserve(numOfAlphaOrbitals);
+        auto *uniqueI = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        auto *uniqueJ = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        auto *commonIJ = reinterpret_cast<uint16_t *>(
+            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        uint16_t uniqueISize, uniqueJSize, commonIJSize;
+        int8_t sign;
+        SlaterDet::CalculateDifferences(detI, detJ,
+                                        numOfAlphaOrbitals, numOfBetaOrbitals,
+                                        uniqueI, &uniqueISize,
+                                        uniqueJ, &uniqueJSize,
+                                        commonIJ, &commonIJSize,
+                                        &sign);
 
-        int8_t sign = 1;
-        SlaterDet::CalculateDifferences(detI, detJ, numOfAlphaOrbitals, numOfBetaOrbitals,
-                                        uniqueI, uniqueJ, commonIJ, sign);
-
-        switch (uniqueI.size()) {
+        switch (uniqueISize) {
             case 0: {
                 double element = 0.0;
 
-                for (const auto m: commonIJ)
-                    element += HSpin(m, m);
+                for (uint16_t m = 0; m < commonIJSize; m++)
+                    element += HSpin(commonIJ[m], commonIJ[m]);
 
-                for (uint32_t m = 0; m < commonIJ.size() - 1; m++)
-                    for (uint32_t n = m + 1; n < commonIJ.size(); n++)
+                for (uint16_t m = 0; m < commonIJSize - 1; m++)
+                    for (uint16_t n = m + 1; n < commonIJSize; n++)
                         element += spinERI(commonIJ[m], commonIJ[n], commonIJ[m], commonIJ[n]);
 
                 return element;
             }
 
             case 1: {
-                uint32_t m = uniqueI[0], p = uniqueJ[0];
+                auto m = uniqueI[0];
+                auto p = uniqueJ[0];
 
                 double element = HSpin(m, p);
 
-                for (auto &n: commonIJ)
+                for (uint16_t k = 0; k < commonIJSize; k++) {
+                    auto n = commonIJ[k];
                     element += spinERI(m, n, p, n);
+                }
 
                 return sign * element;
             }
             case 2: {
-                double element = spinERI(uniqueI[0], uniqueI[1], uniqueJ[0],
+                double element = spinERI(uniqueI[0],
+                                         uniqueI[1],
+                                         uniqueJ[0],
                                          uniqueJ[1]);
 
                 return sign * element;
@@ -278,14 +319,82 @@ namespace SCESS::CI {
         return combinedIndices;
     }
     //
-    std::vector<SlaterDet> EnumerateDet(uint32_t nSpinOrbs, uint32_t excitorLevel) {
-        auto nDeterminants = static_cast<size_t>(
-            boost::math::binomial_coefficient<double>(nSpinOrbs, excitorLevel));
+    std::vector<SlaterDet> EnumerateDet(uint32_t nSpinOrbs,
+                                        uint32_t nAlphaElectrons,
+                                        uint32_t nBetaElectrons,
+                                        uint32_t excitorLevel) {
+        //Even spin orbs are alpha spin
+        //Odd spin orbs are beta spin
+
+        std::unordered_set<uint32_t> occupiedSpinOrbs;
+        std::unordered_set<uint32_t> virtualSpinOrbs;
+        for (uint32_t i = 0; i < nSpinOrbs; i++)
+            virtualSpinOrbs.insert(i);
+        for (uint32_t i = 0; i < nAlphaElectrons; i++) {
+            virtualSpinOrbs.erase(2 * i);
+            occupiedSpinOrbs.insert(2 * i);
+        }
+        for (uint32_t i = 0; i < nBetaElectrons; i++) {
+            virtualSpinOrbs.erase(2 * i + 1);
+            occupiedSpinOrbs.insert(2 * i + 1);
+        }
+
+        if (excitorLevel > occupiedSpinOrbs.size())
+            excitorLevel = occupiedSpinOrbs.size();
+
+        if (excitorLevel > virtualSpinOrbs.size())
+            excitorLevel = virtualSpinOrbs.size();
+
+        uint32_t ex = 1;
+        size_t nDeterminants = 1;
+        for (ex = 1; ex <= excitorLevel; ex++) {
+            nDeterminants += static_cast<size_t>(
+                boost::math::binomial_coefficient<double>(virtualSpinOrbs.size(), ex) *
+                boost::math::binomial_coefficient<double>(occupiedSpinOrbs.size(), ex));
+        }
+
         std::vector<SlaterDet> determinants;
         determinants.reserve(nDeterminants);
 
-        for (auto &&spinOrbCombination: iter::combinations(
-                 boost::irange<uint8_t>(0, nSpinOrbs), excitorLevel)) {
+        determinants.emplace_back(SlaterDet::MakeReference(nAlphaElectrons, nBetaElectrons));
+
+        for (ex = 1; ex <= excitorLevel; ex++)
+            for (auto &virtualSpinOrbComb: iter::combinations(virtualSpinOrbs, ex))
+                for (auto &occupiedSpinOrbComb: iter::combinations(occupiedSpinOrbs, ex)) {
+                    SlaterDet &det = determinants.emplace_back();
+                    det = SlaterDet::MakeReference(nAlphaElectrons, nBetaElectrons);
+
+                    for (const auto oSpinOrbIdx: occupiedSpinOrbComb) {
+                        if (oSpinOrbIdx % 2 == 0) {
+                            // If even then alpha spin
+                            det.GetAlphaOrbitals() ^= 1 << (oSpinOrbIdx / 2);
+                        } else {
+                            // If odd then beta spin
+                            det.GetBetaOrbitals() ^= 1 << (oSpinOrbIdx / 2);
+                        }
+                    }
+                    for (const auto vSpinOrbIdx: virtualSpinOrbComb) {
+                        if (vSpinOrbIdx % 2 == 0) {
+                            // If even then alpha spin
+                            det.GetAlphaOrbitals() |= 1 << (vSpinOrbIdx / 2);
+                        } else {
+                            // If odd then beta spin
+                            det.GetBetaOrbitals() |= 1 << (vSpinOrbIdx / 2);
+                        }
+                    }
+                }
+
+        return determinants;
+    }
+    //
+    std::vector<SlaterDet> EnumerateAllDet(uint32_t nSpinOrbs, uint32_t nElectrons) {
+        auto nDeterminants = static_cast<size_t>(
+            boost::math::binomial_coefficient<double>(nSpinOrbs, nElectrons));
+        std::vector<SlaterDet> determinants;
+        determinants.reserve(nDeterminants);
+
+        for (auto &spinOrbCombination: iter::combinations(
+                 boost::irange<uint8_t>(0, nSpinOrbs), nElectrons)) {
             SlaterDet &det = determinants.emplace_back();
 
             for (const auto spinOrbIndx: spinOrbCombination) {
@@ -375,7 +484,7 @@ namespace SCESS::CI {
         if (console)
             *console << "   Generating all Slater determinants in Hilbert space...\n";
         auto genDetTime1 = std::chrono::high_resolution_clock::now();
-        std::vector<SlaterDet> determinants = EnumerateDet(
+        std::vector<SlaterDet> determinants = EnumerateAllDet(
             nSpinOrbs, excitorLevel < 0 ? nElectrons : static_cast<uint32_t>(excitorLevel));
         auto genDetTime2 = std::chrono::high_resolution_clock::now();
         if (console)

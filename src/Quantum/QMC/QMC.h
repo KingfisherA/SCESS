@@ -92,7 +92,12 @@ namespace SCESS::QMC {
         //
         std::vector<Excitor> EnumerateExcitors(SlaterDet reference,
                                                uint32_t nSpinOrbs,
-                                               uint32_t nElectrons);
+                                               uint32_t nAlphaElectrons,
+                                               uint32_t nBetaElectrons,
+                                               uint32_t excitationLevel);
+        std::vector<Excitor> EnumerateAllExcitors(SlaterDet reference,
+                                                  uint32_t nSpinOrbs,
+                                                  uint32_t nElectrons);
         //
         void UpdateCumulativePop(std::vector<int64_t> &cumulativeWalkers,
                                  std::vector<int64_t> &excitorWalkers,

@@ -231,10 +231,23 @@ namespace SCESS::QMC::CC {
         return std::distance(excitors.begin(), std::ranges::find(excitors, ex));
     }
     //
-    std::vector<Excitor> EnumerateExcitors(SlaterDet reference,
-                                           uint32_t nSpinOrbs,
-                                           uint32_t nElectrons) {
-        std::vector<Excitor> excitors = CI::EnumerateDet(nSpinOrbs, nElectrons);
+    std::vector<Excitor> EnumerateExcitors(SlaterDet reference, uint32_t nSpinOrbs, uint32_t nAlphaElectrons,
+                                           uint32_t nBetaElectrons, uint32_t excitationLevel) {
+        std::vector<Excitor> excitors = CI::EnumerateDet(nSpinOrbs, nAlphaElectrons, nBetaElectrons, excitationLevel);
+
+        for (Excitor &ex: excitors) {
+            ex.CalculateSign(reference, nSpinOrbs / 2, nSpinOrbs / 2);
+            ex.GetAlphaOrbitals() ^= reference.GetAlphaOrbitals();
+            ex.GetBetaOrbitals() ^= reference.GetBetaOrbitals();
+        }
+
+        return excitors;
+    }
+    //
+    std::vector<Excitor> EnumerateAllExcitors(SlaterDet reference,
+                                              uint32_t nSpinOrbs,
+                                              uint32_t nElectrons) {
+        std::vector<Excitor> excitors = CI::EnumerateAllDet(nSpinOrbs, nElectrons);
 
         for (Excitor &ex: excitors) {
             ex.CalculateSign(reference, nSpinOrbs / 2, nSpinOrbs / 2);
@@ -249,10 +262,10 @@ namespace SCESS::QMC::CC {
                              std::vector<int64_t> &excitorWalkers,
                              int64_t &nExcips) {
         cumulativeWalkers[0] = excitorWalkers[0];
-        nExcips = abs(excitorWalkers[0]);
+        nExcips = std::abs(excitorWalkers[0]);
         for (size_t i = 1; i < cumulativeWalkers.size(); i++) {
             cumulativeWalkers[i] = excitorWalkers[i] + cumulativeWalkers[i - 1];
-            nExcips += abs(excitorWalkers[i]);
+            nExcips += std::abs(excitorWalkers[i]);
         }
     }
     //
@@ -314,7 +327,7 @@ namespace SCESS::QMC::CC {
         //Generate all possible excitors in this full CC
         //The first "nAnnihilationBits" bits are the annihilators and the
         //remaning "nCreationBits" are the creation operators
-        std::vector<Excitor> excitors = EnumerateExcitors(D0, nSpinOrbs, nElectrons);
+        std::vector<Excitor> excitors = EnumerateAllExcitors(D0, nSpinOrbs, nElectrons);
         //The populations of walkers on each of the excitors generated above
         std::vector<int64_t> excitorWalkers(excitors.size(), 0);
         excitorWalkers[0] = 100;

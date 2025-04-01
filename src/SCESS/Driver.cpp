@@ -140,7 +140,7 @@ namespace SCESS::Driver {
         //Correct the fact that there is a large basis set error in the non-correlated HF energy
         double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
 
-        double ECCQMC_F12 = F12_QMC::CCQMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
+        double ECCQMC_F12 = F12_QMC::CCSD_QMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
         double ECorrelation = ECCQMC_F12 - uhfWfn.E_HF;
 
         fmt::print(fg(fmt::color::white), "\n\n--- CCSD QMC F12 Single Point Energy ---\n");

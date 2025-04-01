@@ -38,7 +38,7 @@ namespace SCESS::F12_QMC {
     }
     //
     //
-    double CCQMC_MP2_F12(const HF::HF_Wfn &refWfn,
+    double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
         const Integrals::MolInts &mints,
                          const Integrals::F12::F12Integrals &f12Ints,
         F12::F12Idxs f12Idxs);

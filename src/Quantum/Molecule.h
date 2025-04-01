@@ -99,6 +99,21 @@ namespace SCESS {
                 mNoElectrons += a.GetCharge();
         }
 
+        Molecule& operator=(const Molecule& m) {
+            mAtoms = m.mAtoms;
+            mBonds = m.mBonds;
+            mNoElectrons = m.mNoElectrons;
+            return *this;
+        }
+
+        Molecule& operator=(Molecule&& m) noexcept {
+            mAtoms = std::move(m.mAtoms);
+            mBonds = std::move(m.mBonds);
+            mNoElectrons = m.mNoElectrons;
+
+            return *this;
+        }
+
         void AddAtom(const Atom &a);
         const Atom &GetAtom(size_t index) const {
             return mAtoms[index];
