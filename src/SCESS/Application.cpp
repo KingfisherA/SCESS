@@ -1,108 +1,243 @@
-#include <iostream>
-#include<string>
+#include <string>
+#include <fmt/format.h>
+#include <fmt/color.h>
+#include <unordered_map>
+#include <boost/algorithm/string/case_conv.hpp>
 //
-#include "Tests.h"
 #include "Driver.h"
-#include "Quantum/Integrals/IntegralsLibInt.h"
-#include "Resources/AssetFolder.h"
-
-#include<fmt/format.h>
-#include<fmt/color.h>
-#include <cppitertools/combinations.hpp>
-
+#include "Tests.h"
+//
 #include "Quantum/Molecule.h"
-#include "Quantum/CI/CI.h"
+#include "Quantum/Integrals/IntegralsLibInt.h"
+//
+#include <boost/algorithm/string/trim.hpp>
 
+#include "Resources/AssetFolder.h"
+//
 
-void SelectCCQMC_MP2_F12();
 
 //
+//
+void PrintHelpDialog();
 //
 int main(int argc, char *argv[]) {
     using namespace SCESS;
     fmt::print(fmt::emphasis::bold, "Schrodinger's Cat's Electronic System Solver; Terminal Edition\n"
                "    By Charlie Wheelwright (cspw2)"
                "\n    Meow!\n\n");
-    if (!Res::AssetsFolder::Get().Init())
+
+    if (argc - 1 == 0) {
+        PrintHelpDialog();
+        return 0;
+    }
+
+    std::vector<std::string> args;
+    args.reserve(argc - 1);
+
+    for (int i = 1; i < argc; i++)
+        args.push_back(argv[i]);
+
+    for (auto &arg: args) {
+        if (arg == "--help") {
+            PrintHelpDialog();
+            return 0;
+        }
+        boost::algorithm::trim(arg);
+    }
+
+    if (args.size() < 3) {
+        fmt::print(fg(fmt::color::crimson),
+                   "SCESS requires at least 3 arguments however only {} were provided\n", args.size());
         return 1;
+    }
+
+    if (!Res::AssetsFolder::Get().Init()) {
+        fmt::print(fg(fmt::color::crimson),
+                   "Required assets directory could not be located\n");
+        return 1;
+    }
+
+    enum class MethodEnum :int {
+        RHF,
+        UHF,
+        DFT,
+        MP2,
+        CCSD,
+        CCSD_T,
+        FCI,
+        FCIQMC,
+        CCQMC,
+        MP2_F12_Fixed,
+        MP2_F12_Opt,
+        CCSD_QMC_MP2_F12
+    } selectedMethod;
+    enum class MoleculeEnum :int {
+        H2,
+        LiH,
+        NH3,
+        H2O
+    } selectedMol;
+    std::unordered_map<std::string, MethodEnum> methodMap = {
+        {"rhf", MethodEnum::RHF},
+        {"uhf", MethodEnum::UHF},
+        {"dft", MethodEnum::DFT},
+        {"mp2", MethodEnum::MP2},
+        {"ccsd", MethodEnum::CCSD},
+        {"ccsd_t", MethodEnum::CCSD_T},
+        {"fci", MethodEnum::FCI},
+        {"fciqmc", MethodEnum::FCIQMC},
+        {"ccqmc", MethodEnum::CCQMC},
+        {"mp2_f12_fixed", MethodEnum::MP2_F12_Fixed},
+        {"mp2_f12_opt", MethodEnum::MP2_F12_Opt},
+        {"ccsd_qmc_mp2_f12", MethodEnum::CCSD_QMC_MP2_F12}
+    };
+    std::unordered_map<std::string, MoleculeEnum> moleculeMap = {
+        {"H2", MoleculeEnum::H2},
+        {"LiH", MoleculeEnum::LiH},
+        {"NH3", MoleculeEnum::NH3},
+        {"H2O", MoleculeEnum::H2O},
+    };
+    std::unordered_set<std::string> allowableAdditionalOps = {"CABS"};
+    std::unordered_map<std::string, std::string> options;
+
+    fmt::print(fmt::emphasis::bold, "\n\n--- Selected Launch Options ---\n");
+
+    auto &methodStr = args[0];
+    boost::algorithm::to_lower(args[0]);
+    if (!methodMap.contains(methodStr)) {
+        fmt::print(fg(fmt::color::red), "{} is not a valid theory method driver", methodStr);
+        return 1;
+    }
+    selectedMethod = methodMap.at(methodStr);
+    fmt::print("    - Method = ");
+    fmt::print(fg(fmt::color::green), "{}\n", methodStr);
+
+    auto &moleculeStr = args[1];
+    if (!moleculeMap.contains(moleculeStr)) {
+        fmt::print(fg(fmt::color::red), "{} is not an avaliable molecule", moleculeStr);
+        return 1;
+    }
+    selectedMol = moleculeMap.at(moleculeStr);
+    fmt::print("    - Molecule = ");
+    fmt::print(fg(fmt::color::green), "{}\n", moleculeStr);
+
+    auto basisSets = BasisSet::ListBasisSets();
+    for (auto &bs: basisSets)
+        basisSets.insert(boost::algorithm::to_lower_copy(bs));
+
+    auto &selectedBasisSet = args[2];
+    boost::algorithm::to_lower(selectedBasisSet);
+    if (!basisSets.contains(selectedBasisSet)) {
+        fmt::print(fg(fmt::color::red), "{} is not an avaliable basis set", selectedBasisSet);
+        return 1;
+    }
+    fmt::print("    - Basis Set = ");
+    fmt::print(fg(fmt::color::green), "{}\n", selectedBasisSet);
+
+    for (int i = 3; i < args.size(); ++i) {
+        std::string &op = args[i];
+
+        auto markerStart = op.find("--");
+        if (markerStart != std::string::npos && (i + 1) < args.size()) {
+            op = op.substr(markerStart + 2, op.length() - (markerStart + 2));
+            if (allowableAdditionalOps.contains(op))
+                options.emplace(op, args[i + 1]);
+            else {
+                fmt::print(fg(fmt::color::crimson), "{} is not a valid additional option\n", op);
+                return 1;
+            }
+            ++i;
+        }
+    }
+
+    if (!options.empty()) {
+        fmt::print(fmt::emphasis::bold, "--- Selected Additional Options ---\n");
+        for (auto &[k1, v1]: options) {
+            fmt::print("    - {} = ", k1);
+            fmt::print(fg(fmt::color::green), "{}\n", v1);
+        }
+    }
+
 
     Integrals::LibInt::InitLibInt();
 
-    fmt::print(fmt::emphasis::italic, "\n\n\n"
-               "--- Command Line Arguments ---\n"
-               "\t- \"f12ints\" = Calculate a test set of f12 integrals and transforms the basis set\n"
-               "\t- \"mp2f12-opt\" = Perform an MP2-F12 optimised amplitude calculation on a hydrogen molecule.\n"
-               "\t- \"mp2f12-fixed\" = Perform an MP2-F12 fixed amplitude calculation on a hydrogen molecule.\n"
-               "\t- \"ccsd\" = Perform a CCSD calculation on hydrogen\n"
-               "\t- \"dft\" = Perform a test KS-DFT calculation on water with the LDA exchange and VWD correlation functional.\n"
-               "\t- \"fci\" = Perform a test full configuration interaction calculation on hydrogen.\n"
-               "\t- \"fciqmc\" = Perform a test Full-CI Quantum Monte Carlo procedure on hydrogen.\n"
-               "\t- \"ccqmc-mp2-f12\" = Perform a CCSD Quantum Monte Carlo with a second-order geminal excitor operator T2' in the T expansion (new theory)."
-               "\n\n\n");
+    Molecule mol;
+    const char *moleculeName = nullptr;
 
-    // Molecule ammonia = Molecule::GenerateAmmoniaMolecule();
-    // BasisSet basisSet("sto-3g", ammonia);
-    //
-    // auto noSpinOrbs = 2 * basisSet.GetNoCGFs();
-    // auto dets1 = CI::EnumerateDet(noSpinOrbs,
-    //                               ammonia.GetNoElectrons() / 2,
-    //                               ammonia.GetNoElectrons() / 2,
-    //                               2);
-    // auto dets2 = CI::EnumerateAllDet(10, 2);
+    switch (selectedMol) {
+        case MoleculeEnum::H2:
+            mol = Molecule::GenerateHydrogenMolecule();
+            moleculeName = "Hydrogen (H2)";
+            break;
+        case MoleculeEnum::LiH:
+            mol = Molecule::GenerateLithiumHydrideMolecule();
+            moleculeName = "Lithium Hydride (LiH)";
+            break;
+        case MoleculeEnum::H2O:
+            mol = Molecule::GenerateWaterMolecule();
+            moleculeName = "Water (H2O)";
+            break;
+        case MoleculeEnum::NH3:
+            mol = Molecule::GenerateAmmoniaMolecule();
+            moleculeName = "Ammonia (NH3)";
+            break;
+    }
 
-    // volatile bool equal = true;
-    //
-    // for (auto d1: dets1) {
-    //     bool hasFound = false;
-    //     for (auto d2: dets2) {
-    //         if (d1.GetAlphaOrbitals() == d2.GetAlphaOrbitals() && d1.GetBetaOrbitals() == d2.GetBetaOrbitals()) {
-    //             hasFound = true;
-    //             break;
-    //         }
-    //     }
-    //
-    //     if (!hasFound) {
-    //         equal = false;
-    //         break;
-    //     }
-    //}
+    const char *cabsBasisSet = nullptr;
+    if (selectedMethod == MethodEnum::MP2_F12_Fixed ||
+        selectedMethod == MethodEnum::MP2_F12_Opt ||
+        selectedMethod == MethodEnum::CCSD_QMC_MP2_F12) {
+        if (!options.contains("CABS")) {
+            fmt::print(fg(fmt::color::crimson), "F12 method selected but no CABS basis set was specified\n");
+            return 1;
+        }
+        boost::algorithm::to_lower(options.at("CABS"));
+        if (!basisSets.contains(options.at("CABS"))) {
+            fmt::print(fg(fmt::color::crimson), "CABS basis set {} is invalid\n", options.at("CABS"));
+            return 1;
+        }
+        cabsBasisSet = options.at("CABS").c_str();
+    }
 
-    //Tests::TestUHF();
-    //Tests::TestMP2_F12_Fixed();
-    //Tests::TestFCIQMC();
-    //Tests::TestCCQMC();
-    //Tests::TestCCQMC_MP2_F12();
-    //Tests::TestFullCI();
-    //Tests::TestMolecularInts();
-    //Tests::TestF12Integrals();
-    //Tests::TestTensorEinsum();
-    SelectCCQMC_MP2_F12();
+    fmt::print("\n\n");
 
-    //Driver::MP2_F12_Fixed_LiH();
-    //Driver::CCQMC_MP2_F12_LiH();
-
-    if (argc > 1) {
-        std::string arg1 = argv[1];
-        if (arg1 == "f12ints")
-            Tests::TestF12Integrals();
-        else if (arg1 == "mp2f12-opt")
-            Tests::TestMP2_F12_Optimise();
-        else if (arg1 == "mp2f12-fixed")
-            Tests::TestMP2_F12_Fixed();
-        else if (arg1 == "ccsd")
-            Tests::TestCoupledCluster();
-        else if (arg1 == "dft")
-            Tests::TestDFT();
-        else if (arg1 == "fci")
-            Tests::TestFullCI();
-        else if (arg1 == "fciqmc")
-            Tests::TestFCIQMC();
-        else if (arg1 == "ccqmc-mp2-f12")
-            SelectCCQMC_MP2_F12();
-        else
-            std::cout << "Command \"" << arg1 << "\" not recognised\n";
-    } else {
-        std::cout << "--- No command given ---\n";
+    switch (selectedMethod) {
+        case MethodEnum::RHF:
+            Driver::RHF(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::UHF:
+            Driver::UHF(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::DFT:
+            Driver::DFT(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::MP2:
+            Driver::MP2(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::CCSD:
+            Driver::CCSD(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::CCSD_T:
+            Driver::CCSD_T(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::FCI:
+            Driver::FCI(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::FCIQMC:
+            Driver::FCIQMC(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::CCQMC:
+            Driver::CCQMC(selectedBasisSet.c_str(), mol, moleculeName);
+            break;
+        case MethodEnum::MP2_F12_Fixed:
+            Driver::MP2_F12_Fixed(selectedBasisSet.c_str(), cabsBasisSet, mol, moleculeName);
+            break;
+        case MethodEnum::MP2_F12_Opt:
+            Driver::MP2_F12_Optimise(selectedBasisSet.c_str(), cabsBasisSet, mol, moleculeName);
+            break;
+        case MethodEnum::CCSD_QMC_MP2_F12:
+            Driver::CCSD_QMC_MP2_F12(selectedBasisSet.c_str(), cabsBasisSet, mol, moleculeName);
+            break;
     }
 
     Integrals::LibInt::CloseLibInt();
@@ -110,108 +245,71 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 //
-void SelectCCQMC_MP2_F12() {
-    using namespace SCESS;
+void PrintHelpDialog() {
+    fmt::print("SCESS ");
+    fmt::print(fmt::emphasis::italic, "[method] [molecule] [basis set] [additional options]\n");
+    fmt::print(
+        "\n"
+        "--- Available Theory Method Drivers ---\n");
+    fmt::print(fg(fmt::color::green) | fmt::emphasis::bold, "    SCF\n");
+    fmt::print(""
+        "        - RHF = Restricted Hartree-Fock\n"
+        "        - UHF = Unrestricted Hartree-Fock\n"
+        "        - DFT = Kohn-Sham DFT (VWM + Slater-X)\n"
+        "    \n");
+    fmt::print(fg(fmt::color::teal) | fmt::emphasis::bold, "    MP\n");
+    fmt::print(""
+        "        - MP2 = Moller-Plesset Second Order \n"
+        "\n");
+    fmt::print(fg(fmt::color::violet) | fmt::emphasis::bold, "    Configuration Interaction\n");
+    fmt::print(""
+        "        - FCI = Full Configuration Interaction\n"
+        "\n");
+    fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "    Coupled-Cluster\n");
+    fmt::print(""
+        "        - CCSD   = Coupled Cluster Singles and Doubles\n"
+        "        - CCSD_T = Coupled Cluster Singles and Doubles with perturbative triples\n"
+        "\n");
+    fmt::print(fg(fmt::color::gold) | fmt::emphasis::bold, "    Quantum Monte Carlo (QMC)\n");
+    fmt::print(""
+        "        - FCIQMC = Full-CI QMC\n"
+        "        - CCQMC = Coupled-Cluster QMC\n"
+        "\n");
+    fmt::print(fg(fmt::color::silver) | fmt::emphasis::bold, "    F12\n");
+    fmt::print(""
+        "        - MP2_F12_Fixed = MP2 F12 theory with the fixed amplitude approximation \n"
+        "        - MP2_F12_Opt   = MP2 F12 theory with the optimised amplitudes\n"
+        "\n");
+    fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "    QMC + F12\n");
+    fmt::print(""
+        "        - CCSD_QMC_MP2_F12 = CCSD-QMC with first-order T2' operator\n"
+        "\n"
+        "Note!\n"
+        "    F12 theories require the --CABS option to be specified and set to one of the available basis sets.\n"
+        "\n");
+    fmt::print("--- Available Molecules ---\n"
+        "    - H2  = Hydrogen \n"
+        "    - LiH = Lithium Hydride\n"
+        "    - H2O = Water\n"
+        "    - NH3 = Ammonia\n"
+        "\n");
 
-    fmt::print(fmt::emphasis::bold, "\nPlease select an option:\n");
-    fmt::print(fmt::emphasis::italic,
-               "    [0] Hydrogen Single Point\n"
-               "    [1] Hydrogen Dissociation Curve\n"
-               "    [2] Lithium Hydride Single Point \n"
-               "    [3] Water Single Point\n"
-               "    [4] Ammonia Single Point\n"
-               "    [5] Methane Single Point\n"
-               "    [6] Carbon Monoxide Single Point\n\n");
-
-    auto GetNumericEntry = [](int maxValue) {
-        int option;
-        while (true) {
-            fmt::print("[~] ");
-            try {
-                std::cin >> option;
-
-                if (option <= maxValue)
-                    return option;
-            } catch (...) {
-            }
-            fmt::print(fg(fmt::color::red), "\nPlease select a valid option\n");
+    if (SCESS::Res::AssetsFolder::Get().Init()) {
+        fmt::print("--- Available Basis Sets ---\n");
+        auto basisSets = SCESS::BasisSet::ListBasisSets();
+        for (const auto &basisSet: basisSets) {
+            fmt::print("    - ");
+            fmt::print(fg(fmt::color::silver) | fmt::emphasis::italic, "{}\n", basisSet);
         }
-    };
-
-    int option = GetNumericEntry(6);
-
-    std::string moleculeName;
-    Molecule molecule;
-
-    switch (option) {
-        case 0: {
-            molecule = Molecule::GenerateHydrogenMolecule();
-            moleculeName = "Hydrogen (H2)";
-            break;
-        }
-        case 1: return;
-        case 2: {
-            molecule = Molecule::GenerateLithiumHydrideMolecule();
-            moleculeName = "Lithium Hydride (LiH)";
-            break;
-        }
-        case 3: {
-            molecule = Molecule::GenerateWaterMolecule();
-            moleculeName = "Water (H2O)";
-            break;
-        }
-        case 4: {
-            molecule = Molecule::GenerateAmmoniaMolecule();
-            moleculeName = "Ammonia (NH3)";
-            break;
-        }
-        case 5: {
-            molecule = Molecule::GenerateMethaneMolecule();
-            moleculeName = "Methane (CH4)";
-            break;
-        }
-        case 6: {
-            molecule = Molecule::GenerateCOMolecule();
-            moleculeName = "Carbon Monoxide (CO)";
-            break;
-        }
-        default:
-            return;
+        fmt::print("\n");
+    } else {
+        fmt::print(fg(fmt::color::crimson),
+                   "Required assets directory could not be located to list avaliable basis sets\n");
     }
 
-
-    std::string obsName, cabsName;
-
-    auto OrdinalToBasisSetName = [](int ordinal) {
-        switch (ordinal) {
-            case 0:
-                return "sto-3g";
-            case 1:
-                return "cc-pVDZ";
-            case 2:
-                return "cc-pVTZ";
-            default:
-                return "";
-        }
-    };
-
-    fmt::print(fmt::emphasis::bold, "\nPlease select a basis set for the OBS space:\n");
-    fmt::print(fmt::emphasis::italic,
-               "    [0] sto-3g\n"
-               "    [1] cc-pVDZ\n"
-               "    [2] cc-pVTZ \n\n");
-
-    option = GetNumericEntry(2);
-    obsName = OrdinalToBasisSetName(option);
-
-    fmt::print(fmt::emphasis::bold, "\nPlease select a basis set for the CABS space:\n");
-    fmt::print(fmt::emphasis::italic,
-               "    [0] sto-3g\n"
-               "    [1] cc-pVDZ\n"
-               "    [2] cc-pVTZ \n\n");
-
-    option = GetNumericEntry(2);
-    cabsName = OrdinalToBasisSetName(option);
-
-    Driver::CCQMC_MP2_F12(obsName.c_str(), cabsName.c_str(), molecule, moleculeName.c_str());
+    fmt::print("--- Additional Options ---\n"
+        "    --CABS = Sets the complementary auxiliary basis set for a F12 theory. Can be set to any of the available basis sets\n"
+        "\n");
 }
+//
+//

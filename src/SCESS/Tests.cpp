@@ -378,10 +378,10 @@ namespace SCESS::Tests {
         constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
         Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
 
-        auto &hAtom = hydrogenMolecule.GetAtoms().back();
-        auto hPos = hAtom.GetPos();
-        hPos.x() = 1000.0;
-        hAtom.SetPos(hPos);
+        // auto &hAtom = hydrogenMolecule.GetAtoms().back();
+        // auto hPos = hAtom.GetPos();
+        // hPos.x() = 1000.0;
+        // hAtom.SetPos(hPos);
 
         auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 

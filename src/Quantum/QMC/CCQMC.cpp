@@ -281,6 +281,18 @@ namespace SCESS::QMC::CC {
         return cumulativeClusterProb;
     }
     //
+    void PrintCCQMCWavefunction(const std::vector<int64_t> &excitorWalkers) {
+        double D0_pop = (double) excitorWalkers[0];
+
+        std::cout << "--- CCQMC Wavefunction ---\n";
+        std::cout << std::setprecision(15);
+        for (uint32_t i = 0; i < excitorWalkers.size(); ++i) {
+            double amplitude = double(excitorWalkers[i]) / D0_pop;
+            std::cout << "  - c" << i << " = " << amplitude << '\n';
+        }
+        std::cout << "\n\n";
+    }
+    //
     //
 #pragma endregion
     //

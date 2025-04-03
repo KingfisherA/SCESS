@@ -105,6 +105,8 @@ namespace SCESS::QMC {
         //
         std::vector<double> GenerateCumulativeClusterProb(uint32_t nElectrons);
         //
+        void PrintCCQMCWavefunction(const std::vector<int64_t> &excitorWalkers);
+        //
         //
     }
 

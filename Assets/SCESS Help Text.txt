@@ -1,0 +1,50 @@
+SCESS [method] [molecule] [basis set] [additional options]
+
+--- Available Theory Method Drivers ---
+	SCF:
+        - RHF = Restricted Hartree-Fock
+        - UHF = Unrestricted Hartree-Fock
+        - DFT = Kohn-Sham DFT (VWM + Slater-X)
+    
+    MP:
+        - MP2 = Moller-Plesset Second Order 
+
+    Configuration Interaction:
+        - FCI = Full Configuration Interaction
+
+    Coupled-Cluster:
+        - CCSD   = Coupled Cluster Singles and Doubles
+        - CCSD_T = Coupled Cluster Singles and Doubles with perturbative triples
+
+    Quantum Monte Carlo (QMC):
+        - FCIQMC = Full-CI QMC
+        - CCQMC = Coupled-Cluster QMC
+
+    F12:
+        - MP2_F12_Fixed = MP2 F12 theory with the fixed amplitude approximation 
+        - MP2_F12_Opt   = MP2 F12 theory with the optimised amplitudes
+
+    QMC + F12:
+        - CCSD_QMC_MP2_F12 = CCSD-QMC with first-order T2' operator
+
+Note!
+    F12 theories require the --CABS option to be specified and set to one of the available basis sets.
+
+--- Available Molecules ---
+    - H2  = Hydrogen 
+    - LiH = Lithium Hydride
+    - H2O = Water
+    - NH3 = Ammonia
+
+--- Available Basis Sets ---
+    - sto-3g
+    - cc-pVDZ
+    - cc-pVTZ
+    - def2-svp.1
+    - def2-TZVP
+    - 6-21g
+
+--- Additional Options ---
+    --CABS = Sets the complementary auxiliary basis set for a F12 theory. Can be set to any of the available basis sets
+
+

@@ -5,8 +5,10 @@
 
 namespace SCESS {
     class F12BasisSet;
+}
+
+namespace SCESS::Integrals {
     struct MolInts;
-    struct HF_Wfn;
 }
 
 namespace SCESS::Integrals::F12 {
