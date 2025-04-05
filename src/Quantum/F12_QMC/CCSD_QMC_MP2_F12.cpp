@@ -176,7 +176,7 @@ namespace SCESS::F12_QMC {
         //Cycle to start averaging the projected energy
         constexpr int START_AVERAGE = 200;
         //Target excip population
-        constexpr int TARGET_POPULATION = 2000;
+        constexpr int TARGET_POPULATION = 5000;
 
 
         TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
@@ -294,6 +294,8 @@ namespace SCESS::F12_QMC {
                 size_t n_E_F12_Cluster = 0;
                 size_t n_E_Cluster = 0;
                 Na = nExcips;
+                if (abs(static_cast<double>(Na)) > 1E5)
+                    Na = 5000;
 
                 for (int64_t cluster = 0; cluster < Na; cluster++) {
                     // -- Cluster selection --
@@ -327,7 +329,7 @@ namespace SCESS::F12_QMC {
                     } else if (s == 1) {
                         uniform_int_distribution<uint32_t> excitorIdxDist(0, excitors.size() - 1);
                         selectedExcitorIndices.insert(excitorIdxDist(randGenerator));
-                        pClust = 1.0 / (double) (excitors.size());
+                        pClust = 1.0 / (double) (excitors.size() - 1);
                     } else {
                         uniform_int_distribution<uint32_t> excitorIdxDist(0, excitors.size() - 1 - nGeminalExcitors);
                         //uniform_01<mt19937> geminalExcitor(randGenerator);
@@ -346,7 +348,7 @@ namespace SCESS::F12_QMC {
                         }
 
                         pClust = Integrals::Utils::Factorial(s) *
-                                 pow(1.0 / (double) (excitors.size()), s);
+                                 pow(1.0 / (double) (excitors.size() - nGeminalExcitors - 1), s);
                     }
 
 
@@ -444,20 +446,20 @@ namespace SCESS::F12_QMC {
                         double Hij = 0.0;
                         //int64_t IJ_Sign = 1;
                         if (isGeminal) {
-                            Hij = EvaluateGeminalElement(Dj,
-                                                         gemPair,
-                                                         V_pqxy,
-                                                         h_apxy,
-                                                         nAlphaElectrons,
-                                                         nBetaElectrons,
-                                                         nOccupied,
-                                                         nSpatialOrbitals,
-                                                         nSpatialOrbitals);
+                            Hij = 0.6 * EvaluateGeminalElement(Dj,
+                                                               gemPair,
+                                                               V_pqxy,
+                                                               h_apxy,
+                                                               nAlphaElectrons,
+                                                               nBetaElectrons,
+                                                               nOccupied,
+                                                               nSpatialOrbitals,
+                                                               nSpatialOrbitals);
                         } else {
                             Hij = H_CI(DiIdx, DjIdx);
                         }
 
-                        double pSpawn = 0.6 * tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
+                        double pSpawn = tau * abs(excitorAmplitude * Hij) / (Na * pClust * pExcit * pSize);
                         int64_t nSpawn = static_cast<int64_t>(pSpawn);
                         pSpawn = pSpawn - (double) nSpawn;
                         if (pSpawn > randomNumber())
