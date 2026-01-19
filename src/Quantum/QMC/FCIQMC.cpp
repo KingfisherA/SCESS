@@ -1,7 +1,7 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/range/irange.hpp>
-#include <GraphicsEngine/Tools/Threading.h>
+#include  <Dahlia/Tools/Threading.h>
 //
 #include "Quantum/QMC/QMC.h"
 #include "Quantum/CI/CI.h"
@@ -9,7 +9,7 @@
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 #include "Quantum/HF/HF.h"
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 
 
 //
@@ -21,7 +21,7 @@ namespace SCESS::QMC::FCI {
     double FCIQMC(const HF_Wfn &rhfWfn,
                   const Integrals::MolInts &mints,
                   double Vnn,
-                  const GEng::Thread *thread,
+                  const DH::Thread *thread,
                   std::stringstream *console,
                   boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         if (console) (*console) << "--- Full CI Quantum Monte Carlo ---\n";

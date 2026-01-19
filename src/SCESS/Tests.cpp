@@ -7,7 +7,7 @@
 #include<fmt/format.h>
 #include<fmt/color.h>
 
-#include "GraphicsEngine/Utilities/Memory.h"
+#include "Dahlia/Utilities/Memory.h"
 #include "Quantum/Molecule.h"
 #include "Tensor/TensorOperations.h"
 #include "Quantum/HF/HF.h"

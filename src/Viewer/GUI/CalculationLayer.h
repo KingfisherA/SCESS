@@ -1,9 +1,9 @@
 #pragma once
 //
-#include"GraphicsEngine/Layers/Layer.h"
-#include"GraphicsEngine/3D/VertexArray.h"
-#include"GraphicsEngine/3D/ShaderProgram.h"
-#include"GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Layers/Layer.h"
+#include "Dahlia/3D/VertexArray.h"
+#include "Dahlia/3D/ShaderProgram.h"
+#include "Dahlia/Tools/Threading.h"
 //
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
@@ -17,7 +17,7 @@
 #include <boost/circular_buffer.hpp>
 
 
-namespace GEng {
+namespace DH {
     class Camera3D;
     class ShaderProgram;
     class VertexArray;
@@ -106,19 +106,19 @@ namespace SCESS::Viewer {
     //
     //
     //
-    class CalculationLayer : public GEng::Layer {
+    class CalculationLayer : public DH::Layer {
     public:
         CalculationLayer();
 
         virtual void OnInit() override;
         virtual void OnDestroy() override;
-        virtual void OnUpdate(const sRef<GEng::Framebuffer> &screenBuffer, const GEng::Camera3D &cam,
+        virtual void OnUpdate(const sRef<DH::Framebuffer> &screenBuffer, const DH::Camera3D &cam,
                               const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) override;
         virtual void OnImGuiRender() override;
-        virtual void OnEvent(GEng::Event &e) override;
+        virtual void OnEvent(DH::Event &e) override;
 
     private:
-        static void UploadTriSurface(GEng::VertexArray &vArray, const TriSurf &tri);
+        static void UploadTriSurface(DH::VertexArray &vArray, const TriSurf &tri);
         void RenderMOIsosurface();
         void SelectMolecule();
         void UploadMolecule();
@@ -150,25 +150,25 @@ namespace SCESS::Viewer {
         uRef<Molecule> mMolecule;
         uRef<Molecule> mLastMolecule;
         BasisSet mMoleculeBasisSet;
-        sRef<GEng::VertexArray> mMoleculeVAO;
-        sRef<GEng::VertexBuffer> mMoleculeBuffer;
-        sRef<GEng::VertexArray> mMoleculeBondVAO;
+        sRef<DH::VertexArray> mMoleculeVAO;
+        sRef<DH::VertexBuffer> mMoleculeBuffer;
+        sRef<DH::VertexArray> mMoleculeBondVAO;
         MoleculeStyle mMolRenderStyle = MoleculeStyle::BallStick;
         bool mRenderMolecule = true;
         float mMoleculeOpacity = 1.0f;
 
-        sRef<GEng::VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
+        sRef<DH::VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
         bool mIsosurfaceUploaded = false, mIsoWasNull = false;
         TriSurf mNegTrisurf, mPosTrisurf;
         float mIsoOpacity = 1.0f;
 
-        sRef<GEng::ShaderProgram> mDiffuseProg;
-        sRef<GEng::ShaderProgram> mMoleculeDiffuseProg;
-        sRef<GEng::ShaderProgram> mSolidColourProg;
+        sRef<DH::ShaderProgram> mDiffuseProg;
+        sRef<DH::ShaderProgram> mMoleculeDiffuseProg;
+        sRef<DH::ShaderProgram> mSolidColourProg;
 
         std::stringstream mConsoleOutput;
         bool mOrbitalsOrdered = false;
-        GEng::Thread mCalculationThread;
+        DH::Thread mCalculationThread;
 
         SCFMethod mSCFMethod = SCFMethod::RHF,
                 mCalcSCFMethod = SCFMethod::None;

@@ -1,14 +1,14 @@
 //Adapted from https://github.com/nihaljn/marching-cubes
 
 #include "Isosurfaces.h"
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 
 //
 //
 namespace SCESS::Viewer {
     //
     //
-    using namespace GEng;
+    using namespace DH;
     //
     //
 #pragma region Marching Cubes

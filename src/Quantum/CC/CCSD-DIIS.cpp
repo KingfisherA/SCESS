@@ -3,7 +3,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <cfloat>
 //
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 //
 #include "Quantum/CC/CC.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
@@ -17,7 +17,7 @@ namespace SCESS::CC {
     //
     CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn,
                        const Integrals::MolInts &mints,
-                       const GEng::Thread *thread,
+                       const DH::Thread *thread,
                        std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;

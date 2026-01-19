@@ -3,7 +3,7 @@
 #include "Quantum/Molecule.h"
 #include "Quantum/Integrals/Grid/MolGrid.h"
 
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -59,7 +59,7 @@ namespace SCESS::DFT {
     KS_Wfn KS_DFT(const Molecule &mol,
                   const BasisSet &basisSet,
                   Quadrature::MolGrid::Resolution gridRes,
-                  const GEng::Thread *thread = nullptr,
+                  const DH::Thread *thread = nullptr,
                   std::stringstream *console = nullptr);
     //
     //

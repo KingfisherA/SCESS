@@ -1,16 +1,16 @@
 #pragma once
 
-#include "GraphicsEngine/Application/GraphicsApp.h"
-#include"GraphicsEngine/Utilities/Memory.h"
-#include"GraphicsEngine/GUI/Display.h"
-#include"GraphicsEngine/Scene/Camera3D.h"
-#include"GraphicsEngine/Events/WindowEvents.h"
-#include"GraphicsEngine/Layers/LayerStack.h"
-#include"GraphicsEngine/GUI/ImGuiLayer.h"
+#include "Dahlia/Application/GraphicsApp.h"
+#include "Dahlia/Utilities/Memory.h"
+#include "Dahlia/GUI/Display.h"
+#include "Dahlia/Scene/Camera3D.h"
+#include "Dahlia/Events/WindowEvents.h"
+#include "Dahlia/Layers/LayerStack.h"
+#include "Dahlia/GUI/ImGuiLayer.h"
 
 #include<boost/filesystem.hpp>
 
-namespace GEng {
+namespace DH {
     class KeyPressedEvent;
     class KeyReleasedEvent;
     class MouseMoveEvent;
@@ -25,7 +25,7 @@ namespace GEng {
 namespace SCESS::Viewer {
     class CalculationLayer;
 
-    class Application : public GEng::GraphicsApp {
+    class Application : public DH::GraphicsApp {
     public:
         Application();
         ~Application() override = default;
@@ -33,8 +33,8 @@ namespace SCESS::Viewer {
 
         [[nodiscard]] static Application &Get() { return *sInstance; }
 
-        [[nodiscard]] const GEng::Camera3D &GetCamera() const { return mCam; }
-        [[nodiscard]] GEng::Camera3D &GetCamera() { return mCam; }
+        [[nodiscard]] const DH::Camera3D &GetCamera() const { return mCam; }
+        [[nodiscard]] DH::Camera3D &GetCamera() { return mCam; }
 
         void UpdateProjectionMatrix();
         [[nodiscard]] glm::mat4 &GetProjectionMatrix() { return mProjectionMatrix; }
@@ -47,8 +47,8 @@ namespace SCESS::Viewer {
         bool OnInit() override;
         void OnDestroy() override;
 
-        bool OnMouseMove(GEng::MouseMoveEvent &e) override;
-        bool OnMouseScroll(GEng::MouseScrollEvent &e) override;
+        bool OnMouseMove(DH::MouseMoveEvent &e) override;
+        bool OnMouseScroll(DH::MouseScrollEvent &e) override;
 
         void RenderMenuBar();
         void RenderSplashScreen();
@@ -57,12 +57,12 @@ namespace SCESS::Viewer {
 
         CalculationLayer *mCalcLayer = nullptr;
 
-        GEng::Camera3D mCam;
+        DH::Camera3D mCam;
 
         static Application *sInstance;
         glm::mat4 mProjectionMatrix;
 
-        sRef<GEng::Texture2D> mAppIcon;
+        sRef<DH::Texture2D> mAppIcon;
 
         bool mSplashScreenOpen = true;
     };

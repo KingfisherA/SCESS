@@ -10,7 +10,7 @@
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Molecule.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 
 
 //
@@ -35,7 +35,7 @@ namespace SCESS::HF {
               double convergeLimit,
               size_t scfMaxIterations,
               Integrals::MolInts *mintsOut,
-              const GEng::Thread *thread,
+              const DH::Thread *thread,
               std::stringstream *console) {
         using namespace std::chrono;
 
@@ -69,7 +69,7 @@ namespace SCESS::HF {
               double Vnn,
               double convergeLimit,
               size_t scfMaxIterations,
-              const GEng::Thread *thread,
+              const DH::Thread *thread,
               std::stringstream *console) {
         if (console)
             *console << "---Restricted Hartree Fock---\nUsing " << mints.S.rows() << " basis set functions\n";
@@ -308,7 +308,7 @@ namespace SCESS::HF {
     //
     double MP2_RHF_ClosedShellAO(const HF_Wfn &wfn,
                                  const TEITensor &aoERI,
-                                 const GEng::Thread *thread,
+                                 const DH::Thread *thread,
                                  std::stringstream *console) {
         //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
         const TEITensor moTEI = Integrals::Transforms::TransformTEI(aoERI, wfn.C_Alpha);
@@ -317,7 +317,7 @@ namespace SCESS::HF {
     //
     double MP2_RHF_ClosedShell(const HF_Wfn &wfn,
                                const TEITensor &moERI,
-                               const GEng::Thread *thread,
+                               const DH::Thread *thread,
                                std::stringstream *console) {
         const VectorXi &occ = wfn.Occ_Alpha;
         const VectorXd &ep = wfn.Ep_Alpha;

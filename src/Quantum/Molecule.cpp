@@ -1,8 +1,8 @@
-#include<Quantum/Q_PCH.h>
-#include<fstream>
-#include<map>
+#include <Quantum/Q_PCH.h>
+#include <fstream>
+#include <map>
 //
-#include "GraphicsEngine/Tools/Strings.h"
+#include "Dahlia/Tools/Strings.h"
 //
 #include "Quantum/Molecule.h"
 #include "Quantum/Basis/BasisSet.h"
@@ -10,13 +10,13 @@
 #include "Resources/AssetFolder.h"
 //
 
-
 //
 //
-namespace SCESS {
+namespace SCESS
+{
     //
     //
-    using namespace GEng;
+    using namespace DH;
     //
     //
     static std::map<std::string, int> atomicSymbolToCharge = {
@@ -73,49 +73,57 @@ namespace SCESS {
         {"Sb", 51},
         {"Te", 52},
         {"I", 53},
-        {"Xe", 54}
-    };
+        {"Xe", 54}};
     //
     //
-    Atom::Atom(std::string atomSymbol, const Eigen::Vector3d &pos): mSymbol(atomSymbol), mPosition(pos),
-                                                                    mCharge(atomicSymbolToCharge.at(atomSymbol)) {
+    Atom::Atom(std::string atomSymbol, const Eigen::Vector3d &pos) : mSymbol(atomSymbol), mPosition(pos),
+                                                                     mCharge(atomicSymbolToCharge.at(atomSymbol))
+    {
     }
     //
-    void Atom::SetAtomSymbol(std::string s) {
+    void Atom::SetAtomSymbol(std::string s)
+    {
         mCharge = atomicSymbolToCharge.at(s);
         mSymbol = s;
     }
     //
     //
-    void Molecule::AddAtom(const Atom &a) {
+    void Molecule::AddAtom(const Atom &a)
+    {
         mNoElectrons += a.GetCharge();
         mAtoms.emplace_back(a);
     }
     //
-    std::vector<libint2::Atom> Molecule::GetAtomsLibInt() const {
+    std::vector<libint2::Atom> Molecule::GetAtomsLibInt() const
+    {
         std::vector<libint2::Atom> atoms(mAtoms.size());
 
-        for (uint32_t i = 0; i < mAtoms.size(); i++) {
+        for (uint32_t i = 0; i < mAtoms.size(); i++)
+        {
             const SCESS::Atom &atm = mAtoms[i];
             atoms[i] = {
                 atm.GetCharge(),
-                atm.GetPos().x(), atm.GetPos().y(), atm.GetPos().z()
-            };
+                atm.GetPos().x(), atm.GetPos().y(), atm.GetPos().z()};
         }
 
         return atoms;
     }
     //
-    void Molecule::ConstructBonding(double tolerance2) {
-        std::map<double, std::vector<BondPair> > distanceMap;
+    void Molecule::ConstructBonding(double tolerance2)
+    {
+        std::map<double, std::vector<BondPair>> distanceMap;
 
-        for (size_t i = 0; i < mAtoms.size(); i++) {
-            for (size_t j = 0; j < mAtoms.size(); j++) {
-                if (i == j) continue;
+        for (size_t i = 0; i < mAtoms.size(); i++)
+        {
+            for (size_t j = 0; j < mAtoms.size(); j++)
+            {
+                if (i == j)
+                    continue;
                 double distance2 = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).squaredNorm();
 
                 auto it = distanceMap.find(distance2);
-                if (it != distanceMap.end()) {
+                if (it != distanceMap.end())
+                {
                     (*it).second.push_back({i, j});
                     continue;
                 }
@@ -123,38 +131,46 @@ namespace SCESS {
             }
         }
 
-
         if (distanceMap.size() == 0)
             return;
 
-        for (auto &it: distanceMap) {
+        for (auto &it : distanceMap)
+        {
             if (it.first > distanceMap.begin()->first + tolerance2)
                 continue;
 
-            for (const BondPair &p: it.second) {
+            for (const BondPair &p : it.second)
+            {
                 mBonds.insert(p);
             }
         }
     }
     //
-    double Molecule::CalculateVnn() const {
+    double Molecule::CalculateVnn() const
+    {
         double Vnn = 0.0;
-        for (size_t i = 0; i < mAtoms.size(); i++) {
-            for (size_t j = i + 1; j < mAtoms.size(); j++) {
+        for (size_t i = 0; i < mAtoms.size(); i++)
+        {
+            for (size_t j = i + 1; j < mAtoms.size(); j++)
+            {
                 double r = (mAtoms[i].GetPos() - mAtoms[j].GetPos()).norm();
-                if (r > 0.0) Vnn += mAtoms[i].GetCharge() * mAtoms[j].GetCharge() / r;
+                if (r > 0.0)
+                    Vnn += mAtoms[i].GetCharge() * mAtoms[j].GetCharge() / r;
             }
         }
         return Vnn;
     }
     //
-    Molecule Molecule::LoadFromXYZ(const std::string &filePath) {
+    Molecule Molecule::LoadFromXYZ(const std::string &filePath)
+    {
         std::ifstream inStream(filePath);
         Molecule molecule;
 
-        if (inStream.is_open()) {
+        if (inStream.is_open())
+        {
             std::string line;
-            while (std::getline(inStream, line)) {
+            while (std::getline(inStream, line))
+            {
                 Atom a;
                 size_t startIdx = line.find("  ", 0);
                 if (startIdx == line.npos)
@@ -172,20 +188,21 @@ namespace SCESS {
         return molecule;
     }
     //
-    Molecule Molecule::GenerateWaterMolecule() {
+    Molecule Molecule::GenerateWaterMolecule()
+    {
         Atom H1("H", Eigen::Vector3d(0.7569520, -0.586349, 0.0) * ANGSTROM_2_BOHR);
         Atom H2("H", Eigen::Vector3d(-0.7569520, -0.586349, 0.0) * ANGSTROM_2_BOHR);
         Atom O("O", Eigen::Vector3d(0.0, 0.0, 0.0));
 
         Molecule water({H1, O, H2});
 
-
         water.ConstructBonding();
 
         return water;
     }
     //
-    Molecule Molecule::GenerateHydrogenMolecule() {
+    Molecule Molecule::GenerateHydrogenMolecule()
+    {
         constexpr double hydrogenBondLength = 0.7122300374 * ANGSTROM_2_BOHR;
 
         Atom H1("H", {0.0, 0.0, 0.0});
@@ -197,7 +214,8 @@ namespace SCESS {
         return hydrogenMol;
     }
     //
-    Molecule Molecule::GenerateLithiumHydrideMolecule() {
+    Molecule Molecule::GenerateLithiumHydrideMolecule()
+    {
         constexpr double LiHBondLength = 1.60 * ANGSTROM_2_BOHR;
 
         Atom H("H", {0.0, 0.0, 0.0});
@@ -209,7 +227,8 @@ namespace SCESS {
         return LiHMolecule;
     }
     //
-    Molecule Molecule::GenerateCOMolecule() {
+    Molecule Molecule::GenerateCOMolecule()
+    {
         constexpr double COBondLength = 1.128 * ANGSTROM_2_BOHR;
 
         Atom C("C", {0.0, 0.0, 0.0});
@@ -221,7 +240,8 @@ namespace SCESS {
         return COMolecule;
     }
     //
-    Molecule Molecule::GenerateMethaneMolecule() {
+    Molecule Molecule::GenerateMethaneMolecule()
+    {
         Atom H1("H", {-1.183771681898, -1.183771681898, 1.183771681898});
         Atom H2("H", {-1.183771681898, 1.183771681898, -1.183771681898});
         Atom H3("H", {1.183771681898, 1.183771681898, 1.183771681898});
@@ -234,7 +254,8 @@ namespace SCESS {
         return methane;
     }
     //
-    Molecule Molecule::GenerateEtheneMolecule() {
+    Molecule Molecule::GenerateEtheneMolecule()
+    {
         Atom C1(
             "C", Eigen::Vector3d{-0.66754171391078, -0.57999587657014, -0.98766494519065} * ANGSTROM_2_BOHR);
         Atom C2(
@@ -254,7 +275,8 @@ namespace SCESS {
         return ethene;
     }
     //
-    Molecule Molecule::GenerateAmmoniaMolecule() {
+    Molecule Molecule::GenerateAmmoniaMolecule()
+    {
         Eigen::Vector3d NPos{-6.6842683864, 1.9896777361, -0.0017590331};
         NPos *= ANGSTROM_2_BOHR;
         Atom N("N", {0, 0, 0});

@@ -6,7 +6,7 @@
 #include "Quantum/Molecule.h"
 
 
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -154,7 +154,7 @@ namespace SCESS::Integrals {
      */
     MolInts EvaluateMolecularIntegrals(const BasisSet &basisSet,
                                        const std::vector<Atom> &atoms,
-                                       const GEng::Thread *thread = nullptr);
+                                       const DH::Thread *thread = nullptr);
     //
     //Overlap Integrals
     double Overlap1D(double gamma,
@@ -188,9 +188,9 @@ namespace SCESS::Integrals {
      * @param molecule The molecule to evaluate the tei for
      * @return The tei in chemist's notation
      */
-    TEITensor EvaluateERITensor(const BasisSet &basisSet, const GEng::Thread *thread = nullptr);
+    TEITensor EvaluateERITensor(const BasisSet &basisSet, const DH::Thread *thread = nullptr);
     TEITensor ERITensorMultithread(const BasisSet &basisSet,
-                                   const GEng::Thread *parentThread = nullptr);
+                                   const DH::Thread *parentThread = nullptr);
     //Calculates <ij | 1/r12 | kl> (I1) for a contracted gaussian
     double ERI_CGF(const CGF &c1, const CGF &c2,
                    const CGF &c3, const CGF &c4,

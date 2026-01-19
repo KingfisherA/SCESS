@@ -1,7 +1,7 @@
 #include <Quantum/Q_PCH.h>
 #include <iostream>
 //
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 //
 #include <cfloat>
 
@@ -20,7 +20,7 @@ namespace SCESS::CC {
     //
     CCSD_Wfn CCSD(const HFWfn &rhfWfn,
                   const Integrals::MolInts &mints,
-                  const GEng::Thread *thread,
+                  const DH::Thread *thread,
                   std::stringstream *console) {
         //The delta change in energy which must be achieved for convergence
         constexpr double CC_CONVERGENCE = 1.0E-6;
@@ -163,7 +163,7 @@ namespace SCESS::CC {
     void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Index nOcc,
                      const Index nVirt, const Eigen::Tensor<double, 2> &Dia,
                      const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2,
-                     const GEng::Thread *thread) {
+                     const DH::Thread *thread) {
         //Intermediates
         auto MakeTildeTau = [&t1, &t2]() -> TauTensor {
             Tensor<double, 4> tildeTau = t2;

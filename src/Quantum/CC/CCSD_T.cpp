@@ -3,7 +3,7 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 //
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 #include "Quantum/CC/CC.h"
 
 //
@@ -14,7 +14,7 @@ namespace SCESS::CC {
     //
     CCSD_Wfn CCSD_T(const HFWfn &rhfResult,
                     const Integrals::MolInts &mints,
-                    const GEng::Thread *thread,
+                    const DH::Thread *thread,
                     std::stringstream *console) {
         if (console)
             *console << "--- Coupled Cluster Singles & Doubles with perturbative Triples (CCSD(T)) ---\n";
@@ -67,7 +67,7 @@ namespace SCESS::CC {
                                       const TEITensor &eri,
                                       Index nOcc,
                                       Index nVirt,
-                                      const GEng::Thread *thread) {
+                                      const DH::Thread *thread) {
         using IdxP = Eigen::IndexPair<int>;
 
 

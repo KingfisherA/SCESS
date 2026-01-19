@@ -7,7 +7,7 @@
 
 //
 //
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -48,7 +48,7 @@ namespace SCESS::CC {
     */
     CCSD_Wfn CCSD(const HFWfn &rhfResult,
                   const Integrals::MolInts &mints,
-                  const GEng::Thread *thread = nullptr,
+                  const DH::Thread *thread = nullptr,
                   std::stringstream *console = nullptr);
     //
     /**
@@ -58,12 +58,12 @@ namespace SCESS::CC {
     */
     CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn,
                        const Integrals::MolInts &mints,
-                       const GEng::Thread *thread = nullptr,
+                       const DH::Thread *thread = nullptr,
                        std::stringstream *console = nullptr);
     //
     CCSD_Wfn CCSD_T(const HFWfn &rhfWfn,
                     const Integrals::MolInts &mints,
-                    const GEng::Thread *thread = nullptr,
+                    const DH::Thread *thread = nullptr,
                     std::stringstream *console = nullptr);
     //
     double CalculateTriplesCorrection(const CCSD_Wfn &ccsd,
@@ -71,7 +71,7 @@ namespace SCESS::CC {
                                       const TEITensor &eri,
                                       Eigen::Index nOcc,
                                       Eigen::Index nVirt,
-                                      const GEng::Thread *thread = nullptr);
+                                      const DH::Thread *thread = nullptr);
     //
     FockTensor TransformFockToMO(const HFWfn &rhfWfn);
     void CreateDenominatorTensors(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
@@ -81,7 +81,7 @@ namespace SCESS::CC {
     void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Eigen::Index nOcc,
                      const Eigen::Index nVirt, const Eigen::Tensor<double, 2> &Dia,
                      const Eigen::Tensor<double, 4> &Dijab, T1Tensor &t1, T2Tensor &t2,
-                     const GEng::Thread *thread = nullptr);
+                     const DH::Thread *thread = nullptr);
     //
     double CalculateEnergyCCSD(const FockTensor &F, const Eigen::Index nOcc, const Eigen::Index nVirt,
                                const TEITensor &moTEI,

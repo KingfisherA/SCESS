@@ -6,12 +6,12 @@
 #include <Eigen/Core>
 
 #include "Viewer/Application/Application.h"
-#include "GraphicsEngine/Utilities/Memory.h"
+#include "Dahlia/Utilities/Memory.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/HF/HF.h"
 
 
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -125,7 +125,7 @@ namespace SCESS::CI {
               const Integrals::MolInts &mints,
               double Vnn,
               int excitorLevel = -1,
-              const GEng::Thread *thread = nullptr,
+              const DH::Thread *thread = nullptr,
               std::stringstream *console = nullptr);
     //
     /**

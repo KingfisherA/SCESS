@@ -44,12 +44,12 @@ endif()
 
 find_library(LIB_nfd nfd REQUIRED
         PATHS "${SCESS_LIB_DIR}/nfd/build"
-        PATH_SUFFIXES "lib/Release/x64")
+        PATH_SUFFIXES "lib/Release/arm64")
 
 target_include_directories("ViewerSCESS" PRIVATE
   ${SCESS_SRC_DIR}
   ${SCESS_LIB_DIR}/ImPlot
-  ${GENG_INCLUDE_DIRS}
+  ${DAHLIA_INCLUDE_DIRS}
   ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
@@ -58,9 +58,10 @@ target_include_directories("ViewerSCESS" PRIVATE
 )
 
 target_link_libraries("ViewerSCESS" PRIVATE
-  fmt
+  $<LINK_LIBRARY:FRAMEWORK,AppKit>
+  fmt::fmt
   QuantumSCESS
-  ${GENG_LIBRARIES}
+  ${DAHLIA_LIBRARIES}
   ImPlot
   ${LIB_nfd}
   Boost::filesystem
@@ -83,9 +84,9 @@ set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 
    (CMAKE_CXX_COMPILER_ID STREQUAL GNU))
     list(APPEND COMPILE_OPTIONS
-      -m64
       -fPIC
       -std=c++20
+      -arch arm64
     )
     if(CMAKE_BUILD_TYPE STREQUAL Debug)
       list(APPEND COMPILE_OPTIONS
@@ -95,7 +96,7 @@ if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR
     elseif(CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND COMPILE_OPTIONS
         -O3
-        -mavx2
+        #-mavx2
       )
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)

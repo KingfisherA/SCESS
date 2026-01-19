@@ -5,7 +5,7 @@
 #include "CI.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 //
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 
 
 //
@@ -451,7 +451,7 @@ namespace SCESS::CI {
               const Integrals::MolInts &mints,
               double Vnn,
               int excitorLevel,
-              const GEng::Thread *thread,
+              const DH::Thread *thread,
               std::stringstream *console) {
         const MatrixXd &C = rhfWfn.C_Alpha;
 

@@ -16,7 +16,7 @@ namespace SCESS {
     void PGF::CalculateNormalisationConstant() {
         double numerator = std::pow(2 * mExponent / pi, 0.75) *
                            std::pow(4 * mExponent, (mAngular[0] + mAngular[1] + mAngular[2]) * 0.5);
-
+                           
         double denominator = std::sqrt(
             (mAngular[0] < 1 ? 1 : double_factorial<double>(2 * mAngular[0] - 1)) *
             (mAngular[1] < 1 ? 1 : double_factorial<double>(2 * mAngular[1] - 1)) *

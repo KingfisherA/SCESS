@@ -1,6 +1,8 @@
 ﻿# Project defining the shared library for the quantum calculation code for SCESS 
 
 add_library("QuantumSCESS" SHARED
+  "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
+  "${SCESS_SRC_DIR}/Resources/AssetFolder.h"
   "${SCESS_SRC_DIR}/Quantum/Basis/BasisSet.cpp"
   "${SCESS_SRC_DIR}/Quantum/Basis/BasisSet.h"
   "${SCESS_SRC_DIR}/Quantum/Basis/CGF.cpp"
@@ -76,31 +78,34 @@ set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER
     "Utilities.h"
 )
 
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-find_library(LIB_LAPACKE lapacke REQUIRED)
+#find_package(OpenBLAS PATHS "/opt/homebrew/Cellar/openblas/0.3.30/" REQUIRED)
+find_package(LAPACK PATHS "/opt/homebrew/Cellar/lapack/3.12.1/" REQUIRED)
+find_library(LIB_LAPACKE lapacke
+            PATHS "/opt/homebrew/Cellar/lapack/3.12.1/lib"
+            REQUIRED)
 
 target_include_directories("QuantumSCESS" PRIVATE
   ${SCESS_SRC_DIR}
-  ${GENG_INCLUDE_DIRS}
+  ${DAHLIA_INCLUDE_DIRS}
   ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
   ${SCESS_LIB_DIR}/Eigen
+  #${OpenBLAS_INCLUDE_DIRS}
 )
 
 target_link_libraries("QuantumSCESS" PRIVATE
-  fmt
-  LAPACK::LAPACK
+  fmt::fmt
+  $<LINK_LIBRARY:FRAMEWORK,Accelerate>
   ${LIB_LAPACKE}
-  BLAS::BLAS
+  ${LAPACK_LIBRARIES}
+  #${OpenBLAS_LIBRARIES}
   Boost::boost
   Boost::filesystem
   $<TARGET_NAME_IF_EXISTS:Boost::math>
   $<TARGET_NAME_IF_EXISTS:Boost::preprocessor>
-  ${GENG_TOOLS_LIBRARIES}
-  $<TARGET_NAME_IF_EXISTS:Libint2::int2>
-  $<TARGET_NAME_IF_EXISTS:Libint2::libint2>
+  ${DHALIA_TOOLS_LIBRARIES}
+  $<TARGET_NAME_IF_EXISTS:Libint2::libint2_cxx>
   Libxc::xc
 )
 
@@ -121,9 +126,9 @@ set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 
    (CMAKE_CXX_COMPILER_ID STREQUAL GNU))
     list(APPEND COMPILE_OPTIONS
-      -m64
       -fPIC
       -std=c++20
+      -arch arm64
     )
     if(CMAKE_BUILD_TYPE STREQUAL Debug)
       list(APPEND COMPILE_OPTIONS
@@ -133,7 +138,7 @@ if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR
     elseif(CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND COMPILE_OPTIONS
         -O3
-        -mavx2
+        #-mavx2
       )
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)

@@ -2,7 +2,7 @@
 //
 #include <chrono>
 #include <Eigen/Core>
-#include <GraphicsEngine/Tools/Threading.h>
+#include <Dahlia/Tools/Threading.h>
 //
 #include "HF.h"
 #include "Quantum/Integrals/Integrals.h"
@@ -29,7 +29,7 @@ namespace SCESS::HF {
               double convergeLimit,
               size_t scfMaxIterations,
               Integrals::MolInts *mintsOut,
-              const GEng::Thread *thread,
+              const DH::Thread *thread,
               std::stringstream *console) {
         using namespace std::chrono;
 
@@ -72,7 +72,7 @@ namespace SCESS::HF {
               double Vnn,
               double convergeLimit,
               size_t scfMaxIterations,
-              const GEng::Thread *thread,
+              const DH::Thread *thread,
               std::stringstream *console) {
         if (console != nullptr)
             *console << "---Unrestricted Hartree Fock---\nUsing " << mints.S.rows() <<

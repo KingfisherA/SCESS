@@ -7,10 +7,10 @@
 #include<implot.h>
 //
 #include "AtomDraw.h"
-#include "GraphicsEngine/Scene/Camera3D.h"
-#include "GraphicsEngine/3D/VertexArray.h"
-#include "GraphicsEngine/3D/ShaderProgram.h"
-#include "GraphicsEngine/Maths/Geometry.h"
+#include "Dahlia/Scene/Camera3D.h"
+#include "Dahlia/3D/VertexArray.h"
+#include "Dahlia/3D/ShaderProgram.h"
+#include "Dahlia/Maths/Geometry.h"
 #include "Viewer/GUI/ImSpinner.h"
 //
 #include "Quantum/Basis/BasisSet.h"
@@ -26,14 +26,14 @@
 #include "Viewer/Application/Application.h"
 #include "Resources/AssetFolder.h"
 #include "Resources/ShaderSources.h"
-#include "GraphicsEngine/Resources/Resources.h"
+#include "Dahlia/Resources/Resources.h"
 #include "Quantum/QMC/QMC.h"
 
 
 //
 //
 namespace SCESS::Viewer {
-    using namespace GEng;
+    using namespace DH;
 
     void CalculationLayer::UploadTriSurface(VertexArray &vArray, const TriSurf &tri) {
 #ifdef _DEBUG
@@ -56,7 +56,7 @@ namespace SCESS::Viewer {
     void CalculationLayer::OnInit() {
         ImPlot::CreateContext();
 
-        mDiffuseProg = ShaderProgram::Create(GEng::Res::ShaderSources::GetColourDiffuseGLSL());
+        mDiffuseProg = ShaderProgram::Create(DH::Res::ShaderSources::GetColourDiffuseGLSL());
         mMoleculeDiffuseProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetMoleculeColourDiffuseGLSL());
         mSolidColourProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetSolidColourGLSL());
 
@@ -95,7 +95,7 @@ namespace SCESS::Viewer {
         ImPlot::DestroyContext();
     }
 
-    void CalculationLayer::OnUpdate(const sRef<GEng::Framebuffer> &screenBuffer, const Camera3D &cam,
+    void CalculationLayer::OnUpdate(const sRef<DH::Framebuffer> &screenBuffer, const Camera3D &cam,
                                     const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) {
         GPUContext *ctx = GPUContext::Get();
         ctx->SetPolygonMode(GPUContext::PolygonMode::Solid);

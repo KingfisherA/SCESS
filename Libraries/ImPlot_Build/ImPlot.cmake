@@ -15,7 +15,6 @@ target_compile_definitions("ImPlot" PRIVATE
 )
 
 target_compile_options("ImPlot" PRIVATE
-  -m64
   -std=c++20
 )
 
@@ -30,9 +29,9 @@ set_target_properties("ImPlot" PROPERTIES
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   set_target_properties("ImPlot" PROPERTIES
-      ARCHIVE_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Debug-x64"
-      LIBRARY_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Debug-x64"
-      RUNTIME_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Debug-x64"
+      ARCHIVE_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Debug-x64"
+      LIBRARY_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Debug-x64"
+      RUNTIME_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Debug-x64"
   )
 
   target_compile_options("ImPlot" PRIVATE
@@ -43,9 +42,9 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Release)
   set_target_properties("ImPlot" PROPERTIES
-      ARCHIVE_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Release-x64"
-      LIBRARY_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Release-x64"
-      RUNTIME_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/linux/Release-x64"
+      ARCHIVE_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Release-x64"
+      LIBRARY_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Release-x64"
+      RUNTIME_OUTPUT_DIRECTORY "${IMPLOT_DIR}/bin/Release-x64"
   )
 
   target_compile_options("ImPlot" PRIVATE

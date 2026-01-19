@@ -3,13 +3,13 @@
 #include <ImGui/imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "GraphicsEngine/Events/MouseEvents.h"
-#include "GraphicsEngine/Platform/GPUContext.h"
-#include "GraphicsEngine/GUI/Display.h"
-#include "GraphicsEngine/3D/Texture.h"
-#include "GraphicsEngine/3D/Framebuffer.h"
-#include "GraphicsEngine/GUI/ImGuiLayer.h"
-#include "GraphicsEngine/Utilities/Assert.h"
+#include "Dahlia/Events/MouseEvents.h"
+#include "Dahlia/Platform/GPUContext.h"
+#include "Dahlia/GUI/Display.h"
+#include "Dahlia/3D/Texture.h"
+#include "Dahlia/3D/Framebuffer.h"
+#include "Dahlia/GUI/ImGuiLayer.h"
+#include "Dahlia/Utilities/Assert.h"
 
 #include "Viewer/GUI/CalculationLayer.h"
 #include <filesystem>
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     //Initilise libint2
     Integrals::LibInt::InitLibInt();
 
-    if (!Res::AssetsFolder::Get().Init() || !app.Init(GEng::GraphicsAPI::OpenGL, 4, 6)) {
+    if (!Res::AssetsFolder::Get().Init() || !app.Init(DH::GraphicsAPI::OpenGL, 4, 0)) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 #pragma endregion
 
 namespace SCESS::Viewer {
-    using namespace GEng;
+    using namespace DH;
     // Constants
     constexpr float NEAR_PLANE = 0.1f;
     constexpr float FAR_PLANE = 100.0f;
@@ -81,7 +81,7 @@ namespace SCESS::Viewer {
                                                  }
                                              }),
                                  mProjectionMatrix(1.0f) {
-        GENG_ASSERT(sInstance != nullptr, Application::Application,
+        DH_ASSERT(sInstance != nullptr, Application::Application,
                     "There can only exist one instantiation of \"Application\"");
         sInstance = this;
     }
@@ -90,9 +90,10 @@ namespace SCESS::Viewer {
         this->mRenderViewport = true;
         this->mViewportName = "Molecule View";
 
-        float dpiFactor = mWindow->GetContentScaling().x;
-        mWindow->SetSize(size_t((float) mWindow->GetWidth() * dpiFactor),
-                         size_t((float) mWindow->GetHeight() * dpiFactor));
+        float dpiFactor = mWindow->GetContentScaling().x * 0.1f;
+        // mWindow->SetSize(size_t((float) mWindow->GetWidth() * dpiFactor),
+        //                  size_t((float) mWindow->GetHeight() * dpiFactor));
+        mWindow->SetSize(800, 600);
 
         GPUContext *ctx = GPUContext::Get();
         ctx->SetDepthTest(false);
@@ -100,7 +101,7 @@ namespace SCESS::Viewer {
         ctx->SetBlending(true, GPUContext::Blending::Alpha);
 
         mCalcLayer = new CalculationLayer();
-        this->PushLayer(mCalcLayer);
+        this->PushLayer((Layer*)mCalcLayer);
 
         mCam.SetCentrePosition({0.0f, 0.0f, 0.0f});
         mCam.SetZoom(10.0f);
@@ -153,7 +154,7 @@ namespace SCESS::Viewer {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, 0, ImVec2(0.5f, 0.5f));
 
-        float dpiFactor = mWindow->GetContentScaling().x;
+        float dpiFactor = mWindow->GetContentScaling().x * 0.5f;
         ImGui::SetNextWindowSize({600.0f * dpiFactor, 600.0f * dpiFactor});
         if (ImGui::BeginPopup("splashScreenPopup")) {
             float imgWidth = 350.0f * dpiFactor;

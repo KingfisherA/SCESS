@@ -8,7 +8,7 @@
 #include<vector>
 #include<functional>
 
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 
 namespace SCESS::Viewer {
     class ScalarField;
@@ -104,7 +104,7 @@ namespace SCESS::Viewer {
         /// Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
         void TriangulateField(
             const ScalarField &field,
-            float isovalue, std::vector<Triangle<float> > &trianglesOut, const GEng::Thread *thread = nullptr);
+            float isovalue, std::vector<Triangle<float> > &trianglesOut, const DH::Thread *thread = nullptr);
 
     private:
         glm::vec3 mIntersections[12] = {};
@@ -190,7 +190,7 @@ namespace SCESS::Viewer {
         std::condition_variable mHasFinished;
 
         TensorTy mField;
-        GEng::Thread mThread;
+        DH::Thread mThread;
     };
     //
     //
@@ -265,7 +265,7 @@ namespace SCESS::Viewer {
         float mIsoVal = 0.0f;
 
         bool mUsingMultithreading = false;
-        GEng::Thread mThread;
+        DH::Thread mThread;
     };
     //
     //

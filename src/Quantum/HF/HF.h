@@ -12,7 +12,7 @@ namespace SCESS::Integrals {
     struct MolInts;
 }
 
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -82,7 +82,7 @@ namespace SCESS::HF {
                double convergeLimit = 1E-5,
                size_t scfMaxIterations = 100,
                Integrals::MolInts *mintsOut = nullptr,
-               const GEng::Thread *thread = nullptr,
+               const DH::Thread *thread = nullptr,
                std::stringstream *console = nullptr);
     //
     HF_Wfn RHF(const Integrals::MolInts &mints,
@@ -90,7 +90,7 @@ namespace SCESS::HF {
                double Vnn,
                double convergeLimit = 1E-5,
                size_t scfMaxIterations = 100,
-               const GEng::Thread *thread = nullptr,
+               const DH::Thread *thread = nullptr,
                std::stringstream *console = nullptr);
     //
     /// <summary>
@@ -108,7 +108,7 @@ namespace SCESS::HF {
                double convergeLimit = 1E-5,
                size_t scfMaxIterations = 100,
                Integrals::MolInts *mintsOut = nullptr,
-               const GEng::Thread *thread = nullptr,
+               const DH::Thread *thread = nullptr,
                std::stringstream *console = nullptr);
     //
     HF_Wfn UHF(const Integrals::MolInts &mints,
@@ -117,7 +117,7 @@ namespace SCESS::HF {
                double Vnn,
                double convergeLimit = 1E-5,
                size_t scfMaxIterations = 100,
-               const GEng::Thread *thread = nullptr,
+               const DH::Thread *thread = nullptr,
                std::stringstream *console = nullptr);
     //
     double CalculateEnergyRHF(const Eigen::MatrixXd &Density,
@@ -147,7 +147,7 @@ namespace SCESS::HF {
     /// <returns>MP2 correction energy</returns>
     double MP2_RHF_ClosedShellAO(const HF_Wfn &wfn,
                                  const TEITensor &aoERI,
-                                 const GEng::Thread *thread = nullptr,
+                                 const DH::Thread *thread = nullptr,
                                  std::stringstream *console = nullptr);
     //
     /**
@@ -158,7 +158,7 @@ namespace SCESS::HF {
      */
     double MP2_RHF_ClosedShell(const HF_Wfn &wfn,
                                const TEITensor &moERI,
-                               const GEng::Thread *thread = nullptr,
+                               const DH::Thread *thread = nullptr,
                                std::stringstream *console = nullptr);
     //
     //

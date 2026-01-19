@@ -7,7 +7,7 @@
 //
 
 
-namespace GEng {
+namespace DH {
     class Thread;
 }
 
@@ -38,7 +38,7 @@ namespace SCESS::QMC {
         double FCIQMC(const HF_Wfn &rhfWfn,
                       const Integrals::MolInts &mints,
                       double Vnn,
-                      const GEng::Thread *thread = nullptr,
+                      const DH::Thread *thread = nullptr,
                       std::stringstream *console = nullptr,
                       boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
     }
@@ -50,7 +50,7 @@ namespace SCESS::QMC {
         // applied here.
         double CCQMC(const HF_Wfn &rhfWfn,
                      const Integrals::MolInts &mints,
-                     const GEng::Thread *thread = nullptr,
+                     const DH::Thread *thread = nullptr,
                      boost::circular_buffer<glm::vec2> *projEnergyGraph = nullptr);
         //
         //

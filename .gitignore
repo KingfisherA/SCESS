@@ -53,3 +53,4 @@ CMakeFiles/
 .idea/
 .kdev4/
 .cache/
+/cmake-build-Release-darwin

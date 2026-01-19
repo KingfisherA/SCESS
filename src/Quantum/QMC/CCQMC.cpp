@@ -5,7 +5,7 @@
 //
 #include "Quantum/QMC/QMC.h"
 #include "Quantum/CI/CI.h"
-#include "GraphicsEngine/Tools/Threading.h"
+#include "Dahlia/Tools/Threading.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
 
 //
@@ -302,7 +302,7 @@ namespace SCESS::QMC::CC {
     //
     double CCQMC(const HF_Wfn &rhfWfn,
                  const Integrals::MolInts &mints,
-                 const GEng::Thread *thread,
+                 const DH::Thread *thread,
                  boost::circular_buffer<glm::vec2> *projEnergyGraph) {
         constexpr size_t NUM_CYCLES = 100;
         //Number of attempts

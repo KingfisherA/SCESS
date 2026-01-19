@@ -1,6 +1,4 @@
 ﻿add_executable("SCESS"
-    "${SCESS_SRC_DIR}/Resources/AssetFolder.cpp"
-    "${SCESS_SRC_DIR}/Resources/AssetFolder.h"
     "${SCESS_SRC_DIR}/SCESS/Application.cpp"
     "${SCESS_SRC_DIR}/SCESS/Tests.cpp"
     "${SCESS_SRC_DIR}/SCESS/Tests.h"
@@ -8,17 +6,17 @@
     "${SCESS_SRC_DIR}/SCESS/Driver.cpp"
     "${SCESS_SRC_DIR}/SCESS/Driver.h"
 )
-
 add_dependencies("SCESS"
     "QuantumSCESS"
 )
 target_include_directories("SCESS" PRIVATE
   ${SCESS_SRC_DIR}
-  ${GENG_INCLUDE_DIRS}
+  ${DAHLIA_INCLUDE_DIRS}
   ${IMGUI_INCLUDE_DIRS}
   ${SCESS_LIB_DIR}/cppitertools
   ${SCESS_LIB_DIR}/JSON/include
   ${SCESS_LIB_DIR}/Eigen
+  "/usr/local/include"
 )
 target_compile_definitions("SCESS" PRIVATE
   LIBINT2_CPLUSPLUS_STD=2020
@@ -29,11 +27,10 @@ target_compile_definitions("SCESS" PRIVATE
   $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
 target_link_libraries("SCESS" PRIVATE
-  fmt
+  fmt::fmt
   QuantumSCESS
-  ${GENG_TOOLS_LIBRARIES}
+  ${DHALIA_TOOLS_LIBRARIES}
   Boost::filesystem
-  $<TARGET_NAME_IF_EXISTS:Libint2::int2>
   $<TARGET_NAME_IF_EXISTS:Libint2::libint2>
 )
 
@@ -43,9 +40,9 @@ set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 
    (CMAKE_CXX_COMPILER_ID STREQUAL GNU))
     list(APPEND COMPILE_OPTIONS
-      -m64
       -fPIC
       -std=c++20
+      -arch arm64
     )
     if(CMAKE_BUILD_TYPE STREQUAL Debug)
       list(APPEND COMPILE_OPTIONS
@@ -55,7 +52,7 @@ if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR
     elseif(CMAKE_BUILD_TYPE STREQUAL Release)
       list(APPEND COMPILE_OPTIONS
         -O3
-        -mavx2
+        #-mavx2
       )
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)

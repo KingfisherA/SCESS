@@ -1,16 +1,15 @@
 #include <Quantum/Q_PCH.h>
-#include <GraphicsEngine/Tools/Threading.h>
+#include  <Dahlia/Tools/Threading.h>
 //
 #include "Quantum/DFT/DFT.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Integrals/Grid/MolGrid.h"
-#include "xc.h"
 #include "XC.h"
 #include "Quantum/Integrals/Grid/Quadrature.h"
 
 //
-//
+//q
 namespace SCESS::DFT {
     using namespace Eigen;
     using namespace Quadrature;
@@ -27,7 +26,7 @@ namespace SCESS::DFT {
     DFT::KS_Wfn KS_DFT(const Molecule &mol,
                        const BasisSet &basis,
                        MolGrid::Resolution gridRes,
-                       const GEng::Thread *thread,
+                       const DH::Thread *thread,
                        std::stringstream *console) {
         if (console) {
             *console << "--- Kohn-Sham Density Functional Theory ---\n";
