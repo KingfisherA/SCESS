@@ -54,3 +54,4 @@ CMakeFiles/
 .kdev4/
 .cache/
 /cmake-build-Release-darwin
+.DS_Store
