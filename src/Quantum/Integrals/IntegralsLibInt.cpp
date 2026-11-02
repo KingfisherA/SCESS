@@ -4,7 +4,6 @@
 #include "IntegralsF12.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Tensor/TensorOperations.h"
-#include<any>
 
 //
 //
@@ -30,27 +29,25 @@ namespace SCESS::Integrals {
     //
 #pragma region Evaluation Functions
     //
+    // Operator parameters must be passed with their concrete type (e.g. point charges or geminal
+    // contraction): libint2 rejects type-erased parameters with std::bad_cast.
+    template<typename... Params>
     static TEITensor EvaluateTwoElectronTensor(const libint2::BasisSet &basisSet, Operator op,
-                                               const std::any &params = {}) {
+                                               const Params &... params) {
         TEITensor teiTensor(
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf(),
             (Eigen::Index) basisSet.nbf());
+        // Screened shell quartets are skipped below so must already be zero
+        teiTensor.setZero();
 
-
-        Engine integralEngine;
-        if (params.has_value())
-            integralEngine = Engine(op,
-                                    basisSet.max_nprim(),
-                                    static_cast<int>(basisSet.max_l()),
-                                    0,
-                                    std::numeric_limits<double>::epsilon(),
-                                    params);
-        else
-            integralEngine = Engine(op,
-                                    basisSet.max_nprim(),
-                                    static_cast<int>(basisSet.max_l()));
+        Engine integralEngine(op,
+                              basisSet.max_nprim(),
+                              static_cast<int>(basisSet.max_l()),
+                              0,
+                              std::numeric_limits<double>::epsilon(),
+                              params...);
 
         const auto &shell2bf = basisSet.shell2bf();
         const auto &results = integralEngine.results();
@@ -96,29 +93,23 @@ namespace SCESS::Integrals {
         return teiTensor;
     }
     //
+    template<typename... Params>
     static TEITensor EvaluateTwoElectronTensor(const F12BasisSet &basisSet, Operator op,
-                                               const std::any &params = {}) {
+                                               const Params &... params) {
         TEITensor teiTensor(
             (Eigen::Index) basisSet.GetNumOfFuncs(),
             (Eigen::Index) basisSet.GetNumOfFuncs(),
             (Eigen::Index) basisSet.GetNumOfFuncs(),
             (Eigen::Index) basisSet.GetNumOfFuncs());
+        // Screened shell quartets are skipped below so must already be zero
+        teiTensor.setZero();
 
-
-        Engine integralEngine;
-        if (params.has_value())
-            integralEngine = Engine(op,
-                                    basisSet.GetNumOfPrimitives(),
-                                    basisSet.GetMaxL(),
-                                    0,
-                                    std::numeric_limits<double>::epsilon(),
-                                    params);
-        else
-            integralEngine = Engine(op,
-                                    basisSet.GetNumOfPrimitives(),
-                                    basisSet.GetMaxL(),
-                                    0,
-                                    std::numeric_limits<double>::epsilon());
+        Engine integralEngine(op,
+                              basisSet.GetNumOfPrimitives(),
+                              basisSet.GetMaxL(),
+                              0,
+                              std::numeric_limits<double>::epsilon(),
+                              params...);
 
         const auto &shells = basisSet.GetShells();
 
@@ -166,22 +157,17 @@ namespace SCESS::Integrals {
         return teiTensor;
     }
     //
+    template<typename... Params>
     static Eigen::MatrixXd EvaluateOneElectronMatrix(const libint2::BasisSet &basisSet,
-                                                     Operator op, const std::any &params = {}) {
-        Eigen::MatrixXd resultMatrix(basisSet.nbf(), basisSet.nbf());
+                                                     Operator op, const Params &... params) {
+        Eigen::MatrixXd resultMatrix = Eigen::MatrixXd::Zero(basisSet.nbf(), basisSet.nbf());
 
-        Engine integralEngine;
-        if (params.has_value())
-            integralEngine = Engine(op,
-                                    basisSet.nbf(),
-                                    basisSet.max_l(),
-                                    0,
-                                    std::numeric_limits<double>::epsilon(),
-                                    params);
-        else
-            integralEngine = Engine(op,
-                                    basisSet.nbf(),
-                                    basisSet.max_l());
+        Engine integralEngine(op,
+                              basisSet.max_nprim(),
+                              static_cast<int>(basisSet.max_l()),
+                              0,
+                              std::numeric_limits<double>::epsilon(),
+                              params...);
 
         const auto &shell2bf = basisSet.shell2bf();
         const auto &results = integralEngine.results();
@@ -197,6 +183,8 @@ namespace SCESS::Integrals {
                 integralEngine.compute(basisSet[s1], basisSet[s2]);
 
                 const double *integrals = results[0];
+                if (integrals == nullptr)
+                    continue;
 
                 for (uint32_t f1 = 0, f12 = 0; f1 < n1; f1++) {
                     uint32_t i = f1 + bf1;
@@ -211,22 +199,17 @@ namespace SCESS::Integrals {
         return resultMatrix;
     }
     //
+    template<typename... Params>
     static Eigen::MatrixXd EvaluateOneElectronMatrix(const F12BasisSet &basisSet,
-                                                     Operator op, const std::any &params = {}) {
-        Eigen::MatrixXd resultMatrix(basisSet.GetNumOfFuncs(), basisSet.GetNumOfFuncs());
+                                                     Operator op, const Params &... params) {
+        Eigen::MatrixXd resultMatrix = Eigen::MatrixXd::Zero(basisSet.GetNumOfFuncs(), basisSet.GetNumOfFuncs());
 
-        Engine integralEngine;
-        if (params.has_value())
-            integralEngine = Engine(op,
-                                    basisSet.GetNumOfPrimitives(),
-                                    basisSet.GetMaxL(),
-                                    0,
-                                    std::numeric_limits<double>::epsilon(),
-                                    params);
-        else
-            integralEngine = Engine(op,
-                                    basisSet.GetNumOfPrimitives(),
-                                    basisSet.GetMaxL());
+        Engine integralEngine(op,
+                              basisSet.GetNumOfPrimitives(),
+                              basisSet.GetMaxL(),
+                              0,
+                              std::numeric_limits<double>::epsilon(),
+                              params...);
 
         const auto &shell2bf = basisSet.ShellToBasisIdx();
         const auto &results = integralEngine.results();
@@ -241,6 +224,8 @@ namespace SCESS::Integrals {
                 integralEngine.compute(basisSet[s1], basisSet[s2]);
 
                 const double *integrals = results[0];
+                if (integrals == nullptr)
+                    continue;
 
                 for (uint32_t f1 = 0, f12 = 0; f1 < n1; f1++) {
                     uint32_t i = f1 + bf1;

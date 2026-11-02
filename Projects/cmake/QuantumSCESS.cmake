@@ -79,10 +79,8 @@ set_target_properties("QuantumSCESS" PROPERTIES PUBLIC_HEADER
 )
 
 #find_package(OpenBLAS PATHS "/opt/homebrew/Cellar/openblas/0.3.30/" REQUIRED)
-find_package(LAPACK PATHS "/opt/homebrew/Cellar/lapack/3.12.1/" REQUIRED)
-find_library(LIB_LAPACKE lapacke
-            PATHS "/opt/homebrew/Cellar/lapack/3.12.1/lib"
-            REQUIRED)
+find_package(LAPACK REQUIRED)
+find_library(LIB_LAPACKE lapacke REQUIRED)
 
 target_include_directories("QuantumSCESS" PRIVATE
   ${SCESS_SRC_DIR}
@@ -119,8 +117,6 @@ target_compile_definitions("QuantumSCESS" PRIVATE
   $<$<CONFIG:DEBUG>:_DEBUG>
   $<$<CONFIG:RELEASE>:CONFIG_RELEASE>
 )
-
-target_precompile_headers("QuantumSCESS" PRIVATE "${SCESS_SRC_DIR}/Quantum/Q_PCH.h")
 
 set(COMPILE_OPTIONS)
 if((CMAKE_CXX_COMPILER_ID STREQUAL Clang) OR 

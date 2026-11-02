@@ -26,24 +26,26 @@ namespace SCESS::F12_QMC {
     using ElectronPair = std::pair<int, int>;
     //
     //
+    // The Hamiltonian matrix element <Dj|H|MEG> between the determinant Dj and the multi-electron geminal (MEG)
+    // where the alpha orbital gemPair.first and the beta orbital gemPair.second of the reference are replaced by the
+    // fixed amplitude geminal. Only determinants which differ from the reference within the geminal pair couple.
     double EvaluateGeminalElement(SlaterDet Dj,
                                   ElectronPair gemPair,
                                   const Tensor4 &V_pqxy,
-                                  const Tensor4 &h_apxy,
+                                  const Tensor4 &h_pqxy,
                                   uint32_t nAlphaElectrons,
                                   uint32_t nBetaElectrons,
-                                  uint32_t nOcc,
                                   uint32_t numOfAlphaOrbitals,
                                   uint32_t numOfBetaOrbitals);
     inline Excitor MakeGeminalExcitor() {
         Excitor ex = {0, 0};
-        ex.GetAlphaOrbitals() |= ((unsigned long) (1) << 63);
-        ex.GetBetaOrbitals() |= ((unsigned long) (1) << 63);
+        ex.GetAlphaOrbitals() |= (1ULL << 63);
+        ex.GetBetaOrbitals() |= (1ULL << 63);
         return ex;
     }
     inline bool IsGeminalExcitor(Excitor ex) {
-        return (ex.GetAlphaOrbitals() & ((unsigned long) (1) << 63)) && (
-                   ex.GetBetaOrbitals() & ((unsigned long) (1) << 63));
+        return (ex.GetAlphaOrbitals() & (1ULL << 63)) && (
+                   ex.GetBetaOrbitals() & (1ULL << 63));
     }
     ElectronPair GetGeminalElectronPair(Excitor gemExcitor,
                                         uint32_t nAlphaOrbitals,

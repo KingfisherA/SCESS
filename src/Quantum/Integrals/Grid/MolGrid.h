@@ -20,10 +20,12 @@ namespace SCESS::Quadrature {
             LebedevOrder lebedevOrder;
         };
 
-        constexpr static Resolution LOW_RES{10, LebedevOrder::LEBEDEV_50};
-        constexpr static Resolution MEDIUM_RES{15, LebedevOrder::LEBEDEV_74};
-        constexpr static Resolution HIGH_RES{20, LebedevOrder::LEBEDEV_110};
-        constexpr static Resolution ULTRAFINE_RES{30, LebedevOrder::LEBEDEV_194};
+        //Water/STO-3G LDA errors against the converged grid: LOW ~1e-3, MEDIUM ~1e-5, HIGH and ULTRAFINE < 1e-5
+        //hartrees
+        constexpr static Resolution LOW_RES{30, LebedevOrder::LEBEDEV_74};
+        constexpr static Resolution MEDIUM_RES{50, LebedevOrder::LEBEDEV_110};
+        constexpr static Resolution HIGH_RES{75, LebedevOrder::LEBEDEV_146};
+        constexpr static Resolution ULTRAFINE_RES{100, LebedevOrder::LEBEDEV_194};
 
         explicit MolGrid(const Molecule *molecule, const BasisSet *basisSet);
 

@@ -1,6 +1,7 @@
 //Adapted from https://github.com/nihaljn/marching-cubes
 
 #include "Isosurfaces.h"
+#include <chrono>
 #include "Dahlia/Tools/Threading.h"
 
 //
@@ -105,12 +106,21 @@ namespace SCESS::Viewer {
 #pragma region Isosurface
     //
     void ScalarField::Evaluate(bool useMultithreading) {
+        {
+            std::lock_guard<std::mutex> lock(mMutHasFinished);
+            mEvaluationDone = false;
+            mEvaluationCompleted = false;
+        }
+
         auto workerFunc = [this](bool useMultithreading) {
             size_t resolution = mField.size();
+            bool completed = true;
 
-            for (size_t i = 0; i < resolution; i++) {
-                if (useMultithreading && mThread.ShouldStop())
-                    return;
+            for (size_t i = 0; i < resolution && completed; i++) {
+                if (useMultithreading && mThread.ShouldStop()) {
+                    completed = false;
+                    break;
+                }
                 for (size_t j = 0; j < resolution; j++) {
                     for (size_t k = 0; k < resolution; k++) {
                         glm::vec3 pos(
@@ -122,11 +132,15 @@ namespace SCESS::Viewer {
                 }
             }
 
-            if (useMultithreading) {
-                mThread.MarkAsFinished();
-                std::unique_lock<std::mutex> lock(mMutHasFinished);
-                mHasFinished.notify_all();
+            {
+                std::lock_guard<std::mutex> lock(mMutHasFinished);
+                mEvaluationDone = true;
+                mEvaluationCompleted = completed;
             }
+            mHasFinished.notify_all();
+
+            if (useMultithreading)
+                mThread.MarkAsFinished();
         };
 
         if (!useMultithreading) {
@@ -137,19 +151,32 @@ namespace SCESS::Viewer {
         mThread.Start(workerFunc, useMultithreading);
     }
     //
+    bool ScalarField::WaitUntilEvaluated(const DH::Thread *waiter) {
+        using namespace std::chrono_literals;
+        std::unique_lock<std::mutex> lock(mMutHasFinished);
+
+        //Wait on the evaluation state rather than the notification alone so a notification sent before waiting is
+        //not missed, and poll the waiter so that it can be stopped while waiting
+        while (!mEvaluationDone) {
+            if (waiter && waiter->ShouldStop())
+                return false;
+            mHasFinished.wait_for(lock, 20ms);
+        }
+
+        return mEvaluationCompleted;
+    }
+    //
     void TriSurf::Evaluate(bool useMultithreading) {
         auto workerFunc = [this]() {
             std::unique_ptr<MarchingCubes> marchingCubes = std::make_unique<MarchingCubes>();
 
-            if (mUsingMultithreading) {
-                while (true) {
-                    std::unique_lock<std::mutex> lock(mField->GetHasFinishedMutex());
-                    mField->GetHasFinishedCondition().wait(lock);
-                    if (mField->HasFinished()) break;
-                }
+            mTriangles.clear();
+
+            if (mUsingMultithreading && !mField->WaitUntilEvaluated(&mThread)) {
+                mThread.MarkAsFinished();
+                return;
             }
 
-            mTriangles.clear();
             marchingCubes->TriangulateField(*mField, mIsoVal, mTriangles, mUsingMultithreading ? &mThread : nullptr);
 
             //Rescale vertices

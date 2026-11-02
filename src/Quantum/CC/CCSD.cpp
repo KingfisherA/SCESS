@@ -67,8 +67,9 @@ CCSD_Wfn CCSD(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
   // Dimensions of o,o,v,v
   T2Tensor t2Amps = CreateInitialT2Tensor(nOcc, nVirt, eri, Dijab);
 
-  double E_CC_last = -DBL_MIN, E_CC = 0.0;
+  double E_CC_last = DBL_MAX, E_CC = 0.0;
   size_t ccIteration = 0;
+  bool converged = false;
 
   for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
     if (thread)
@@ -87,6 +88,7 @@ CCSD_Wfn CCSD(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
                << "      dE = " << dE << '\n';
 
     if (dE < CC_CONVERGENCE) {
+      converged = true;
       if (console)
         *console << "---- CCSD procedure converged! ----\n";
       break;
@@ -95,7 +97,7 @@ CCSD_Wfn CCSD(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
     E_CC_last = E_CC;
   }
 
-  if (ccIteration == MAX_ITERATIONS - 1) {
+  if (!converged) {
     if (console)
       *console << "!!! CCSD procedure failed to converge !!!\n\n\n";
     return {};
@@ -336,7 +338,6 @@ void IterateCCSD(const TEITensor &moTEI, const FockTensor &F, const Index nOcc,
     // MO[o, o, v, v]
     // jnfb,mnef-> jbme -> mbej
     Wmbej -=
-        0.25 *
         tmp.contract(moTEI.slice(array<Index, 4>{0, 0, nOcc, nOcc},
                                  array<Index, 4>{nOcc, nOcc, nVirt, nVirt}),
                      array<IndexPair<int>, 2>{IndexPair<int>{1, 1},

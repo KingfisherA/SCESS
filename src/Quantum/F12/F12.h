@@ -56,6 +56,30 @@ namespace SCESS::F12 {
         double E_F12_MP2;
     };
     //
+    //The intermediates of the MP2-F12/3C approximation in the canonical OBS + CABS MO basis. The four-index
+    //quantities are in physicists' notation over the occupied spatial orbitals.
+    struct MP2F12Intermediates {
+        //Fock matrix over the whole OBS + CABS space
+        Tensor2 F;
+        //Exchange contribution to the Fock matrix
+        Tensor2 K;
+        //V_ij^kl = <ij| r12^-1 Q12 f12 |kl>, Coulomb operator on ij and geminal on kl, indexed (i, j, k, l)
+        TEITensor V;
+        //X_kl^mn = <kl| f12 Q12 f12 |mn>
+        TEITensor X;
+        //B_kl^mn
+        TEITensor B;
+        //C_kl^ab, indexed (k, l, a, b) with a, b virtual
+        TEITensor C;
+    };
+    //
+    MP2F12Intermediates EvaluateMP2F12Intermediates(const Integrals::MolInts &mints,
+                                                    const Integrals::F12::F12Integrals &f12Ints,
+                                                    F12Idxs f12Idxs);
+    //
+    //Conventional closed-shell MP2 energy from physicists' notation MO integrals
+    double EvaluateMP2Energy(const TEITensor &eri, const Eigen::VectorXd &epsilon, F12Idxs f12Idxs);
+    //
     //
     double EvaluateCABSSinglesCorrection(const Tensor2 &F,
                                          F12Idxs f12Idxs,
@@ -82,12 +106,15 @@ namespace SCESS::F12 {
                                TEITensor *B_xywz_out = nullptr);
     //
     Tensor4 EvaluateW(const Tensor4 &f12Int, F12Idxs f12Idxs);
+    //
+    //Intermediates for the MEG Hamiltonian matrix elements, both indexed (p, q, i, j) for all OBS p, q and
+    //occupied i, j: V_pq^ij = <pq| r12^-1 Q12 f12 |ij> and h_pq^ij = <pq| (h1 + h2) Q12 f12 |ij>
     void EvaluateAdditionalMP2Intermediates(
         const Integrals::MolInts &configIntegrals,
         const Integrals::F12::F12Integrals &f12Ints,
         F12Idxs f12Idxs,
-        TEITensor *V_abxy_out = nullptr,
-        TEITensor *h_apxy_out = nullptr
+        TEITensor *V_pqxy_out = nullptr,
+        TEITensor *h_pqxy_out = nullptr
     );
     //
     double CalculateMP2_F12_FixedEnergyElectronPair(long electronI, long electronJ,

@@ -23,7 +23,7 @@ namespace SCESS::QMC::FCI {
                   double Vnn,
                   const DH::Thread *thread,
                   std::stringstream *console,
-                  boost::circular_buffer<glm::vec2> *projEnergyGraph) {
+                  const ProjEnergyCallback &onReportCycle) {
         if (console) (*console) << "--- Full CI Quantum Monte Carlo ---\n";
 
         //Evaluate the Full CI  Hamiltonian matrix
@@ -32,7 +32,8 @@ namespace SCESS::QMC::FCI {
                 nSpatialOrbitals = rhfWfn.Occ_Alpha.size(),
                 nSpinOrbs = nSpatialOrbitals * 2;
 
-        std::vector<SlaterDet> determinants = CI::EnumerateAllDet(nSpinOrbs, nElectrons);
+        //Only the M_s = 0 determinants can couple to the closed-shell reference
+        std::vector<SlaterDet> determinants = CI::EnumerateAllDet(nSpinOrbs, nElectrons / 2, nElectrons / 2);
 
         MatrixXd H_FCI = MatrixXd::Zero((Eigen::Index) determinants.size(),
                                         (Eigen::Index) determinants.size()); {
@@ -42,7 +43,9 @@ namespace SCESS::QMC::FCI {
             TEITensor moSpinTEI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
                 Integrals::Transforms::TransformTEI(mints.eri, rhfWfn.C_Alpha));
 
-            for (uint32_t i = 0; i < H_FCI.rows(); i++)
+            for (uint32_t i = 0; i < H_FCI.rows(); i++) {
+                if (thread && thread->ShouldStop())
+                    return 0.0;
                 for (uint32_t j = i; j < H_FCI.cols(); j++)
                     H_FCI(i, j) = H_FCI(j, i) =
                                   CalculateHamiltonianElement(determinants[i],
@@ -50,6 +53,7 @@ namespace SCESS::QMC::FCI {
                                                               nSpatialOrbitals,
                                                               nSpatialOrbitals,
                                                               HSpin, moSpinTEI);
+            }
         }
 
 
@@ -68,11 +72,11 @@ namespace SCESS::QMC::FCI {
 
         constexpr size_t NUM_CYCLES = 1000;
         constexpr size_t NUM_REPORT_CYCLES = 2000;
-        constexpr double EPSILON = 0.01;
 
         using namespace boost::random;
         mt19937 generator(time(nullptr));
-        uniform_01<mt19937, double> randomNumber(generator);
+        uniform_01<double> unitDist;
+        auto randomNumber = [&generator, &unitDist]() { return unitDist(generator); };
 
         using Particle = int;
         //The populations of the walker and spawned particles 
@@ -85,6 +89,7 @@ namespace SCESS::QMC::FCI {
 
         //Reference determinant in the Hartree-Fock determinant which is given by the first index 0
         double runningTotalProjEnergy = 0.0, averageEnergy = 0.0;
+        //Electronic energy of the reference; the shift is a correlation energy relative to it
         double H00 = H_FCI(0, 0);
         //Imaginary time step
         double tau = 0.0001;
@@ -114,7 +119,7 @@ namespace SCESS::QMC::FCI {
                         for (uint32_t J = 0; J < determinants.size(); J++) {
                             if (I == J) continue;
 
-                            if (abs(H_FCI(I, J)) < EPSILON) continue;
+                            if (H_FCI(I, J) == 0.0) continue;
 
                             double pSpawn = abs(tau * H_FCI(I, J));
                             int nSpawn = int(pSpawn);
@@ -138,7 +143,7 @@ namespace SCESS::QMC::FCI {
                         }
 
                     //Death cloning stage
-                    double pCloneDeath = abs(currentWalker) * tau * (Hii - rhfWfn.E_HF - shift);
+                    double pCloneDeath = abs(currentWalker) * tau * (Hii - H00 - shift);
                     int nKill = int(pCloneDeath);
                     pCloneDeath = pCloneDeath - nKill;
 
@@ -170,8 +175,8 @@ namespace SCESS::QMC::FCI {
                     projEnergy += H_FCI(0, I) * double(walkerPopulations[I]) / double(walkerPopulations[0]);
                 }
 
-            if (projEnergyGraph)
-                projEnergyGraph->push_back(glm::vec2{(float) reportCycle, (float) projEnergy});
+            if (onReportCycle)
+                onReportCycle(reportCycle, projEnergy);
 
             if (reportCycle + 1 > NUM_REPORT_CYCLES - 100) {
                 runningTotalProjEnergy += projEnergy;
@@ -184,13 +189,14 @@ namespace SCESS::QMC::FCI {
                         averageEnergy
                         << '\n';
 
+            //Total number of walkers of either sign
             nParticles = std::accumulate(walkerPopulations.begin(), walkerPopulations.end(), 0,
-                                         [](int &&acc, const Particle &p)-> int {
-                                             return acc + p;
+                                         [](int acc, const Particle &p)-> int {
+                                             return acc + std::abs(p);
                                          });
 
 
-            if (reportCycle + 1 > 2 && nParticlesLast != 0)
+            if (reportCycle + 1 > 2 && nParticlesLast != 0 && nParticles != 0)
                 shift = shift - (1.0 / (tau * 1000.0)) * log((double) nParticles / (double) nParticlesLast);
 
             if (console) (*console) << "      Shift: " << shift << '\n';

@@ -57,16 +57,16 @@ namespace SCESS {
             double gz = -2.0 * g.mExponent * (pos[2] - g.mPosition[2]) * fz;
 
             if (g.mAngular[0] > 0) {
-                gx += std::pow(pos[0] - g.mPosition[0], g.mAngular[0] - 1) * ex;
+                gx += g.mAngular[0] * std::pow(pos[0] - g.mPosition[0], g.mAngular[0] - 1) * ex;
             }
             if (g.mAngular[1] > 0) {
-                gy += std::pow(pos[1] - g.mPosition[1], g.mAngular[1] - 1) * ey;
+                gy += g.mAngular[1] * std::pow(pos[1] - g.mPosition[1], g.mAngular[1] - 1) * ey;
             }
             if (g.mAngular[2] > 0) {
-                gz += std::pow(pos[2] - g.mPosition[2], g.mAngular[2] - 1) * ez;
+                gz += g.mAngular[2] * std::pow(pos[2] - g.mPosition[2], g.mAngular[2] - 1) * ez;
             }
 
-            gradientVector += g.mCoeff * Vector3d(gx * fy * fz,
+            gradientVector += g.mCoeff * g.mNorm * Vector3d(gx * fy * fz,
                                                   fx * gy * fz,
                                                   fx * fy * gz);
         }

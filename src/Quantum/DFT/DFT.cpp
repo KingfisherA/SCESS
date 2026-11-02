@@ -36,7 +36,6 @@ namespace SCESS::DFT {
             *console << "Evaluating Molecular Integrals ....\n";
         }
 
-        constexpr double ALPHA = 0.9;
         const Integrals::MolInts &mints = Integrals::EvaluateMolecularIntegrals(basis, mol.GetAtoms(), thread);
 
         if (thread)
@@ -94,8 +93,16 @@ namespace SCESS::DFT {
         //Nuclear-nuclear repulsion energy
         double Vnn = mol.CalculateVnn();
 
-        constexpr double E_CONVERGENCE = 1e-5;
+        constexpr double E_CONVERGENCE = 1e-8;
+        //RMS of the orbital gradient FDS - SDF required for convergence
+        constexpr double COMMUTATOR_CONVERGENCE = 1e-5;
         constexpr uint32_t MAX_ITERATIONS = 500;
+        constexpr size_t MAX_DIIS_SIZE = 6;
+
+        //Fock matrices and their error vectors for Pulay DIIS extrapolation
+        std::vector<MatrixXd> F_DIIS, DIIS_Errors;
+        double commutatorRMS = 1.0;
+        bool converged = false;
 
         if (console)
             *console << "--- Starting SCF cycles ---\n";
@@ -107,21 +114,53 @@ namespace SCESS::DFT {
                     return {};
 
             F = H + 2.0 * J + ExchangeCorr;
-            MatrixXd Fprime = U.transpose() * F * U;
+
+            MatrixXd F_Extrapolated = F;
+            if (iter > 0) {
+                //DIIS error vector (FDS - SDF) in the orthonormal basis
+                MatrixXd error = U.transpose() * (F * D * S - S * D * F) * U;
+                commutatorRMS = std::sqrt(error.cwiseAbs2().mean());
+
+                F_DIIS.push_back(F);
+                DIIS_Errors.push_back(error);
+                if (F_DIIS.size() > MAX_DIIS_SIZE) {
+                    F_DIIS.erase(F_DIIS.begin());
+                    DIIS_Errors.erase(DIIS_Errors.begin());
+                }
+
+                const Index DIIS_Size = (Index) F_DIIS.size();
+                if (DIIS_Size >= 2) {
+                    MatrixXd B = MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1, -1.0);
+                    B(DIIS_Size, DIIS_Size) = 0.0;
+
+                    double maxVal = 0.0;
+                    for (Index i = 0; i < DIIS_Size; i++)
+                        for (Index j = i; j < DIIS_Size; j++) {
+                            B(i, j) = B(j, i) = DIIS_Errors[i].cwiseProduct(DIIS_Errors[j]).sum();
+                            maxVal = std::max(maxVal, abs(B(i, j)));
+                        }
+                    if (maxVal > 0.0)
+                        B.block(0, 0, DIIS_Size, DIIS_Size) /= maxVal;
+
+                    VectorXd rhs = VectorXd::Zero(DIIS_Size + 1);
+                    rhs(DIIS_Size) = -1.0;
+                    VectorXd coeffs = B.fullPivLu().solve(rhs);
+
+                    F_Extrapolated = MatrixXd::Zero(F.rows(), F.cols());
+                    for (Index i = 0; i < DIIS_Size; i++)
+                        F_Extrapolated += coeffs(i) * F_DIIS[i];
+                }
+            }
+
+            MatrixXd Fprime = U.transpose() * F_Extrapolated * U;
 
             SelfAdjointEigenSolver<MatrixXd> eigensolver2(Fprime);
             Ep = eigensolver2.eigenvalues().real();
             C = U * eigensolver2.eigenvectors().real();
 
-            MatrixXd NewDensity = CreateDensityMatrix(C, nElectrons);
-
-            if (iter == 0)
-                D = NewDensity;
-            else
-                D = ALPHA * D + (1 - ALPHA) * NewDensity;
+            D = CreateDensityMatrix(C, nElectrons);
 
             MolGrid.SetDensity(D);
-            MolGrid.CorrectDensities();
 
             J = CreateColoumbMatrixTEI(tei, D);
             //Exchange-correlation energy
@@ -136,14 +175,20 @@ namespace SCESS::DFT {
             E_KS = kineticPotentialE + electronRepulsion + Vnn + E_XC;
 
             double dE = abs(E_KS - lastE);
-            if (console) *console << "   DFT(" << iter << "): E(DFT) = " << E_KS << "          dE = " << dE << '\n';
+            if (console)
+                *console << "   DFT(" << iter << "): E(DFT) = " << E_KS << "          dE = " << dE
+                        << "          |FDS-SDF| = " << commutatorRMS << '\n';
 
-            if (dE < E_CONVERGENCE) {
+            if (iter > 0 && dE < E_CONVERGENCE && commutatorRMS < COMMUTATOR_CONVERGENCE) {
+                converged = true;
                 if (console) *console << "--- DFT procedure has converged! ---\n";
                 break;
             }
             lastE = E_KS;
         }
+
+        if (!converged && console)
+            *console << "!!! DFT procedure failed to converge !!!\n";
 
         if (console) {
             *console << "--- Final DFT Energy ---\n";

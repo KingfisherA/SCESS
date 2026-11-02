@@ -35,8 +35,9 @@ namespace SCESS::Quadrature {
             double w = sin((pi / double(radialPoints + 1)) * static_cast<double>(p));
             w = (pi / double(radialPoints + 1)) * w * w;
 
-            // calculate x point in the interval [-1,1] for Gauss-Chebyshev integration
-            double x = cos((2.0 * p - 1.0) * pi / (2 * radialPoints));
+            // calculate x point in the interval [-1,1] for Gauss-Chebyshev integration (of the second kind, matching
+            // the weights above)
+            double x = cos((pi / double(radialPoints + 1)) * static_cast<double>(p));
 
             // convert x to r so that the interval is converted from [-1,1] to [0, infinity]
             double r = rm * (1.0 + x) / (1.0 - x);

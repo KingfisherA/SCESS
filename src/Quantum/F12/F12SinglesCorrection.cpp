@@ -90,15 +90,20 @@ namespace SCESS::F12 {
             t_ai = rhs_ai / Dai;
             t_xi = rhs_xi / Dxi;
 
+            //Largest change in any amplitude, so that changes of opposite sign cannot cancel
             Tensor2 deltaTensor = t_xi - t1Last;
-            Tensor<double, 0> deltaTensor2 = deltaTensor.sum();
-            delta = abs(deltaTensor2(0));
+            Tensor<double, 0> deltaTensor2 = deltaTensor.abs().maximum();
+            delta = deltaTensor2(0);
 
             if (delta < 1E-8)
                 break;
 
             t1Last = t_xi;
         }
+
+        if (delta >= 1E-8)
+            std::cerr << "Warning: CABS singles amplitudes failed to converge after " << MAX_ITERATIONS
+                    << " iterations (max change " << delta << ")\n";
 
         //Times two for pair of electrons
         //ix, xi ->

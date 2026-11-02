@@ -1,8 +1,7 @@
 #include <Quantum/Q_PCH.h>
 #include <fstream>
 #include <map>
-//
-#include "Dahlia/Tools/Strings.h"
+#include <sstream>
 //
 #include "Quantum/Molecule.h"
 #include "Quantum/Basis/BasisSet.h"
@@ -15,8 +14,6 @@
 namespace SCESS
 {
     //
-    //
-    using namespace DH;
     //
     //
     static std::map<std::string, int> atomicSymbolToCharge = {
@@ -164,25 +161,31 @@ namespace SCESS
     Molecule Molecule::LoadFromXYZ(const std::string &filePath)
     {
         std::ifstream inStream(filePath);
-        Molecule molecule;
+        if (!inStream.is_open())
+            throw std::runtime_error("Cannot open XYZ file: " + filePath);
 
-        if (inStream.is_open())
+        Molecule molecule;
+        std::string line;
+        size_t lineNumber = 0;
+        while (std::getline(inStream, line))
         {
-            std::string line;
-            while (std::getline(inStream, line))
-            {
-                Atom a;
-                size_t startIdx = line.find("  ", 0);
-                if (startIdx == line.npos)
-                    continue;
-                std::vector<std::string> tokens = Strings::Split(line.substr(startIdx), ' ');
-                a.SetAtomSymbol(tokens[0]);
-                double x = std::stod(tokens[1]);
-                double y = std::stod(tokens[2]);
-                double z = std::stod(tokens[3]);
-                a.SetPos({x, y, z});
-                molecule.AddAtom(a);
-            }
+            //The first two lines of an XYZ file are the number of atoms and a comment
+            if (++lineNumber <= 2)
+                continue;
+
+            std::istringstream lineStream(line);
+            std::string symbol;
+            if (!(lineStream >> symbol))
+                continue;
+
+            double x, y, z;
+            if (!(lineStream >> x >> y >> z))
+                throw std::runtime_error("Malformed XYZ file '" + filePath + "' at line " + std::to_string(lineNumber));
+            if (!atomicSymbolToCharge.contains(symbol))
+                throw std::runtime_error("Unknown element '" + symbol + "' in XYZ file '" + filePath + "'");
+
+            //XYZ coordinates are in angstrom
+            molecule.AddAtom(Atom(symbol, Eigen::Vector3d(x, y, z) * ANGSTROM_2_BOHR));
         }
 
         return molecule;

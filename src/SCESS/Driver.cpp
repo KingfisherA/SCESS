@@ -44,7 +44,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- Kohn-Sham DFT Single Point Energy ---\n");
         fmt::print("    Correlation Functional = VMW\n");
         fmt::print("    Exchange Functional = Slater-X\n");
-        fmt::print("  Molecule = {}\n", moleculeName ? "Unknown" : moleculeName);
+        fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(DFT) = {} hartrees\n", ksWfn.E_KS);
     }
     //
@@ -77,7 +77,7 @@ namespace SCESS::Driver {
 
         fmt::print("\n\n--- Unrestricted Hartree-Fock Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
-        fmt::print("  E(RHF) = {} hartrees\n", uhfWfn.E_HF);
+        fmt::print("  E(UHF) = {} hartrees\n", uhfWfn.E_HF);
     }
     //
     //
@@ -136,7 +136,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- Full Configuration Interaction Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(RHF) = {} hartrees\n", rhfWfn.E_HF);
-        fmt::print("  E(FCI) = {} hartrees\n", ciWfn.E_CI(0) - rhfWfn.E_HF);
+        fmt::print("  E(FCI correlation) = {} hartrees\n", ciWfn.E_CI(0) - rhfWfn.E_HF);
         fmt::print("  E(Total) = {} hartrees\n", ciWfn.E_CI(0));
     }
     //
@@ -159,7 +159,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- Full Configuration Interaction Quantum Monte Carlo Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(RHF) = {} hartrees\n", rhfWfn.E_HF);
-        fmt::print("  E(FCI) = {} hartrees\n", E_FCI - rhfWfn.E_HF);
+        fmt::print("  E(FCIQMC correlation) = {} hartrees\n", E_FCI - rhfWfn.E_HF);
         fmt::print("  E(Total) = {} hartrees\n", E_FCI);
     }
     //
@@ -196,7 +196,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- Coupled-Cluster Singles & Doubles Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(RHF) = {} hartrees\n", rhfWfn.E_HF);
-        fmt::print("  E(CCSD) = {} hartrees\n", ccsdWfn.E_CCSD);
+        fmt::print("  E(CCSD correlation) = {} hartrees\n", ccsdWfn.E_CCSD);
         fmt::print("  E(Total) = {} hartrees\n", ccsdWfn.E_CCSD + rhfWfn.E_HF);
     }
     //
@@ -226,7 +226,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- CCSD(T) Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(RHF) = {} hartrees\n", rhfWfn.E_HF);
-        fmt::print("  E(CCSD(T)) = {} hartrees\n", ccsdWfn.E_CCSD + ccsdWfn.E_T);
+        fmt::print("  E(CCSD(T) correlation) = {} hartrees\n", ccsdWfn.E_CCSD + ccsdWfn.E_T);
         fmt::print("  E(Total) = {} hartrees\n", ccsdWfn.E_CCSD + rhfWfn.E_HF + ccsdWfn.E_T);
     }
     //
@@ -248,7 +248,7 @@ namespace SCESS::Driver {
         fmt::print("\n\n--- Coupled-Cluster Quantum Monte Carlo Single Point Energy ---\n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(RHF) = {} hartrees\n", rhfWfn.E_HF);
-        fmt::print("  E(FCI) = {} hartrees\n", E_CC - rhfWfn.E_HF);
+        fmt::print("  E(CCQMC correlation) = {} hartrees\n", E_CC - rhfWfn.E_HF);
         fmt::print("  E(Total) = {} hartrees\n", E_CC);
     }
     //
@@ -303,7 +303,7 @@ namespace SCESS::Driver {
 
         fmt::print("\n\n--- MP2 F12 Single Point Energy ---\n");
         fmt::print(" --- Fixed amplitude approximation used --- \n");
-        fmt::print("  Molecule = {}\n", moleculeName ? "Unknown" : moleculeName);
+        fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(HF) = {} hartrees\n", uhfWfn.E_HF);
         fmt::print("  E(CABS singles correction) = {} hartrees\n", ECABSSingles);
         fmt::print("  E(MP2) = {} hartrees\n", f12Result.E_MP2);
@@ -358,7 +358,7 @@ namespace SCESS::Driver {
 
         fmt::print("\n\n--- MP2 F12 Single Point Energy ---\n");
         fmt::print(" --- Optimised amplitudes used --- \n");
-        fmt::print("  Molecule = {}\n", moleculeName ? "Unknown" : moleculeName);
+        fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print("  E(HF) = {} hartrees\n", uhfWfn.E_HF);
         fmt::print("  E(CABS singles correction) = {} hartrees\n", ECABSSingles);
         fmt::print("  E(MP2) = {} hartrees\n", f12Result.E_MP2);
@@ -421,7 +421,7 @@ namespace SCESS::Driver {
 
         fmt::print(fg(fmt::color::white), "\n\n--- CCSD QMC F12 Single Point Energy ---\n");
         fmt::print(fg(fmt::color::white), " --- Fixed amplitude approximation used --- \n");
-        fmt::print(fg(fmt::color::white), "  Molecule = {}\n", moleculeName);
+        fmt::print(fg(fmt::color::white), "  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n",
                    uhfWfn.E_HF);
         fmt::print(fg(fmt::color::white), "  E(CABS singles correction) = {:.8} hartrees\n",

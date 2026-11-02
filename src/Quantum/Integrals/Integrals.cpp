@@ -136,8 +136,8 @@ Eigen::MatrixXd CalculateMixedOverlapMatrix(const BasisSet &set1,
   Eigen::MatrixXd S = Eigen::MatrixXd::Zero(set1.GetNoCGFs(), set2.GetNoCGFs());
 
   for (Eigen::Index i = 0; i < S.rows(); i++)
-    for (Eigen::Index j = i; j < S.cols(); j++)
-      S(i, j) = S(j, i) = OverlapCGF(set1.Get(i), set2.Get(j));
+    for (Eigen::Index j = 0; j < S.cols(); j++)
+      S(i, j) = OverlapCGF(set1.Get(i), set2.Get(j));
 
   return S;
 }
@@ -345,7 +345,7 @@ TEITensor EvaluateERITensor(const BasisSet &basisSet,
 
 TEITensor ERITensorMultithread(const BasisSet &basisSet,
                                const DH::Thread *parentThread) {
-  using IdxTuple = Eigen::Vector4<uint8_t>;
+  using IdxTuple = Eigen::Vector4<uint32_t>;
   using YoshMap_T = std::unordered_map<size_t, std::vector<IdxTuple>>;
 
   YoshMap_T yoshIdxMap;
@@ -367,8 +367,8 @@ TEITensor ERITensorMultithread(const BasisSet &basisSet,
             indxArray = &itPair->second;
           }
 
-          indxArray->emplace_back((uint8_t)i, (uint8_t)j, (uint8_t)k,
-                                  (uint8_t)l);
+          indxArray->emplace_back((uint32_t)i, (uint32_t)j, (uint32_t)k,
+                                  (uint32_t)l);
         }
 
   if (parentThread)

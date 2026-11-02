@@ -14,7 +14,11 @@
 #include "Quantum/CC/CC.h"
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 //
+#include <atomic>
+#include <mutex>
+#include <streambuf>
 #include <boost/circular_buffer.hpp>
+#include <glm/vec2.hpp>
 
 
 namespace DH {
@@ -104,6 +108,49 @@ namespace SCESS::Viewer {
         BallStick = 1
     };
     //
+    //A string buffer which may be written to by the calculation thread while the UI thread reads it. It has no put
+    //area so that every write goes through the locked overflow/xsputn.
+    class SyncStringBuf : public std::streambuf {
+    public:
+        std::string Snapshot() const {
+            std::lock_guard<std::mutex> lock(mMutex);
+            return mData;
+        }
+
+        void Clear() {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mData.clear();
+        }
+
+    protected:
+        int_type overflow(int_type ch) override {
+            if (!traits_type::eq_int_type(ch, traits_type::eof())) {
+                std::lock_guard<std::mutex> lock(mMutex);
+                mData.push_back(traits_type::to_char_type(ch));
+            }
+            return traits_type::not_eof(ch);
+        }
+
+        std::streamsize xsputn(const char *s, std::streamsize n) override {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mData.append(s, static_cast<size_t>(n));
+            return n;
+        }
+
+    private:
+        mutable std::mutex mMutex;
+        std::string mData;
+    };
+    //
+    //DH::Thread::Stop() blocks until the worker joins. This lets the UI request a stop and keep rendering; the
+    //worker still reports completion with MarkAsFinished() and is joined by the next Start() or the destructor.
+    class CalculationThread : public DH::Thread {
+    public:
+        void RequestStop() { mThreadRequestStop.store(true); }
+
+        [[nodiscard]] bool IsStopping() const { return IsRunning() && ShouldStop(); }
+    };
+    //
     //
     //
     class CalculationLayer : public DH::Layer {
@@ -148,7 +195,6 @@ namespace SCESS::Viewer {
 
         int mSelectedMolecule = -1;
         uRef<Molecule> mMolecule;
-        uRef<Molecule> mLastMolecule;
         BasisSet mMoleculeBasisSet;
         sRef<DH::VertexArray> mMoleculeVAO;
         sRef<DH::VertexBuffer> mMoleculeBuffer;
@@ -166,9 +212,12 @@ namespace SCESS::Viewer {
         sRef<DH::ShaderProgram> mMoleculeDiffuseProg;
         sRef<DH::ShaderProgram> mSolidColourProg;
 
+        //Calculation output; the stream writes into mConsoleBuffer which the UI thread reads with Snapshot()
+        SyncStringBuf mConsoleBuffer;
         std::stringstream mConsoleOutput;
+        std::string mConsoleSnapshot;
         bool mOrbitalsOrdered = false;
-        DH::Thread mCalculationThread;
+        CalculationThread mCalculationThread;
 
         SCFMethod mSCFMethod = SCFMethod::RHF,
                 mCalcSCFMethod = SCFMethod::None;
@@ -182,7 +231,9 @@ namespace SCESS::Viewer {
         std::optional<HF::HF_Wfn> mUHFWfn;
         //Kohn-Sham DFT wavefunction
         std::optional<DFT::KS_Wfn> mKSWfn;
-        bool mUseLastSCF = true, mInvalidateLastSCF = false;
+        bool mUseLastSCF = true;
+        //Written by the calculation thread when it finishes
+        std::atomic<bool> mInvalidateLastSCF = false;
 
         std::optional<CC::CCSD_Wfn> mCCSDWfn;
         std::optional<CC::CCSD_Wfn> mCCSD_TWfn;
@@ -192,6 +243,8 @@ namespace SCESS::Viewer {
 
         std::string mCalcBasisSet;
 
+        //Projected energies pushed by the calculation thread and plotted by the UI thread
+        std::mutex mQMCGraphMutex;
         boost::circular_buffer<glm::vec2> mQMCGraphData;
         double mQMCEnergy = 0.0;
 
@@ -203,6 +256,8 @@ namespace SCESS::Viewer {
 
         float mIsosurfaceVal = 0.02f;
         int mIsosurfaceResolution = 20;
+        //The field is allocated as resolution^3 floats
+        static constexpr int MAX_ISOSURFACE_RESOLUTION = 250;
         float mIsosurfaceVolume = 5.0f;
     };
     //

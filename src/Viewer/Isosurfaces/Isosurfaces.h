@@ -149,13 +149,21 @@ namespace SCESS::Viewer {
 
         void Evaluate(bool useMultithreading = true);
 
-        void Stop() { {
-                std::unique_lock<std::mutex> lock(mMutHasFinished);
-                mThread.MarkAsFinished();
-                mHasFinished.notify_all();
+        void Stop() {
+            //Request the worker to stop and wait for it, then release anything waiting on the field
+            mThread.Stop(); {
+                std::lock_guard<std::mutex> lock(mMutHasFinished);
+                mEvaluationDone = true;
             }
-            mThread.Stop();
+            mHasFinished.notify_all();
         }
+
+        /**
+         * Block until the field has been evaluated (or evaluation has stopped).
+         * @param waiter The thread waiting on the field; waiting is abandoned if it is asked to stop
+         * @return Whether the field was completely evaluated
+         */
+        bool WaitUntilEvaluated(const DH::Thread *waiter);
 
         bool IsRunning() const {
             return mThread.IsRunning();
@@ -188,6 +196,8 @@ namespace SCESS::Viewer {
 
         std::mutex mMutHasFinished;
         std::condition_variable mHasFinished;
+        //Guarded by mMutHasFinished
+        bool mEvaluationDone = false, mEvaluationCompleted = false;
 
         TensorTy mField;
         DH::Thread mThread;

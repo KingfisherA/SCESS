@@ -1,5 +1,7 @@
 #include "CalculationLayer.h"
 //
+#include <numeric>
+//
 #include <ImGui/imgui.h>
 #include <nfd.h>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -51,6 +53,7 @@ namespace SCESS::Viewer {
     }
 
     CalculationLayer::CalculationLayer(): Layer("Graph Layer"), mQMCGraphData(1000) {
+        mConsoleOutput.std::ios::rdbuf(&mConsoleBuffer);
     }
 
     void CalculationLayer::OnInit() {
@@ -134,7 +137,7 @@ namespace SCESS::Viewer {
                 glm::mat4 transformMat =
                         glm::translate(midpoint) *
                         glm::mat4(CalculateBondRotMatrix(glm::normalize(dirVec), {0.0f, 0.0f, 1.0f}))
-                        * glm::scale(glm::vec3(1.0f, 1.0f, dirVec.length()));
+                        * glm::scale(glm::vec3(1.0f, 1.0f, glm::length(dirVec)));
 
                 mSolidColourProg->UploadMatF("uTransformMatrix", transformMat);
 
@@ -220,7 +223,6 @@ namespace SCESS::Viewer {
             return;
 
         mInvalidateLastSCF = true;
-        mLastMolecule.reset();
 
         float *data = new float[mMolecule->GetNoAtoms() * 7];
         for (size_t i = 0; i < mMolecule->GetNoAtoms(); i++) {
@@ -277,138 +279,154 @@ namespace SCESS::Viewer {
         mCalcBasisSet = mBasisSets[mSelectedBasisSet];
         mMoleculeBasisSet = BasisSet(mCalcBasisSet, *mMolecule);
 
+        //Correlated methods are all built on an RHF reference
+        if (mCorrelationMethod != CorrelationMethod::None)
+            mSCFMethod = SCFMethod::RHF;
+
         mCalcSCFMethod = mSCFMethod;
         mCalcCorrelationMethod = mCorrelationMethod;
 
+        //Decide on the UI thread whether the RHF reference can be reused; it must exist and be for this
+        //molecule and basis set
+        const bool runRHF = !mUseLastSCF || mInvalidateLastSCF || !mRHFWfn.has_value();
+
         mConsoleOutput.clear();
-        mConsoleOutput.str("");
+        mConsoleBuffer.Clear(); {
+            std::lock_guard<std::mutex> lock(mQMCGraphMutex);
+            mQMCGraphData.clear();
+        }
 
-        mQMCGraphData.clear();
+        auto onQMCReportCycle = [this](size_t reportCycle, double projectedEnergy) {
+            std::lock_guard<std::mutex> lock(mQMCGraphMutex);
+            mQMCGraphData.push_back(glm::vec2{(float) reportCycle, (float) projectedEnergy});
+        };
 
-        mCalculationThread.Start([this]() {
-            if (mCalcCorrelationMethod != CorrelationMethod::None) {
-                mSCFMethod = mCalcSCFMethod = SCFMethod::RHF;
+        mCalculationThread.Start([this, runRHF, onQMCReportCycle]() {
+            constexpr double SCF_CONVERGENCE = 1E-10;
 
-                //Run SCF as RHF if a SCF determinant is not available
-                if (!mUseLastSCF || mInvalidateLastSCF)
-                    mRHFWfn = HF::RHF(
-                        *mMolecule,
-                        mMoleculeBasisSet,
-                        1E-5,
-                        100,
-                        &mints,
-                        &mCalculationThread,
-                        &mConsoleOutput);
+            //Exceptions must not escape the worker thread (e.g. an odd number of electrons for RHF)
+            bool failed = false;
+            try {
+                if (mCalcCorrelationMethod != CorrelationMethod::None) {
+                    //Run SCF as RHF if a SCF determinant is not available
+                    if (runRHF)
+                        mRHFWfn = HF::RHF(
+                            *mMolecule,
+                            mMoleculeBasisSet,
+                            SCF_CONVERGENCE,
+                            100,
+                            &mints,
+                            &mCalculationThread,
+                            &mConsoleOutput);
 
-                switch (mCalcCorrelationMethod) {
-                    case CorrelationMethod::MP2:
-                        mMP2Energy = HF::MP2_RHF_ClosedShellAO(*mRHFWfn,
-                                                               mints.eri,
+                    if (!mCalculationThread.ShouldStop())
+                        switch (mCalcCorrelationMethod) {
+                            case CorrelationMethod::MP2:
+                                mMP2Energy = HF::MP2_RHF_ClosedShellAO(*mRHFWfn,
+                                                                       mints.eri,
+                                                                       &mCalculationThread,
+                                                                       &mConsoleOutput);
+                                break;
+                            case CorrelationMethod::CCSD: {
+                                mCCSDWfn = CC::CCSD_DIIS(
+                                    *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
+                                break;
+                            }
+
+                            case CorrelationMethod::CCSD_T: {
+                                mCCSD_TWfn = SCESS::CC::CCSD_T(
+                                    *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
+                                break;
+                            }
+
+                            case CorrelationMethod::FCI: {
+                                mFCIWfn = CI::CI(*mRHFWfn,
+                                                 mints,
+                                                 mMolecule->CalculateVnn(),
+                                                 -1,
+                                                 &mCalculationThread,
+                                                 &mConsoleOutput);
+                                break;
+                            }
+
+                            case CorrelationMethod::FCIQMC: {
+                                mQMCEnergy = QMC::FCI::FCIQMC(*mRHFWfn,
+                                                                 mints,
+                                                                 mMolecule->CalculateVnn(),
+                                                                 &mCalculationThread,
+                                                                 &mConsoleOutput,
+                                                                 onQMCReportCycle);
+                                break;
+                            }
+
+                            case CorrelationMethod::CCQMC: {
+                                mQMCEnergy = QMC::CC::CCQMC(*mRHFWfn,
+                                                               mints,
                                                                &mCalculationThread,
-                                                               &mConsoleOutput);
-                        break;
-                    case CorrelationMethod::CCSD: {
-                        mCCSDWfn = CC::CCSD_DIIS(
-                            *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
-                        break;
-                    }
+                                                               onQMCReportCycle);
+                                break;
+                            }
 
-                    case CorrelationMethod::CCSD_T: {
-                        mCCSD_TWfn = SCESS::CC::CCSD_T(
-                            *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
-                        break;
-                    }
-
-                    case CorrelationMethod::FCI: {
-                        mFCIWfn = CI::CI(*mRHFWfn,
-                                         mints,
-                                         mMolecule->CalculateVnn(),
-                                         -1,
-                                         &mCalculationThread,
-                                         &mConsoleOutput);
-                        break;
-                    }
-
-                    case CorrelationMethod::FCIQMC: {
-                        mQMCEnergy = QMC::FCI::FCIQMC(*mRHFWfn,
-                                                         mints,
-                                                         mMolecule->CalculateVnn(),
-                                                         &mCalculationThread,
-                                                         &mConsoleOutput,
-                                                         &mQMCGraphData);
-                        break;
-                    }
-
-                    case CorrelationMethod::CCQMC: {
-                        mQMCEnergy = QMC::CC::CCQMC(*mRHFWfn,
-                                                       mints,
-                                                       &mCalculationThread,
-                                                       &mQMCGraphData);
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
-            } else {
-                switch (mCalcSCFMethod) {
-                    default:
-                        break;
-                    case SCFMethod::RHF:
-                        if (mUseLastSCF && !mInvalidateLastSCF)
-                            mRHFWfn =
-                                    HF::RHF(
-                                        *mMolecule,
-                                        mMoleculeBasisSet,
-                                        1E-10,
-                                        100,
-                                        &mints,
-                                        &mCalculationThread,
-                                        &mConsoleOutput);
-                        else
+                            default:
+                                break;
+                        }
+                } else {
+                    switch (mCalcSCFMethod) {
+                        default:
+                            break;
+                        case SCFMethod::RHF:
                             mRHFWfn = HF::RHF(
                                 *mMolecule,
                                 mMoleculeBasisSet,
-                                1E-10,
+                                SCF_CONVERGENCE,
                                 100,
                                 &mints,
                                 &mCalculationThread,
                                 &mConsoleOutput);
-                        break;
-                    case SCFMethod::UHF:
-                        mUHFWfn = HF::UHF(*mMolecule,
-                                          mMoleculeBasisSet,
-                                          1E-10,
-                                          100,
-                                          &mints,
-                                          &mCalculationThread,
-                                          &mConsoleOutput);
-                        break;
-                    case SCFMethod::KS_DFT:
-                        mKSWfn = DFT::KS_DFT(*mMolecule,
-                                             mMoleculeBasisSet,
-                                             DFTGridResToRes(mDFTGridRes),
-                                             &mCalculationThread,
-                                             &mConsoleOutput);
-                        break;
+                            break;
+                        case SCFMethod::UHF:
+                            mUHFWfn = HF::UHF(*mMolecule,
+                                              mMoleculeBasisSet,
+                                              SCF_CONVERGENCE,
+                                              100,
+                                              &mints,
+                                              &mCalculationThread,
+                                              &mConsoleOutput);
+                            break;
+                        case SCFMethod::KS_DFT:
+                            mKSWfn = DFT::KS_DFT(*mMolecule,
+                                                 mMoleculeBasisSet,
+                                                 DFTGridResToRes(mDFTGridRes),
+                                                 &mCalculationThread,
+                                                 &mConsoleOutput);
+                            break;
+                    }
                 }
+            } catch (const std::exception &e) {
+                failed = true;
+                mConsoleOutput << "Calculation failed: " << e.what() << '\n';
             }
 
-
-            if (!mCalculationThread.ShouldStop()) {
-                mLastMolecule = std::make_unique<Molecule>(*mMolecule);
-            } else {
+            const bool cancelled = mCalculationThread.ShouldStop();
+            if (cancelled)
                 mConsoleOutput << "Calculation cancelled\n";
-            }
 
-            std::cout << mConsoleOutput.str();
-            mInvalidateLastSCF = false;
+            std::cout << mConsoleBuffer.Snapshot();
+            //The RHF reference is valid for the current molecule and basis set only if it was computed (and not
+            //cancelled) in this run
+            const bool ranRHF = mCalcCorrelationMethod != CorrelationMethod::None
+                                    ? runRHF
+                                    : mCalcSCFMethod == SCFMethod::RHF;
+            if (ranRHF)
+                mInvalidateLastSCF = cancelled || failed;
             mCalculationThread.MarkAsFinished();
         });
     }
-
+    //
     void CalculationLayer::StopCalculation() {
-        mCalculationThread.Stop();
+        //Do not join here; the worker notices ShouldStop(), unwinds and marks itself finished, at which point the
+        //UI re-enables and a new calculation may be started
+        mCalculationThread.RequestStop();
     }
 
     // void CalculationLayer::DrawProgressScreen() {
@@ -459,22 +477,23 @@ namespace SCESS::Viewer {
     void CalculationLayer::OrderOrbitals() {
         auto sortCoeffs = [this](Eigen::VectorXd &Ep_, Eigen::MatrixXd &Coeffs,
                                  const Eigen::VectorXi &Occupation) {
-            std::unordered_map<double, uint32_t> sortMap;
-            for (Eigen::Index i = 0; i < Ep_.rows(); i++) {
-                sortMap.insert({Ep_[i], i});
-            }
-            std::sort(Ep_.begin(), Ep_.end());
+            //Sort orbital indices by energy; degenerate orbitals keep their relative order
+            std::vector<Eigen::Index> order(Ep_.rows());
+            std::iota(order.begin(), order.end(), 0);
+            std::stable_sort(order.begin(), order.end(),
+                             [&Ep_](Eigen::Index a, Eigen::Index b) { return Ep_[a] < Ep_[b]; });
 
-            Eigen::MatrixXd sortedCoeffs = Eigen::MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
+            Eigen::VectorXd sortedEp(Ep_.rows());
+            Eigen::MatrixXd sortedCoeffs(Coeffs.rows(), Coeffs.cols());
 
-            mMOLabels.reserve(Ep_.rows());
+            mMOLabels.reserve(mMOLabels.size() + Ep_.rows());
             for (Eigen::Index i = 0; i < Ep_.rows(); i++) {
-                uint32_t index = sortMap.at(Ep_[i]);
-                sortedCoeffs.col(i) = Coeffs.col(index);
+                sortedEp[i] = Ep_[order[i]];
+                sortedCoeffs.col(i) = Coeffs.col(order[i]);
 
                 std::stringstream ss;
                 ss.precision(3);
-                ss << "MO " << i + 1 << "; E=" << Ep_[i] << " hartrees. ";
+                ss << "MO " << i + 1 << "; E=" << sortedEp[i] << " hartrees. ";
 
                 if (i + 1 < Occupation.rows())
                     if (Occupation(i + 1) == 0 && Occupation(i) > 0)
@@ -485,6 +504,7 @@ namespace SCESS::Viewer {
 
                 mMOLabels.push_back(ss.str());
             }
+            Ep_ = sortedEp;
             Coeffs = sortedCoeffs;
         };
 
@@ -580,11 +600,13 @@ namespace SCESS::Viewer {
                 if (ImGui::RadioButton("FCI", reinterpret_cast<int *>(&mCorrelationMethod), 4)) {
                     mCorrelationMethod = CorrelationMethod::FCIQMC;
                     mSCFMethod = SCFMethod::RHF;
+                    std::lock_guard<std::mutex> lock(mQMCGraphMutex);
                     mQMCGraphData.clear();
                 }
                 if (ImGui::RadioButton("CC", reinterpret_cast<int *>(&mCorrelationMethod), 5)) {
                     mCorrelationMethod = CorrelationMethod::CCQMC;
                     mSCFMethod = SCFMethod::RHF;
+                    std::lock_guard<std::mutex> lock(mQMCGraphMutex);
                     mQMCGraphData.clear();
                 }
                 ImGui::Unindent(200.0);
@@ -606,7 +628,7 @@ namespace SCESS::Viewer {
                     ImGui::Unindent(100.0);
                 }
 
-                if (mRHFWfn.has_value()) {
+                if (!mCalculationThread.IsRunning() && mRHFWfn.has_value()) {
                     ImGui::Checkbox("Use Last SCF Result", &mUseLastSCF);
                     ImGui::SameLine();
                 }
@@ -626,16 +648,20 @@ namespace SCESS::Viewer {
                 } else {
                     ImGui::PushStyleColor(ImGuiCol_Button, {0.8f, 0.1f, 0.0f, 1.0f});
 
-                    ImGui::Text("Running %s single point energy...",
+                    const bool stopping = mCalculationThread.IsStopping();
+                    ImGui::Text(stopping ? "Stopping %s single point energy..." : "Running %s single point energy...",
                                 mCalcCorrelationMethod == CorrelationMethod::None
                                     ? SCFMethosToStr(mCalcSCFMethod)
                                     : CorrelationMethodToStr(mCalcCorrelationMethod));
                     ImGui::SameLine();
                     ImSpinner::SpinnerAtom("##atomSpinner", 12.0f * ImGui::GetWindowDpiScale(), 1.5f);
 
-                    if (ImGui::Button("Stop Calculation", ImVec2{-FLT_MIN, 0.0f})) {
+                    ImGui::BeginDisabled(stopping);
+                    if (ImGui::Button(stopping ? "Stopping Calculation..." : "Stop Calculation",
+                                      ImVec2{-FLT_MIN, 0.0f})) {
                         StopCalculation();
                     }
+                    ImGui::EndDisabled();
                 }
 
                 ImGui::PopStyleColor();
@@ -759,7 +785,7 @@ namespace SCESS::Viewer {
                                         if (Occ(mSelectedMO + 1) == 0 && Occ(
                                                 mSelectedMO) > 0)
                                             ImGui::TextColored({1.0f, 0.0f, 0.0f, 1.0f}, "HOMO");
-                                    if (mSelectedMO - 1 > 0)
+                                    if (mSelectedMO - 1 >= 0)
                                         if (Occ(mSelectedMO - 1) > 0 && Occ(
                                                 mSelectedMO) == 0)
                                             ImGui::TextColored({0.0f, 0.5f, 0.5f, 1.0f}, "LUMO");
@@ -776,7 +802,7 @@ namespace SCESS::Viewer {
                                     if (mSelectedMO + 1 < occupation.rows())
                                         if (occupation(mSelectedMO + 1) == 0 && occupation(mSelectedMO) > 0)
                                             ImGui::TextColored({1.0f, 0.0f, 0.0f, 1.0f}, "HOMO");
-                                    if (mSelectedMO - 1 > 0)
+                                    if (mSelectedMO - 1 >= 0)
                                         if (occupation(mSelectedMO - 1) > 0 && occupation(mSelectedMO) == 0)
                                             ImGui::TextColored({0.0f, 0.5f, 0.5f, 1.0f}, "LUMO");
                                     ImGui::BulletText(
@@ -884,7 +910,8 @@ namespace SCESS::Viewer {
                                     ImGui::Text("Resolution: ");
                                     ImGui::SameLine();
                                     ImGui::SetCursorPosX(xPos);
-                                    ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10, 1000);
+                                    ImGui::DragInt("##isoResolutionVal", &mIsosurfaceResolution, 1.0f, 10,
+                                                   MAX_ISOSURFACE_RESOLUTION, "%d", ImGuiSliderFlags_AlwaysClamp);
 
                                     ImGui::Text("Volume: ");
                                     ImGui::SameLine();
@@ -971,8 +998,8 @@ namespace SCESS::Viewer {
 
     void CalculationLayer::DrawConsolePanel() {
         if (ImGui::Begin("Console")) {
-            const std::string &consoleStr = mConsoleOutput.str();
-            ImGui::InputTextMultiline("##consoleOutput", (char *) consoleStr.c_str(), consoleStr.length(),
+            mConsoleSnapshot = mConsoleBuffer.Snapshot();
+            ImGui::InputTextMultiline("##consoleOutput", mConsoleSnapshot.data(), mConsoleSnapshot.length() + 1,
                                       {-FLT_MIN, -FLT_MIN}, ImGuiInputTextFlags_ReadOnly);
         }
         ImGui::End();
@@ -992,26 +1019,27 @@ namespace SCESS::Viewer {
                         return "Full CI quantum monte carlo";
                 }
             }());
-            if (mCalculationThread.HasFinished()) {
+            if (mCalculationThread.HasFinished() && mRHFWfn.has_value()) {
                 ImGui::Text("Final QMC electronic energy: %.8f", mQMCEnergy);
                 ImGui::Text("Final QMC correlation energy: %.8f", mQMCEnergy - mRHFWfn->E_HF);
             }
 
-            if (ImPlot::BeginPlot("Projected Energy", ImVec2(-1, -1))) {
+            //Copy the points so the calculation thread is not blocked while plotting
+            std::vector<glm::vec2> graphData; {
+                std::lock_guard<std::mutex> lock(mQMCGraphMutex);
+                graphData.assign(mQMCGraphData.begin(), mQMCGraphData.end());
+            }
+
+            if (!graphData.empty() && ImPlot::BeginPlot("Projected Energy", ImVec2(-1, -1))) {
                 ImPlot::SetupAxes("Cycle No.", "E(Proj) / hartrees");
-                ImPlot::SetupAxisLimits(ImAxis_X1, mQMCGraphData.back().x, mQMCGraphData.back().x + 250,
+                ImPlot::SetupAxisLimits(ImAxis_X1, graphData.back().x, graphData.back().x + 250,
                                         ImGuiCond_Once);
                 ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
                 ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.0f);
                 ImPlot::PlotLine<float>("E(Proj)",
-                                        reinterpret_cast<float *>(mQMCGraphData.array_one().first),
-                                        reinterpret_cast<float *>(mQMCGraphData.array_one().first) + 1,
-                                        static_cast<int>(mQMCGraphData.array_one().second),
-                                        0, 0, sizeof(glm::vec2));
-                ImPlot::PlotLine<float>("E(Proj)",
-                                        reinterpret_cast<float *>(mQMCGraphData.array_two().first),
-                                        reinterpret_cast<float *>(mQMCGraphData.array_two().first) + 1,
-                                        static_cast<int>(mQMCGraphData.array_two().second),
+                                        &graphData.data()->x,
+                                        &graphData.data()->y,
+                                        static_cast<int>(graphData.size()),
                                         0, 0, sizeof(glm::vec2));
                 ImPlot::PopStyleColor();
                 ImPlot::PopStyleVar();

@@ -106,17 +106,15 @@ namespace SCESS::HF {
         MatrixXd C_Alpha, C_Beta;
         VectorXd Ep_Alpha, Ep_Beta;
 
-        while (delta > convergeLimit && scfCount < scfMaxIterations) {
-            if (thread)
-                if (thread->ShouldStop())
-                    return {};
-
+        auto BuildFock = [&]() {
             ConstructGUHF(D_Alpha, D_Beta, tei, G_Alpha, G_Beta);
             F_Alpha = h + G_Alpha;
             F_Alpha = (F_Alpha + F_Alpha.transpose()) * 0.5;
             F_Beta = h + G_Beta;
             F_Beta = (F_Beta + F_Beta.transpose()) * 0.5;
+        };
 
+        auto DiagonaliseFock = [&]() {
             MatrixXd F_AlphaPrime = X.transpose() * F_Alpha * X;
             MatrixXd F_BetaPrime = X.transpose() * F_Beta * X;
 
@@ -128,9 +126,6 @@ namespace SCESS::HF {
 
             C_Alpha = X * alphaEigen.eigenvectors().real();
             C_Beta = X * betaEigen.eigenvectors().real();
-
-            D_AlphaOld = D_Alpha;
-            D_BetaOld = D_Beta;
 
             D_Alpha = MatrixXd::Zero(h.rows(), h.rows());
             D_Beta = MatrixXd::Zero(h.rows(), h.rows());
@@ -146,6 +141,20 @@ namespace SCESS::HF {
                     }
                 }
             }
+        };
+
+        while (delta > convergeLimit && scfCount < scfMaxIterations) {
+            if (thread)
+                if (thread->ShouldStop())
+                    return {};
+
+            BuildFock();
+            E_UHF = CalculateEnergyUHF(D_Alpha, D_Beta, h, F_Alpha, F_Beta) + Vnn;
+
+            D_AlphaOld = D_Alpha;
+            D_BetaOld = D_Beta;
+
+            DiagonaliseFock();
 
             MatrixXd D_Delta = D_Alpha - D_AlphaOld;
             delta = D_Delta.cwiseProduct(D_Delta).sum();
@@ -153,27 +162,26 @@ namespace SCESS::HF {
             delta += D_Delta.cwiseProduct(D_Delta).sum();
             delta = sqrt(delta);
 
-            E_UHF = CalculateEnergyUHF(D_Alpha,
-                                       D_Beta,
-                                       h,
-                                       F_Alpha,
-                                       F_Beta) + Vnn;
-
             if (console)
-                *console << "   UHF(" << scfCount << "): E = " << E_UHF << "      dE = " << delta << '\n';
+                *console << "   UHF(" << scfCount << "): E = " << E_UHF << "      dD = " << delta << '\n';
 
             scfCount++;
         }
+        const bool converged = delta <= convergeLimit;
 
+        //Final Fock build so that the energy pairs each density with the Fock matrix built from it, then take the
+        //canonical orbitals of that Fock matrix
+        BuildFock();
         E_UHF = CalculateEnergyUHF(D_Alpha,
                                    D_Beta,
                                    h,
                                    F_Alpha,
                                    F_Beta) + Vnn;
+        DiagonaliseFock();
 
         if (console) {
-            if (scfCount < scfMaxIterations)
-                *console << "---- UHF procedure converged! ----\nRHF converged after " <<
+            if (converged)
+                *console << "---- UHF procedure converged! ----\nUHF converged after " <<
                         scfCount << " iterations.\nE(UHF) = " << E_UHF << " hartrees\n\n\n";
             else
                 *console << "!!! UHF procedure failed to converge !!!\n\n\n";

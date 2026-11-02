@@ -57,8 +57,10 @@ Tensor4 EvaluateW(const Tensor4 &f12, F12Idxs f12Idxs) {
       {alpha, {f12Idxs.nOcc, f12Idxs.nVirt + f12Idxs.nCABS}},
       {beta, {f12Idxs.nOcc, f12Idxs.nVirt + f12Idxs.nCABS}}};
 
+  // Fixed amplitude (SP) geminal: 3/8 f12|ij> + 1/8 f12|ji>
   Tensor4 W = (3.0 / 8.0) * Slice<Indices<alpha, beta, I, J>>(idxs, f12);
-  W -= (1.0 / 8.0) * Slice<Indices<alpha, beta, I, J>>(idxs, f12);
+  W += (1.0 / 8.0) * Einsum<Indices<alpha, beta, J, I>, Indices<alpha, beta, I, J>>(
+                         Slice<Indices<alpha, beta, I, J>>(idxs, f12));
 
   return W;
 }
@@ -66,88 +68,81 @@ Tensor4 EvaluateW(const Tensor4 &f12, F12Idxs f12Idxs) {
 void EvaluateAdditionalMP2Intermediates(
     const Integrals::MolInts &mints,
     const Integrals::F12::F12Integrals &f12Ints, F12Idxs f12Idxs,
-    TEITensor *V_pqxy_out, TEITensor *h_apxy_out) {
+    TEITensor *V_pqxy_out, TEITensor *h_pqxy_out) {
   TensorSliceIndices idxs = {
       // All Occupied orbital indices
       {I, {0, f12Idxs.nOcc}},
       {J, {0, f12Idxs.nOcc}},
       {M, {0, f12Idxs.nOcc}},
-      // All virtual orbital indices
-      {A, {f12Idxs.nOcc, f12Idxs.nVirt}},
-      {B, {f12Idxs.nOcc, f12Idxs.nVirt}},
-      {C, {f12Idxs.nOcc, f12Idxs.nVirt}},
-      {D, {f12Idxs.nOcc, f12Idxs.nVirt}},
       // All OBS indices
       {P, {0, f12Idxs.nOBS}},
       {Q, {0, f12Idxs.nOBS}},
       {R, {0, f12Idxs.nOBS}},
       {S, {0, f12Idxs.nOBS}},
-      {T, {0, f12Idxs.nOBS}},
-      {U, {0, f12Idxs.nOBS}},
       // CABS indices
       {X, {f12Idxs.nOBS, f12Idxs.nCABS}},
   };
 
   const TEITensor &eri = mints.eri;
   const TEITensor &f12 = f12Ints.f12;
-  const TEITensor &f12Sq = f12Ints.f12Sq;
-  const TEITensor &f12DelSq = f12Ints.f12DelSq;
   const TEITensor &f12Repulsion = f12Ints.f12Repulsion;
 
-  // Make the V_pqxy intermediate
-  // Note that i=x and j=y as fixed amplitude approximation employed
+  // Make the V_pq^ij = <pq| r12^-1 Q12 f12 |ij> intermediate for all OBS p, q
   Tensor4 V_pqij = Slice<Indices<P, Q, I, J>>(idxs, f12Repulsion);
 
-  // abmx,cdmx->abcd
+  // pqmx,mxij->pqij
   V_pqij -=
       Einsum<Indices<P, Q, M, X>, Indices<M, X, I, J>, Indices<P, Q, I, J>>(
           Slice<Indices<P, Q, M, X>>(idxs, eri),
           Slice<Indices<M, X, I, J>>(idxs, f12));
 
-  // abxm,cdxm->abcd
+  // pqxm,xmij->pqij
   V_pqij -=
       Einsum<Indices<P, Q, X, M>, Indices<X, M, I, J>, Indices<P, Q, I, J>>(
           Slice<Indices<P, Q, X, M>>(idxs, eri),
           Slice<Indices<X, M, I, J>>(idxs, f12));
 
+  // pqrs,rsij->pqij
   V_pqij -=
       Einsum<Indices<P, Q, R, S>, Indices<R, S, I, J>, Indices<P, Q, I, J>>(
           Slice<Indices<P, Q, R, S>>(idxs, eri),
           Slice<Indices<R, S, I, J>>(idxs, f12));
 
-  Tensor2 h_xp = Slice<Indices<X, A>>(idxs, MatrixToTensor(mints.T + mints.V));
-
-  Tensor4 h_apxy =
-      Einsum<Indices<A, X, I, J>, Indices<X, P>, Indices<A, P, I, J>>(
-          Slice<Indices<A, X, I, J>>(idxs, f12), h_xp);
-
-  h_apxy += Einsum<Indices<X, A, I, J>, Indices<X, P>, Indices<A, P, I, J>>(
-      Slice<Indices<X, A, I, J>>(idxs, f12), h_xp);
+  // Make the h_pq^ij = <pq| (h1 + h2) Q12 f12 |ij> intermediate for all OBS
+  // p, q. Q12 f12|ij> only contains pairs (a x), (x a) and (x y) so
+  // h1 contributes sum_x h_px <xq|f12|ij> when q is virtual and h2
+  // contributes sum_x h_qx <px|f12|ij> when p is virtual
+  const MatrixXd h = mints.T + mints.V;
+  const Index nOcc = f12Idxs.nOcc;
+  const Index nOBS = f12Idxs.nOBS;
+  const Index nCABS = f12Idxs.nCABS;
+  Tensor4 h_pqij(nOBS, nOBS, nOcc, nOcc);
+  h_pqij.setZero();
+  for (Index p = 0; p < nOBS; p++)
+    for (Index q = 0; q < nOBS; q++)
+      for (Index i = 0; i < nOcc; i++)
+        for (Index j = 0; j < nOcc; j++) {
+          double element = 0.0;
+          for (Index x = nOBS; x < nOBS + nCABS; x++) {
+            if (q >= nOcc)
+              element += h(p, x) * f12(x, q, i, j);
+            if (p >= nOcc)
+              element += h(q, x) * f12(p, x, i, j);
+          }
+          h_pqij(p, q, i, j) = element;
+        }
 
   if (V_pqxy_out)
     *V_pqxy_out = V_pqij;
 
-  if (h_apxy_out)
-    *h_apxy_out = h_apxy;
+  if (h_pqxy_out)
+    *h_pqxy_out = h_pqij;
 }
 //
 //
-MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
-                           const Integrals::MolInts &mints,
-                           const Integrals::F12::F12Integrals &f12Ints,
-                           F12Idxs f12Idxs, Tensor2 *F_pq_out,
-                           TEITensor *V_ijxy_out, TEITensor *C_xyab_out,
-                           TEITensor *X_xywz_out, TEITensor *B_xywz_out) {
-  // * We assume that the reference wavefunction is actually a closed shell RHF
-  // hence alternating
-  //      alpha and beta spins (fix this in the future to support open shell :(
-  //      )
-  // * We need | Psi > = |ijk...> |alpha beta alpha beta ... > (alpha and beta
-  // are stored alternating)
-  // * All calculations are done in SPIN ORBITALS so we need to integrate spin
-  // out the spin!
-  // * All EVEN indices are spin alpha and ODD are spin beta
-
+MP2F12Intermediates EvaluateMP2F12Intermediates(
+    const Integrals::MolInts &mints,
+    const Integrals::F12::F12Integrals &f12Ints, F12Idxs f12Idxs) {
   TensorSliceIndices idxs = {// All Occupied orbital indices
                              {I, {0, f12Idxs.nOcc}},
                              {J, {0, f12Idxs.nOcc}},
@@ -218,47 +213,24 @@ MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
       Slice<Indices<I, J, M, X>>(idxs, f12),
       Slice<Indices<K, L, M, X>>(idxs, f12));
 
-  // Full Fock Matrix
+  // Fock matrix over the full OBS + CABS space,
+  // F_pq = h_pq + sum_i 2 <pi|qi> - <ii|pq>, and its exchange part K_pq
+  const Index nAll = f12Idxs.nOBS + f12Idxs.nCABS;
   Tensor<double, 2> F_ = MatrixToTensor(TInts + VInts);
-  // Coloumb Fock Terms
-  // piqi->pq
-  Slice<Indices<P, Q>>(idxs, F_) +=
-      2.0 * Einsum<Indices<P, I, Q, I>, Indices<P, Q>>(
-                Slice<Indices<P, I, Q, I>>(idxs, eri));
-  // ipix->px
-  Slice<Indices<P, X>>(idxs, F_) +=
-      2.0 * Einsum<Indices<I, P, I, X>, Indices<P, X>>(
-                Slice<Indices<I, P, I, X>>(idxs, eri));
-  // ixiy->xy
-  Slice<Indices<X, Y>>(idxs, F_) +=
-      2.0 * Einsum<Indices<I, X, I, Y>, Indices<X, Y>>(
-                Slice<Indices<I, X, I, Y>>(idxs, eri));
-
-  Tensor<double, 2> K_(F_.dimensions());
+  Tensor<double, 2> K_(nAll, nAll);
   K_.setZero();
-  // Exchange Fock Terms
-  // iipq->pq
-  Slice<Indices<P, Q>>(idxs, K_) = Einsum<Indices<I, I, P, Q>, Indices<P, Q>>(
-      Slice<Indices<I, I, P, Q>>(idxs, eri));
-  // iipx->px
-  Slice<Indices<P, X>>(idxs, K_) = Einsum<Indices<I, I, P, X>, Indices<P, X>>(
-      Slice<Indices<I, I, P, X>>(idxs, eri));
-  // iixy->xy
-  Slice<Indices<X, Y>>(idxs, K_) = Einsum<Indices<I, I, X, Y>, Indices<X, Y>>(
-      Slice<Indices<I, I, X, Y>>(idxs, eri));
+  for (Index p = 0; p < nAll; p++)
+    for (Index q = 0; q < nAll; q++)
+      for (Index i = 0; i < f12Idxs.nOcc; i++) {
+        F_(p, q) += 2.0 * eri(p, i, q, i);
+        K_(p, q) += eri(i, i, p, q);
+      }
   F_ -= K_;
-
-  // Fill in the remaining elements by symmetry
-  Slice<Indices<X, P>>(idxs, F_) =
-      Einsum<Indices<P, X>, Indices<X, P>>(Slice<Indices<P, X>>(idxs, F_));
-  Slice<Indices<X, P>>(idxs, K_) =
-      Einsum<Indices<P, X>, Indices<X, P>>(Slice<Indices<P, X>>(idxs, K_));
 
   // Fock matrix without the exchange terms
   Tensor<double, 2> F_K = F_ + K_;
 
   // Makes the B and C intermediate tensors
-  //, &idxs, &f12Idxs.nOcc, &f12Idxs.nOBS, &f12Idxs.nCABS]
   auto MakeB_C = [&f12Sq, &f12, &F_, &F_K, &K_, &idxs](TEITensor &B_,
                                                        TEITensor &C_) -> void {
     //-- F12 Contributions --
@@ -473,10 +445,12 @@ MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
   C_.setZero();
   MakeB_C(B_, C_);
 
-  // Calculate conventional MP2 energy
+  return {F_, K_, V_, X_, B_, C_};
+}
+//
+double EvaluateMP2Energy(const TEITensor &eri, const VectorXd &epsilon,
+                         F12Idxs f12Idxs) {
   double E_MP2 = 0.0;
-
-  const auto &epsilon = refWfn.Ep_Alpha;
 
   // i and j run over the occupied orbitals
   for (Index i = 0; i < f12Idxs.nOcc; i++)
@@ -496,34 +470,42 @@ MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
         }
     }
 
-  double E_F12_X = 0.0;
-  double E_F12_B = 0.0;
-  double E_F12_V = 0.0;
+  return E_MP2;
+}
+//
+MP2F12Result MP2_F12_Fixed(const HF_Wfn &refWfn,
+                           const Integrals::MolInts &mints,
+                           const Integrals::F12::F12Integrals &f12Ints,
+                           F12Idxs f12Idxs, Tensor2 *F_pq_out,
+                           TEITensor *V_ijxy_out, TEITensor *C_xyab_out,
+                           TEITensor *X_xywz_out, TEITensor *B_xywz_out) {
+  // * We assume that the reference wavefunction is actually a closed shell RHF
+  // * The integrals have been canonicalised and transformed into the CABS/OBS
+  //   MO basis set and are in physicists' notation
+  const MP2F12Intermediates ints =
+      EvaluateMP2F12Intermediates(mints, f12Ints, f12Idxs);
 
-  // Loop over pairs of electrons
+  // Calculate conventional MP2 energy
+  const double E_MP2 = EvaluateMP2Energy(mints.eri, refWfn.Ep_Alpha, f12Idxs);
+
+  // Calculate the F12 contribution to the MP2 energy, looping over pairs of
+  // electrons
+  double E_F12 = 0.0;
   for (Index i = 0; i < f12Idxs.nOcc; i++)
-    for (Index j = 0; j < f12Idxs.nOcc; j++) {
-      E_F12_V += (5.0 / 8.0) * V_(i, j, i, j);
-      E_F12_V -= (1.0 / 8.0) * V_(j, i, i, j);
-      E_F12_X += (F_(i, i) + F_(j, j)) * (7.0 / 32.0) * X_(i, j, i, j);
-      E_F12_X += (F_(i, i) + F_(j, j)) * (1.0 / 32.0) * X_(i, j, j, i);
-      E_F12_B += (7.0 / 32.0) * B_(i, j, i, j);
-      E_F12_B += (1.0 / 32.0) * B_(i, j, j, i);
-    }
-
-  // Calculate the F12 contribution to the MP2 energy
-  double E_F12 = 2.0 * E_F12_V + E_F12_B - E_F12_X;
+    for (Index j = 0; j < f12Idxs.nOcc; j++)
+      E_F12 += CalculateMP2_F12_FixedEnergyElectronPair(i, j, ints.F, ints.V,
+                                                        ints.X, ints.B);
 
   if (F_pq_out)
-    *F_pq_out = F_;
+    *F_pq_out = ints.F;
   if (V_ijxy_out)
-    *V_ijxy_out = V_;
+    *V_ijxy_out = ints.V;
   if (X_xywz_out)
-    *X_xywz_out = X_;
+    *X_xywz_out = ints.X;
   if (B_xywz_out)
-    *B_xywz_out = B_;
+    *B_xywz_out = ints.B;
   if (C_xyab_out)
-    *C_xyab_out = C_;
+    *C_xyab_out = ints.C;
 
   return {E_MP2, E_F12};
 }

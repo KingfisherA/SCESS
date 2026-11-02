@@ -75,8 +75,9 @@ CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
   std::vector<VectorXd> DIIS_ErrorVectors;
   DIIS_ErrorVectors.reserve(6);
 
-  double E_CC_last = -DBL_MIN, E_CC = 0.0;
+  double E_CC_last = DBL_MAX, E_CC = 0.0;
   size_t ccIteration = 0;
+  bool converged = false;
 
   for (; ccIteration < MAX_ITERATIONS; ccIteration++) {
     if (thread)
@@ -111,6 +112,12 @@ CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
               combinedErrVec(idx++) = t2Err(i, j, a, b);
 
       DIIS_ErrorVectors.push_back(combinedErrVec);
+
+      // DIIS extrapolates the updated amplitudes; extrapolating the input
+      // amplitudes discards the latest update and can stagnate away from the
+      // solution of the CC equations
+      t1AmpsArray.back() = t1Amps;
+      t2AmpsArray.back() = t2Amps;
     }
 
     if (ccIteration >= 3) {
@@ -139,7 +146,8 @@ CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
           maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
         }
 
-      ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
+      if (maxVal > 0.0)
+        ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
 
       VectorXd Residual = VectorXd::Zero(DIIS_Size + 1);
       Residual(Residual.rows() - 1) = -1.0;
@@ -166,6 +174,7 @@ CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
                << "      dE = " << dE << '\n';
 
     if (dE < CC_CONVERGENCE) {
+      converged = true;
       if (console)
         *console << "---- CCSD procedure converged! ----\n";
       break;
@@ -174,7 +183,7 @@ CCSD_Wfn CCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
     E_CC_last = E_CC;
   }
 
-  if (ccIteration == MAX_ITERATIONS - 1) {
+  if (!converged) {
     if (console)
       *console << "!!! CCSD procedure failed to converge !!!\n\n\n";
     return {};

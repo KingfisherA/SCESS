@@ -146,7 +146,10 @@ namespace SCESS::CI {
     //
     std::vector<SlaterDet> EnumerateDet(uint32_t nSpinOrbs, uint32_t nAlphaElectrons,
                                         uint32_t nBetaElectrons, uint32_t excitorLevel);
+    //Every determinant of nElectrons in nSpinOrbs spin orbitals (all M_s sectors)
     std::vector<SlaterDet> EnumerateAllDet(uint32_t nSpinOrbs, uint32_t nElectrons);
+    //Every determinant with the given number of alpha and beta electrons, starting with the reference
+    std::vector<SlaterDet> EnumerateAllDet(uint32_t nSpinOrbs, uint32_t nAlphaElectrons, uint32_t nBetaElectrons);
     //
     size_t GetNumOccOrbs(OrbBitStr orbitalBitStr, size_t numOfOrbitals);
     //

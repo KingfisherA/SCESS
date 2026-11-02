@@ -25,10 +25,12 @@ namespace SCESS::Tests {
         constexpr std::array<Index, 4> dims{5, 5, 5, 5};
         Tensor<double, 4> t1(dims);
         Tensor<double, 4> t2(dims);
+        Tensor<double, 2> m(5, 5);
         t1.setRandom();
         t2.setRandom();
+        m.setRandom();
 
-        auto op = Einsum<Indices<alpha, M>, Indices<beta, M, I, J>, Indices<alpha, beta, I, J> >(t1,t2);
+        auto op = Einsum<Indices<alpha, M>, Indices<beta, M, I, J>, Indices<alpha, beta, I, J> >(m,t2);
         auto op2 = Einsum<Indices<I,J,K,L>, Indices<I,J,K,L>, Indices<>>(t1,t2);
 
     }

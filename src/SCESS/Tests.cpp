@@ -30,6 +30,50 @@
 namespace SCESS::Tests {
 //
 //
+// Reference energies (hartrees) for the built-in geometries. Unless noted they
+// are from PySCF 2.14; small differences (< 1e-6) are expected for water as
+// PySCF stores the STO-3G coefficients to fewer significant figures.
+namespace Reference {
+// H2 / STO-3G
+constexpr double H2_RHF = -1.1175058851;
+constexpr double H2_MP2 = -0.0125038087;
+constexpr double H2_CCSD = -0.0193419373;
+constexpr double H2_FCI = -1.1368478224;
+// H2O / STO-3G
+constexpr double H2O_RHF = -74.9629832288;
+constexpr double H2O_MP2 = -0.0355225667;
+constexpr double H2O_CCSD = -0.0494026324;
+constexpr double H2O_T = -0.0000673499;
+constexpr double H2O_FCI = -75.0125022529;
+// LDA (Slater + VWN5) on a converged grid
+constexpr double H2O_LDA = -74.7319604693;
+// He / def2-TZVP
+constexpr double He_RHF = -2.8598954257;
+constexpr double He_FCI = -2.8929575257;
+// H2 / STO-3G with the cc-pVDZ CABS. From the independent NumPy MP2-F12
+// implementation in Scripts/verification/mp2f12_port.py (geminal integrals
+// built from PySCF range-separated ERIs).
+constexpr double H2_CABS_SINGLES = -0.0099723;
+constexpr double H2_MP2_F12_FIXED = -0.022091052;
+constexpr double H2_MP2_F12_OPT = -0.021554970;
+} // namespace Reference
+//
+static int gFailures = 0;
+//
+// Compare an energy against its reference and report the result
+static bool CheckEnergy(const char *label, double value, double reference,
+                        double tolerance) {
+  const double diff = std::abs(value - reference);
+  const bool pass = diff <= tolerance;
+  fmt::print(pass ? fg(fmt::color::green) : fg(fmt::color::crimson),
+             "  [{}] {}: {:.10f} (reference {:.10f}, |diff| = {:.2e}, "
+             "tolerance {:.0e})\n",
+             pass ? "PASS" : "FAIL", label, value, reference, diff, tolerance);
+  if (!pass)
+    gFailures++;
+  return pass;
+}
+//
 void ProfileMolInts() {
   Molecule hydrogen = Molecule::GenerateWaterMolecule();
 
@@ -92,6 +136,7 @@ void TestDFT() {
       DFT::KS_DFT(waterMolecule, basisSet, Quadrature::MolGrid::MEDIUM_RES,
                   nullptr, &console);
   std::cout << console.str() << '\n';
+  CheckEnergy("E(LDA)", ksWavefunction.E_KS, Reference::H2O_LDA, 1e-5);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
@@ -109,7 +154,7 @@ void TestCoupledCluster() {
 
   std::stringstream ss;
   HF::HF_Wfn rhfWfn =
-      HF::RHF(hydrogenMolecule, basisSet, 1e-05, 100, &mints, nullptr, &ss);
+      HF::RHF(hydrogenMolecule, basisSet, 1e-10, 100, &mints, nullptr, &ss);
   std::cout << ss.str();
   ss.clear();
   ss.str("");
@@ -120,23 +165,25 @@ void TestCoupledCluster() {
 
   std::cout << "\n\nE(CCSD Correlation) = " << ccsdWfn.E_CCSD << '\n';
   std::cout << "E(Total) = " << ccsdWfn.E_CCSD + rhfWfn.E_HF << '\n';
+  // CCSD is exact for two electrons
+  CheckEnergy("E(CCSD correlation)", ccsdWfn.E_CCSD, Reference::H2_CCSD, 1e-6);
   std::cout << "Press any key to continue..\n";
   std::cin.get();
 }
 //
 void TestCCSD_T() {
-  std::cout << "---Performing CCSD(T) Calculation on LiH---\n";
+  std::cout << "---Performing CCSD(T) Calculation on Water---\n";
 
   constexpr const char *BASIS_SET_NAME = "sto-3g";
 
-  Molecule liHMolecule = Molecule::GenerateWaterMolecule();
-  BasisSet basisSet(BASIS_SET_NAME, liHMolecule);
+  Molecule waterMolecule = Molecule::GenerateWaterMolecule();
+  BasisSet basisSet(BASIS_SET_NAME, waterMolecule);
 
   Integrals::MolInts mints;
 
   std::stringstream ss;
   HF::HF_Wfn rhfWfn =
-      HF::RHF(liHMolecule, basisSet, 1e-05, 100, &mints, nullptr, &ss);
+      HF::RHF(waterMolecule, basisSet, 1e-10, 100, &mints, nullptr, &ss);
   std::cout << ss.str();
   ss.clear();
   ss.str("");
@@ -149,12 +196,15 @@ void TestCCSD_T() {
             << '\n';
   std::cout << "E(Total) = " << ccsdWfn.E_CCSD + ccsdWfn.E_T + rhfWfn.E_HF
             << '\n';
+  CheckEnergy("E(CCSD correlation)", ccsdWfn.E_CCSD, Reference::H2O_CCSD,
+              1e-6);
+  CheckEnergy("E(T)", ccsdWfn.E_T, Reference::H2O_T, 1e-7);
   std::cout << "Press any key to continue..\n";
   std::cin.get();
 }
 //
 void TestFullCI() {
-  std::cout << "---Performing Hartree Fock Calculation on Hydrogen ---\n";
+  std::cout << "---Performing Full CI Calculation on Hydrogen ---\n";
 
   constexpr const char *BASIS_SET_NAME = "sto-3g";
 
@@ -176,6 +226,7 @@ void TestFullCI() {
   std::cout << ss.str();
   ss.clear();
   ss.str("");
+  CheckEnergy("E(FCI)", ciWfn.E_CI(0), Reference::H2_FCI, 1e-8);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
@@ -197,6 +248,9 @@ void TestFCIQMC() {
 
   double energy = QMC::FCI::FCIQMC(
       rhfWfn, mints, hydrogenMolecule.CalculateVnn(), nullptr, &ss);
+  std::cout << ss.str() << '\n';
+  // Stochastic; only a loose check
+  CheckEnergy("E(FCIQMC)", energy, Reference::H2_FCI, 5e-3);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
@@ -219,6 +273,8 @@ void TestCCQMC() {
   double energy = QMC::CC::CCQMC(rhfWfn, mints);
 
   std::cout << "Final CC energy: " << energy << " hartrees\n";
+  // Stochastic; only a loose check. CC is exact for two electrons
+  CheckEnergy("E(CCQMC)", energy, Reference::H2_FCI, 5e-3);
   std::cout << "Press any key to continue..\n";
   std::cin.get();
 }
@@ -235,7 +291,7 @@ void TestHelium() {
   Integrals::MolInts mints;
   std::stringstream ss;
   HF::HF_Wfn rhfWfn =
-      HF::RHF(heliumMolecule, basisSet, 1e-05, 100, &mints, nullptr, &ss);
+      HF::RHF(heliumMolecule, basisSet, 1e-10, 100, &mints, nullptr, &ss);
 
   std::cout << ss.str() << '\n';
   ss.str("");
@@ -244,6 +300,8 @@ void TestHelium() {
   CI::CI_Wfn ciWfn = CI::CI(rhfWfn, mints, 0.0, -1, nullptr, &ss);
 
   std::cout << ss.str() << '\n';
+  CheckEnergy("E(RHF)", rhfWfn.E_HF, Reference::He_RHF, 1e-6);
+  CheckEnergy("E(FCI)", ciWfn.E_CI(0), Reference::He_FCI, 1e-6);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
@@ -347,20 +405,21 @@ void TestMP2_F12_Optimise() {
   std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
   std::cout << " --- Geminal amplitudes are optimised --- \n";
   std::cout << "  Molecule = Hydrogen (H2)\n";
-  // Should be -1.117505880245 hartrees
   std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
-  // Should be -0.009972302139 hartrees
   std::cout << "  E(CABS singles correction) = " << ECABSSingles
             << " hartrees\n";
-  // Should be -0.012503809116 hartrees
   std::cout << "  E(MP2) = " << f12Result.E_MP2 << " hartrees\n";
-  // Should be -0.021009866243 hartrees
   std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
-  // Should be -1.160991857744 hartrees
   std::cout << "  E(Total) = "
             << uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
                    f12Result.E_F12_MP2
             << " hartrees\n\n";
+  CheckEnergy("E(HF)", uhfWfn.E_HF, Reference::H2_RHF, 1e-8);
+  CheckEnergy("E(CABS singles)", ECABSSingles, Reference::H2_CABS_SINGLES,
+              1e-7);
+  CheckEnergy("E(MP2)", f12Result.E_MP2, Reference::H2_MP2, 1e-8);
+  CheckEnergy("E(F12 MP2, optimised)", f12Result.E_F12_MP2,
+              Reference::H2_MP2_F12_OPT, 1e-8);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
@@ -419,20 +478,21 @@ void TestMP2_F12_Fixed() {
   std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
   std::cout << " --- Fixed amplitude approximation used --- \n";
   std::cout << "  Molecule = Hydrogen (H2)\n";
-  // Should be -1.117505880245 hartrees
   std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
-  // Should be -0.009972302139 hartrees
   std::cout << "  E(CABS singles correction) = " << ECABSSingles
             << " hartrees\n";
-  // Should be -0.012503809116 hartrees
   std::cout << "  E(MP2) = " << f12Result.E_MP2 << " hartrees\n";
-  // Should be -0.021009866243 hartrees
   std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
-  // Should be -1.160991857744 hartrees
   std::cout << "  E(Total) = "
             << uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
                    f12Result.E_F12_MP2
             << " hartrees\n\n";
+  CheckEnergy("E(HF)", uhfWfn.E_HF, Reference::H2_RHF, 1e-8);
+  CheckEnergy("E(CABS singles)", ECABSSingles, Reference::H2_CABS_SINGLES,
+              1e-7);
+  CheckEnergy("E(MP2)", f12Result.E_MP2, Reference::H2_MP2, 1e-8);
+  CheckEnergy("E(F12 MP2, fixed)", f12Result.E_F12_MP2,
+              Reference::H2_MP2_F12_FIXED, 1e-8);
 
   fmt::print(fg(fmt::color::dark_green), "\nPress any key to continue..\n");
   std::cin.get();
@@ -491,16 +551,11 @@ void TestCCQMC_MP2_F12() {
   fmt::print(fg(fmt::color::white),
              " --- Fixed amplitude approximation used --- \n");
   fmt::print(fg(fmt::color::white), "  Molecule = Hydrogen (H2)\n");
-  // Should be -1.117505880245 hartrees
   fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n", uhfWfn.E_HF);
-  // Should be -0.009972302139 hartrees
   fmt::print(fg(fmt::color::white),
              "  E(CABS singles correction) = {:.8} hartrees\n", ECABSSingles);
-  // Should be -0.012503809116 hartrees
   fmt::print(fg(fmt::color::white), "  E(CCQMC_F12) = {:.8} hartrees\n",
              ECorrelation);
-  // Should be -0.021009866243 hartrees
-  // Should be -1.160991857744 hartrees
   fmt::print(fg(fmt::color::green), "  E(Total) = {:.8} hartrees\n\n",
              uhfWfn.E_HF + ECABSSingles + ECorrelation);
 
@@ -528,6 +583,108 @@ void TestUHF() {
                               hydrogenMolecule.CalculateVnn());
 
   fmt::print("E(UHF) = {} hartrees\n", uhfWfn.E_HF);
+}
+//
+int RunRegressionTests() {
+  gFailures = 0;
+
+  auto RunRHF = [](const Molecule &mol, const BasisSet &basis,
+                   Integrals::MolInts &mints) {
+    std::stringstream ss;
+    return HF::RHF(mol, basis, 1e-10, 100, &mints, nullptr, &ss);
+  };
+
+  fmt::print(fmt::emphasis::bold, "\n--- H2 / STO-3G ---\n");
+  {
+    Molecule mol = Molecule::GenerateHydrogenMolecule();
+    BasisSet basis("sto-3g", mol);
+    Integrals::MolInts mints;
+    HF::HF_Wfn rhf = RunRHF(mol, basis, mints);
+
+    CheckEnergy("E(RHF)", rhf.E_HF, Reference::H2_RHF, 1e-8);
+    CheckEnergy("E(MP2 correlation)",
+                HF::MP2_RHF_ClosedShellAO(rhf, mints.eri), Reference::H2_MP2,
+                1e-8);
+    CheckEnergy("E(CCSD correlation)", CC::CCSD_DIIS(rhf, mints).E_CCSD,
+                Reference::H2_CCSD, 1e-6);
+    CheckEnergy("E(FCI)", CI::CI(rhf, mints, mol.CalculateVnn()).E_CI(0),
+                Reference::H2_FCI, 1e-8);
+    // Truncated CI at doubles is exact for two electrons
+    CheckEnergy("E(CISD)", CI::CI(rhf, mints, mol.CalculateVnn(), 2).E_CI(0),
+                Reference::H2_FCI, 1e-8);
+  }
+
+  fmt::print(fmt::emphasis::bold, "\n--- H2O / STO-3G ---\n");
+  {
+    Molecule mol = Molecule::GenerateWaterMolecule();
+    BasisSet basis("sto-3g", mol);
+    Integrals::MolInts mints;
+    HF::HF_Wfn rhf = RunRHF(mol, basis, mints);
+
+    CheckEnergy("E(RHF)", rhf.E_HF, Reference::H2O_RHF, 1e-6);
+    CheckEnergy("E(MP2 correlation)",
+                HF::MP2_RHF_ClosedShellAO(rhf, mints.eri), Reference::H2O_MP2,
+                1e-7);
+    CC::CCSD_Wfn ccsd = CC::CCSD_T(rhf, mints);
+    CheckEnergy("E(CCSD correlation)", ccsd.E_CCSD, Reference::H2O_CCSD,
+                1e-6);
+    CheckEnergy("E(T)", ccsd.E_T, Reference::H2O_T, 1e-7);
+    CheckEnergy("E(FCI)", CI::CI(rhf, mints, mol.CalculateVnn()).E_CI(0),
+                Reference::H2O_FCI, 1e-6);
+
+    DFT::KS_Wfn ks =
+        DFT::KS_DFT(mol, basis, Quadrature::MolGrid::MEDIUM_RES, nullptr);
+    CheckEnergy("E(LDA)", ks.E_KS, Reference::H2O_LDA, 1e-5);
+  }
+
+  fmt::print(fmt::emphasis::bold, "\n--- H2 / STO-3G MP2-F12 (cc-pVDZ CABS) ---\n");
+  {
+    Molecule mol = Molecule::GenerateHydrogenMolecule();
+    auto atoms = mol.GetAtomsLibInt();
+    F12BasisSet f12BasisSet("sto-3g", "cc-pVDZ", atoms);
+
+    auto RunF12 = [&](bool optimise) {
+      Integrals::MolInts configInts =
+          Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, atoms);
+      Integrals::F12::F12Integrals f12Ints =
+          Integrals::F12::EvaluateF12Integrals(f12BasisSet);
+      HF::HF_Wfn uhfWfn = HF::UHF(
+          Integrals::F12::ExtractHFIntegrals(configInts, 0,
+                                             f12BasisSet.GetNoHFFuncs()),
+          mol.GetNoElectrons() / 2, mol.GetNoElectrons() / 2,
+          mol.CalculateVnn(), 1e-12);
+      F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
+
+      Eigen::MatrixXd F;
+      Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
+                                               uhfWfn.C_Alpha, configInts,
+                                               f12Ints, true, &F);
+      if (!optimise)
+        CheckEnergy(
+            "E(CABS singles)",
+            F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs),
+            Reference::H2_CABS_SINGLES, 1e-7);
+
+      return optimise
+                 ? F12::MP2_F12_Optimise(uhfWfn, configInts, f12Ints, f12Idxs)
+                 : F12::MP2_F12_Fixed(uhfWfn, configInts, f12Ints, f12Idxs);
+    };
+
+    F12::MP2F12Result fixed = RunF12(false);
+    CheckEnergy("E(MP2)", fixed.E_MP2, Reference::H2_MP2, 1e-8);
+    CheckEnergy("E(F12 MP2, fixed)", fixed.E_F12_MP2,
+                Reference::H2_MP2_F12_FIXED, 1e-8);
+    CheckEnergy("E(F12 MP2, optimised)", RunF12(true).E_F12_MP2,
+                Reference::H2_MP2_F12_OPT, 1e-8);
+  }
+
+  if (gFailures == 0)
+    fmt::print(fg(fmt::color::green), "\nAll regression tests passed\n");
+  else
+    fmt::print(fg(fmt::color::crimson), "\n{} regression test(s) failed\n",
+               gFailures);
+
+  return gFailures;
 }
 //
 //

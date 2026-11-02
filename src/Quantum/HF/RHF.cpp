@@ -39,6 +39,9 @@ namespace SCESS::HF {
               std::stringstream *console) {
         using namespace std::chrono;
 
+        if (molecule.GetNoElectrons() % 2 != 0)
+            throw std::runtime_error("Closed-shell RHF requires an even number of electrons");
+
         std::cout << "\nBeginning integral evaluation...\n";
         auto integralStartTP = high_resolution_clock::now();
         Integrals::MolInts integrals = Integrals::EvaluateMolecularIntegrals(basis, molecule.GetAtoms(), thread);
@@ -87,6 +90,10 @@ namespace SCESS::HF {
         double delta = 1.0;
         double E_RHF = 0.0;
         double lastEnergy = DBL_MAX;
+        bool converged = false;
+        //The RMS of the orbital gradient (FDS - SDF) required for convergence. The energy error is quadratic in the
+        //orbital gradient so pair it with the square root of the energy limit
+        const double commutatorLimit = std::sqrt(convergeLimit);
 
         //Core one-electron elements of the Hamiltonian
         MatrixXd h = T + V;
@@ -101,6 +108,22 @@ namespace SCESS::HF {
         //Density matrix
         MatrixXd D = MatrixXd::Zero(dimensions, dimensions);
         VectorXd Ep;
+
+        //Diagonalise a Fock matrix in the orthonormal basis and rebuild the orbitals and density from it
+        auto DiagonaliseFock = [&](const MatrixXd &fock) {
+            //Transform the Fock matrix in the orthonormal basis set
+            MatrixXd F_Prime = X.transpose() * fock * X;
+
+            //Diagonalise the transformed Fock matrix
+            SelfAdjointEigenSolver<MatrixXd> eigensolver2(F_Prime);
+            Ep = eigensolver2.eigenvalues().real();
+
+            //Transform coefficients back into normal basis
+            C = X * eigensolver2.eigenvectors().real();
+
+            //Recompute the density matrix
+            D = ConstructDensityRHF(C, nElectronPairs);
+        };
 
         if (console)
             *console << "Beginning SCF iterations...\n";
@@ -122,13 +145,27 @@ namespace SCESS::HF {
             F = h + ConstructGRHF(D, eri);
             F = (F + F.transpose()) * 0.5;
 
+            //The energy of the current density, evaluated with the Fock matrix built from that same density
+            lastEnergy = E_RHF;
+            E_RHF = CalculateEnergyRHF(D, h, F) + Vnn;
+
             //Build the DIIS error vector (FDS-SDF)
             MatrixXd DIIS_Error = F * D * S - S * D * F;
             DIIS_Error = X.transpose() * DIIS_Error * X;
-            DIIS_Errors.push_back(DIIS_Error);
-            F_DIIS.push_back(F);
             delta = sqrt(DIIS_Error.cwiseSquare().mean());
 
+            if (console)
+                *console << "   RHF(" << scfIter << "): E = " << E_RHF << "      dE = " << delta << '\n';
+
+            if (scfIter > 1 && delta < commutatorLimit && abs(E_RHF - lastEnergy) < convergeLimit) {
+                converged = true;
+                break;
+            }
+
+            DIIS_Errors.push_back(DIIS_Error);
+            F_DIIS.push_back(F);
+
+            MatrixXd F_Extrapolated = F;
             if (scfIter >= 4) {
                 //Turn on DIIS
 
@@ -157,50 +194,28 @@ namespace SCESS::HF {
                         maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
                     }
 
-                ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
+                if (maxVal > 0.0)
+                    ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
 
                 VectorXd Residual = VectorXd::Zero(DIIS_Size + 1);
                 Residual(Residual.rows() - 1) = -1.0;
 
                 VectorXd DIISCoeffs = ErrorMat.lu().solve(Residual);
 
-                F = MatrixXd::Zero(F.rows(), F.cols());
+                F_Extrapolated = MatrixXd::Zero(F.rows(), F.cols());
                 for (Index i = 0; i < F_DIIS.size(); i++)
-                    F += DIISCoeffs(i) * F_DIIS[i];
+                    F_Extrapolated += DIISCoeffs(i) * F_DIIS[i];
             }
 
-            //Transform the Fock matrix in the orthonormal basis set
-            MatrixXd F_Prime = X.transpose() * F * X;
-
-            //Diagonalise the transformed Fock matrix
-            SelfAdjointEigenSolver<MatrixXd> eigensolver2(F_Prime);
-            Ep = eigensolver2.eigenvalues().real();
-
-            //Transform coefficients back into normal basis
-            const MatrixXd &C_Prime = eigensolver2.eigenvectors().real();
-            C = X * C_Prime;
-
-            //Recompute the density matrix
-            D = ConstructDensityRHF(C, nElectronPairs);
-
-            //Calculate delta change to the density matrix
-            // const MatrixXd DensityMatriciesDelta = Density - OldDensity;
-            // delta = std::sqrt(DensityMatriciesDelta.cwiseProduct(DensityMatriciesDelta).sum());
-
-            lastEnergy = E_RHF;
-            E_RHF = CalculateEnergyRHF(D, h, F) + Vnn;
-
-            if (delta < 1E-3 && abs(E_RHF - lastEnergy) < convergeLimit)
-                break;
-
-            //Calculate the current energy
-            if (console)
-                *console << "   RHF(" << scfIter << "): E = " << E_RHF << "      dE = " << delta << '\n';
+            DiagonaliseFock(F_Extrapolated);
         }
 
-        E_RHF = CalculateEnergyRHF(D, h, F) + Vnn;
+        //Canonical orbitals of the (non-extrapolated) Fock matrix of the final density so that the returned orbitals,
+        //orbital energies and Fock matrix are consistent with each other
+        DiagonaliseFock(F);
+
         if (console) {
-            if (scfIter < scfMaxIterations)
+            if (converged)
                 *console << "---- RHF procedure converged! ----\nRHF converged after " <<
                         scfIter << " iterations.\nE(RHF) = " << E_RHF << " hartrees\n\n\n";
             else

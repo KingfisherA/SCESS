@@ -129,79 +129,55 @@ double CalculateTriplesCorrection(const CCSD_Wfn &ccsd, const FockTensor &Fock,
     return Dijkabc;
   };
 
-  auto MakeDijab = [&Fock, &idxs, nOcc, nVirt]() {
-    Tensor<double, 4> Dijab(nOcc, nOcc, nVirt, nVirt);
-
-    // Slices of the Fock matricies for occupied and virtual orbitals
-    Tensor<double, 2> Focc = Slice<Indices<I, J>>(idxs, Fock);
-    Tensor<double, 2> Fvirt = Slice<Indices<A, B>>(idxs, Fock);
-
-    for (Eigen::Index i = 0; i < nOcc; i++)
-      for (Eigen::Index j = 0; j < nOcc; j++)
-        for (Eigen::Index a = 0; a < nVirt; a++)
-          for (Eigen::Index b = 0; b < nVirt; b++) {
-            Dijab(i, j, a, b) =
-                Focc(i, i) + Focc(j, j) - Fvirt(a, a) - Fvirt(b, b);
-          }
-
-    return Dijab;
-  };
-
-  // Compute P(i/jk)P(a/bc) =
-  // P(i/jk) = ijk - jik - kji
-  // P(a/bc) = abc - bac - cba
-  // (ijk - jik - kji) * (abc - bac - cba)
-  // ijkabc - ijkbac - ijkcba
-  // - jikabc + jikbac + jikcba
-  // - kjiabc + kjibac + kjicba
-  auto PerformPermute_ijk_abc =
-      [&idxs](Tensor<double, 6> &tensor_ijkabc) -> void {
+  // Antisymmetrisers P(p/qr) = 1 - P_pq - P_pr acting on the indices of a
+  // t_ijkabc-shaped tensor. Swap1 and Swap2 are the index orders after the
+  // transpositions P_pq and P_pr respectively.
+  auto Permute = []<class Swap1, class Swap2>(const Tensor<double, 6> &tensor) {
     Tensor<double, 6> result =
-        // ijkabc - ijkbac - ijkcba
-        tensor_ijkabc -
-        Einsum<Indices<I, J, K, A, B, C>, Indices<I, J, K, B, A, C>>(
-            tensor_ijkabc) -
-        Einsum<Indices<I, J, K, A, B, C>, Indices<I, J, K, C, B, A>>(
-            tensor_ijkabc)
-        // - jikabc + jikbac + jikcba
-        - Einsum<Indices<I, J, K, A, B, C>, Indices<J, I, K, A, B, C>>(
-              tensor_ijkabc) +
-        Einsum<Indices<I, J, K, A, B, C>, Indices<J, I, K, B, A, C>>(
-            tensor_ijkabc) +
-        Einsum<Indices<I, J, K, A, B, C>, Indices<J, I, K, C, B, A>>(
-            tensor_ijkabc)
-        // - kjiabc + kjibac + kjicba
-        - Einsum<Indices<I, J, K, A, B, C>, Indices<K, J, I, A, B, C>>(
-              tensor_ijkabc) +
-        Einsum<Indices<I, J, K, A, B, C>, Indices<K, J, I, B, A, C>>(
-            tensor_ijkabc) +
-        Einsum<Indices<I, J, K, A, B, C>, Indices<K, J, I, C, B, A>>(
-            tensor_ijkabc);
-    tensor_ijkabc = result;
+        tensor - Einsum<Indices<I, J, K, A, B, C>, Swap1>(tensor) -
+        Einsum<Indices<I, J, K, A, B, C>, Swap2>(tensor);
+    return result;
+  };
+  // P(i/jk) = ijk - jik - kji
+  auto P_i_jk = [&Permute](const Tensor<double, 6> &t) {
+    return Permute.template operator()<Indices<J, I, K, A, B, C>,
+                                       Indices<K, J, I, A, B, C>>(t);
+  };
+  // P(k/ij) = ijk - kji - ikj
+  auto P_k_ij = [&Permute](const Tensor<double, 6> &t) {
+    return Permute.template operator()<Indices<K, J, I, A, B, C>,
+                                       Indices<I, K, J, A, B, C>>(t);
+  };
+  // P(a/bc) = abc - bac - cba
+  auto P_a_bc = [&Permute](const Tensor<double, 6> &t) {
+    return Permute.template operator()<Indices<I, J, K, B, A, C>,
+                                       Indices<I, J, K, C, B, A>>(t);
+  };
+  // P(c/ab) = abc - cba - acb
+  auto P_c_ab = [&Permute](const Tensor<double, 6> &t) {
+    return Permute.template operator()<Indices<I, J, K, C, B, A>,
+                                       Indices<I, J, K, A, C, B>>(t);
   };
 
-  // Third order corrected double amplitudes
-  Tensor<double, 4> t_ijab_3;
-  // Second order correted triple amplitudes
+  // Contribution of the connected triples to the doubles equations,
+  // D_ijab t_ijab^(3)
+  Tensor<double, 4> VT3;
+  // Second order corrected triple amplitudes
   Tensor<double, 6> t_ijkabc;
   {
     {
-      // g_{bc}^{dk} t_{ad}^{ij}
+      // P(k/ij)P(a/bc) g_{bc}^{dk} t_{ad}^{ij}
       Tensor<double, 6> lhs =
           Einsum<Indices<D, K, B, C>, Indices<I, J, A, D>,
-                 Indices<I, J, K, A, B, C>, double, 4, double, 4>(
+                 Indices<I, J, K, A, B, C>>(
               Slice<Indices<D, K, B, C>>(idxs, eri), ccsd.t2);
-      PerformPermute_ijk_abc(lhs);
+      t_ijkabc = P_a_bc(P_k_ij(lhs));
 
-      t_ijkabc = lhs;
-      auto &rhs = lhs;
-
-      // g_{lc}^{jk} t_{ab}^{il}
-      rhs = Einsum<Indices<J, K, L, C>, Indices<I, L, A, B>,
-                   Indices<I, J, K, A, B, C>>(
+      // P(i/jk)P(c/ab) g_{lc}^{jk} t_{ab}^{il}
+      Tensor<double, 6> rhs = Einsum<Indices<J, K, L, C>, Indices<I, L, A, B>,
+                                     Indices<I, J, K, A, B, C>>(
           Slice<Indices<J, K, L, C>>(idxs, eri), ccsd.t2);
-      PerformPermute_ijk_abc(rhs);
-      t_ijkabc -= rhs;
+      t_ijkabc -= P_c_ab(P_i_jk(rhs));
     }
 
     // Divide through by the denominator tensor
@@ -209,31 +185,30 @@ double CalculateTriplesCorrection(const CCSD_Wfn &ccsd, const FockTensor &Fock,
 
     Tensor<double, 4> lhs =
         Einsum<Indices<E, F, B, M>, Indices<I, J, M, A, E, F>,
-               Indices<I, J, A, B>, double, 4, double, 6>(
+               Indices<I, J, A, B>>(
             Slice<Indices<E, F, B, M>>(idxs, eri), t_ijkabc);
 
     // P(ab)ijab = ijab - ijba
     lhs = (lhs - Einsum<Indices<I, J, A, B>, Indices<I, J, B, A>>(lhs)).eval();
 
-    t_ijab_3 = 0.5 * lhs;
+    VT3 = 0.5 * lhs;
 
     auto &rhs = lhs;
     rhs = Einsum<Indices<J, E, M, N>, Indices<I, M, N, A, B, E>,
-                 Indices<I, J, A, B>, double, 4, double, 6>(
+                 Indices<I, J, A, B>>(
         Slice<Indices<J, B, M, N>>(idxs, eri), t_ijkabc);
     // P(ij)ijab = ijab - jiab
     rhs = (rhs - Einsum<Indices<I, J, A, B>, Indices<J, I, A, B>>(rhs)).eval();
 
-    t_ijab_3 -= 0.5 * rhs;
-    t_ijab_3 /= MakeDijab();
+    VT3 -= 0.5 * rhs;
   }
 
+  // Fourth order energy correction, projecting the triples contribution onto
+  // the converged CCSD doubles amplitudes:
+  // E[4] = 1/4 sum_ijab t_ij^ab D_ijab t_ijab^(3)
   Tensor<double, 0> E_T_4 =
-      Einsum<Indices<I, J, A, B>, Indices<I, J, A, B>, Indices<>, double, 4,
-             double, 4>(Slice<Indices<I, J, A, B>>(idxs, eri), t_ijab_3);
-
-  // Fourth order energy correction using the third order \hat{T}_2 (using
-  // second order wavefunction)
+      Einsum<Indices<I, J, A, B>, Indices<I, J, A, B>, Indices<>>(ccsd.t2,
+                                                                  VT3);
   E_T_4(0) *= 1.0 / 4.0;
 
   // Calculate the fifth order energy correction using the fourth order

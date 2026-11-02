@@ -71,7 +71,7 @@ namespace SCESS
         auto GenerateAngularMomenta = [&angularMomenta](uint32_t angMom)
         {
             angularMomenta.clear();
-            angularMomenta.reserve(2 * angMom + 1);
+            angularMomenta.reserve((angMom + 1) * (angMom + 2) / 2);
 
             for (uint32_t x = 0; x <= angMom; x++)
                 for (uint32_t y = 0; y <= angMom; y++)
@@ -88,28 +88,32 @@ namespace SCESS
             for (size_t i = 0; i < shells.size(); i++)
             {
                 nlohmann::json &shell = shells[i];
-                nlohmann::json angMomenta = shell["angular_momentum"];
-                for (size_t j = 0; j < angMomenta.size(); j++)
+                const nlohmann::json &angMomenta = shell["angular_momentum"];
+                const nlohmann::json &exponents = shell["exponents"];
+                const nlohmann::json &coefficients = shell["coefficients"];
+
+                // Every coefficient array is a separate contracted function. For Pople SP-type shells
+                // (several angular momenta) the j-th array belongs to the j-th angular momentum; for
+                // general contractions (one angular momentum) every array shares that angular momentum.
+                if (angMomenta.size() > 1 && angMomenta.size() != coefficients.size())
+                    throw std::runtime_error("Basis set shell has mismatched angular momenta and coefficient sets");
+
+                for (size_t j = 0; j < coefficients.size(); j++)
                 {
-                    int angularMomentum = angMomenta[j].get<int>();
+                    int angularMomentum = angMomenta[angMomenta.size() > 1 ? j : 0].get<int>();
                     GenerateAngularMomenta((uint32_t)angularMomentum);
 
-                    nlohmann::json exponents = shell["exponents"];
-                    nlohmann::json coefficients = shell["coefficients"];
-
+                    const nlohmann::json &coeffCollection = coefficients[j];
                     for (const Eigen::Vector3i &angMom : angularMomenta)
                     {
                         CGF cgf(a.GetPos());
-                        for (nlohmann::json &coeffCollection : coefficients)
+                        for (size_t k = 0; k < coeffCollection.size(); k++)
                         {
-                            for (size_t k = 0; k < coeffCollection.size(); k++)
-                            {
-                                double coefficient = std::stod(coeffCollection[k].get<std::string>());
-                                if (coefficient == 0.0)
-                                    continue;
-                                double exponent = std::stod(exponents[k].get<std::string>());
-                                cgf.Add(angMom, PGF(exponent, coefficient));
-                            }
+                            double coefficient = std::stod(coeffCollection[k].get<std::string>());
+                            if (coefficient == 0.0)
+                                continue;
+                            double exponent = std::stod(exponents[k].get<std::string>());
+                            cgf.Add(angMom, PGF(exponent, coefficient));
                         }
                         mBasisFuncs.push_back(cgf);
                     }

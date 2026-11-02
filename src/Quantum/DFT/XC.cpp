@@ -96,7 +96,7 @@ namespace SCESS::DFT::XC {
     }
     //
     double vwn_epsf(double x) {
-        return vwn_eps(x, 0.01554535, -0.32500, 7.06042, 13.0045);
+        return vwn_eps(x, 0.01554535, -0.32500, 7.06042, 18.0578);
     }
     //
     double vwn_eps(double x, double a, double x0, double b, double c) {
@@ -113,7 +113,7 @@ namespace SCESS::DFT::XC {
     }
     //
     double vwn_depsf(double x) {
-        return vwn_deps(x, 0.01554535, -0.32500, 7.06042, 13.0045);
+        return vwn_deps(x, 0.01554535, -0.32500, 7.06042, 18.0578);
     }
     //
     double vwn_deps(double x, double a, double x0, double b, double c) {
@@ -125,11 +125,13 @@ namespace SCESS::DFT::XC {
         return deps;
     }
     //
+    //Spin interpolation f(zeta) = ((1+z)^(4/3) + (1-z)^(4/3) - 2) / (2^(4/3) - 2) with f(0) = 0 and f(1) = 1 so
+    //that eps = epsp + f(zeta) (epsf - epsp) reproduces the ferromagnetic limit
     double vwn_g(double z) {
-        return 1.125 * (pow(1.0 + z, 4.0 / 3.0) + pow(1.0 - z, 4.0 / 3.0) - 2.0);
+        return (pow(1.0 + z, 4.0 / 3.0) + pow(1.0 - z, 4.0 / 3.0) - 2.0) / (pow(2.0, 4.0 / 3.0) - 2.0);
     }
     //
     double vwn_dg(double z) {
-        return 1.5 * (pow(1.0 + z, 1.0 / 3.0) - pow(1.0 - z, 1.0 / 3.0));
+        return (4.0 / 3.0) * (pow(1.0 + z, 1.0 / 3.0) - pow(1.0 - z, 1.0 / 3.0)) / (pow(2.0, 4.0 / 3.0) - 2.0);
     }
 } // SCESS

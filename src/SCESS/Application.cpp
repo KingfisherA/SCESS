@@ -45,6 +45,18 @@ int main(int argc, char *argv[]) {
     boost::algorithm::trim(arg);
   }
 
+  if (args[0] == "test") {
+    if (!Res::AssetsFolder::Get().Init()) {
+      fmt::print(fg(fmt::color::crimson),
+                 "Required assets directory could not be located\n");
+      return 1;
+    }
+    Integrals::LibInt::InitLibInt();
+    const int failures = Tests::RunRegressionTests();
+    Integrals::LibInt::CloseLibInt();
+    return failures == 0 ? 0 : 1;
+  }
+
   if (args.size() < 3) {
     fmt::print(
         fg(fmt::color::crimson),
@@ -119,8 +131,12 @@ int main(int argc, char *argv[]) {
   fmt::print("    - Molecule = ");
   fmt::print(fg(fmt::color::green), "{}\n", moleculeStr);
 
-  auto basisSets = BasisSet::ListBasisSets();
-  for (auto &bs : basisSets)
+  // Accept both the original and lower case basis set names. Insert into a
+  // separate set as inserting while iterating can rehash and invalidate the
+  // iterators
+  const auto availableBasisSets = BasisSet::ListBasisSets();
+  auto basisSets = availableBasisSets;
+  for (const auto &bs : availableBasisSets)
     basisSets.insert(boost::algorithm::to_lower_copy(bs));
 
   auto &selectedBasisSet = args[2];
@@ -299,6 +315,9 @@ void PrintHelpDialog() {
       "    F12 theories require the --CABS option to be specified and set to "
       "one of the available basis sets.\n"
       "\n");
+  fmt::print(fmt::emphasis::bold, "    Testing\n");
+  fmt::print("        SCESS test = Run the regression tests against reference "
+             "energies\n\n");
   fmt::print("--- Available Molecules ---\n"
              "    - H2  = Hydrogen \n"
              "    - LiH = Lithium Hydride\n"

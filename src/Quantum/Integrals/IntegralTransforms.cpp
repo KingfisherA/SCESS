@@ -114,18 +114,25 @@ namespace SCESS::Integrals::Transforms {
             }
         }
 
-        //Canonical orthogonalisation with normalisation
+        //Canonical orthogonalisation with normalisation. The OBS directions have been projected out so the
+        //projected overlap has (at least) nOBS null eigenvalues; only the remaining directions span the CABS
         auto S_tmp = P.transpose() * S * P;
         SelfAdjointEigenSolver<MatrixXd> orthogonalEig(S_tmp);
         MatrixXd U = orthogonalEig.eigenvectors().real();
         VectorXd s = orthogonalEig.eigenvalues().real();
-        MatrixXd sInvSqrt = MatrixXd::Zero(s.rows(), s.rows());
 
+        std::vector<Index> cabsDirections;
         for (Index i = 0; i < s.rows(); ++i)
             if (abs(s(i)) > 1E-8)
-                sInvSqrt(i, i) = 1.0 / std::sqrt(s(i));
+                cabsDirections.push_back(i);
 
-        MatrixXd X = U * sInvSqrt;
+        if ((Index) cabsDirections.size() > nCABS)
+            throw std::runtime_error("Failed to project the orbital basis set out of the CABS");
+
+        MatrixXd X = MatrixXd::Zero(N, (Index) cabsDirections.size());
+        for (Index k = 0; k < (Index) cabsDirections.size(); ++k)
+            X.col(k) = U.col(cabsDirections[k]) / std::sqrt(s(cabsDirections[k]));
+
         MatrixXd P_Prime = P * X;
 
         //Fock matrix built in CABS virtual orbitals
@@ -146,14 +153,16 @@ namespace SCESS::Integrals::Transforms {
             F = T + V + G;
         }
 
-        auto F_Prime = P_Prime.transpose() * F * P_Prime;
+        MatrixXd F_Prime = P_Prime.transpose() * F * P_Prime;
         SelfAdjointEigenSolver<MatrixXd> fockEig(F_Prime);
 
         //Matrix which transforms both the OBS and CABS into the projected canonicalised basis set
         //This matrix is different to MRCC's as the degenerate eigenvectors are different
-        //but any observable property will be the same
-        MatrixXd Q = P_Prime * fockEig.eigenvectors().real();
+        //but any observable property will be the same. Should the CABS be linearly dependent on the OBS, the
+        //redundant CABS functions are left as zero columns
+        MatrixXd Q = MatrixXd::Zero(N, N);
         Q.block(0, 0, nOBS, nOBS) = C_HF;
+        Q.block(0, nOBS, N, (Index) cabsDirections.size()) = P_Prime * fockEig.eigenvectors().real();
 
         auto TransformF12Tensor = [&Q, convertChemToPhys](TEITensor &tei) {
             tei = TransformTEI(tei, Q, convertChemToPhys);

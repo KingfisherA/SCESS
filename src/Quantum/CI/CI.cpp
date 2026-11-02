@@ -1,3 +1,4 @@
+#include <array>
 #include <cppitertools/combinations.hpp>
 #include <boost/range/irange.hpp>
 #include <boost/math/special_functions/binomial.hpp>
@@ -23,10 +24,10 @@ namespace SCESS::CI {
         uint16_t i = 0;
 
         for (; i < nAlphaOcc; i++)
-            reference.GetAlphaOrbitals() |= 0x1 << i;
+            reference.GetAlphaOrbitals() |= 1ULL << i;
 
         for (i = 0; i < nBetaOcc; i++)
-            reference.GetBetaOrbitals() |= 0x1 << i;
+            reference.GetBetaOrbitals() |= 1ULL << i;
 
         return reference;
     }
@@ -34,7 +35,7 @@ namespace SCESS::CI {
     static uint16_t CountSetBits(uint64_t bitStr, uint32_t nBits) {
         uint32_t nBitsSet = 0;
         for (uint32_t i = 0; i < nBits; i++)
-            if ((0x1 << i) & bitStr)
+            if ((1ULL << i) & bitStr)
                 nBitsSet++;
 
         return nBitsSet;
@@ -51,8 +52,8 @@ namespace SCESS::CI {
                                          uint16_t *commonIJArray,
                                          uint16_t *commonIJSize,
                                          int8_t *sign) {
-        //Arrays for uniqueIArray, uniqueJArray and commonIJArray must be at least as larger as
-        //max(numOfAlphaOrbitals, numOfBetaOrbitals) in size
+        //Arrays for uniqueIArray, uniqueJArray and commonIJArray must be at least
+        //numOfAlphaOrbitals + numOfBetaOrbitals in size as they hold spin orbitals of both spins
 
         uint16_t nElectrons = CountSetBits(I.GetAlphaOrbitals(), numOfAlphaOrbitals) +
                               CountSetBits(I.GetBetaOrbitals(), numOfBetaOrbitals);
@@ -77,13 +78,13 @@ namespace SCESS::CI {
 
             for (uint32_t i = 0; i < numOfOrbs; i++) {
                 //Occupied in J
-                if ((0x1 << i) & J) iel2++;
+                if ((1ULL << i) & J) iel2++;
 
                 //Occupied in I
-                if ((0x1 << i) & I) {
+                if ((1ULL << i) & I) {
                     iel1++;
                     //Occupied in J
-                    if ((0x1 << i) & J) {
+                    if ((1ULL << i) & J) {
                         if (commonIJArray)
                             commonIJArray[commonIJPtr++] = func(i);
                         //commonIJArray.push_back(func(i));
@@ -100,7 +101,7 @@ namespace SCESS::CI {
                 //Not occupied in I
                 else {
                     //Occupied in J
-                    if ((0x1 << i) & J) {
+                    if ((1ULL << i) & J) {
                         iexcit2++;
                         //uniqueJArray.push_back(func(i));
                         flips += (shift - iel2 + iexcit2);
@@ -148,13 +149,13 @@ namespace SCESS::CI {
 
             for (uint16_t i = 0; i < numOfOrbs; i++) {
                 //Occupied in J
-                if ((0x1 << i) & J) iel2++;
+                if ((1ULL << i) & J) iel2++;
 
                 //Occupied in I
-                if ((0x1 << i) & I) {
+                if ((1ULL << i) & I) {
                     iel1++;
                     //Not occupied in J
-                    if (!((0x1 << i) & J)) {
+                    if (!((1ULL << i) & J)) {
                         iexcit1++;
                         flips += (shift - iel1 + iexcit1);
                     }
@@ -162,7 +163,7 @@ namespace SCESS::CI {
                 //Not occupied in I
                 else {
                     //Occupied in J
-                    if ((0x1 << i) & J) {
+                    if ((1ULL << i) & J) {
                         iexcit2++;
                         flips += (shift - iel2 + iexcit2);
                     }
@@ -242,23 +243,15 @@ namespace SCESS::CI {
             throw std::runtime_error(
                 "Only RHF determinants with equal numbers of alpha and beta number of electrons are supported currently");
 
-        // std::vector<uint32_t> uniqueI, uniqueJ, commonIJ;
-        // uniqueI.reserve(numOfAlphaOrbitals);
-        // uniqueJ.reserve(numOfAlphaOrbitals);
-        // commonIJ.reserve(numOfAlphaOrbitals);
-        auto *uniqueI = reinterpret_cast<uint16_t *>(
-            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
-        auto *uniqueJ = reinterpret_cast<uint16_t *>(
-            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
-        auto *commonIJ = reinterpret_cast<uint16_t *>(
-            alloca(std::max(numOfAlphaOrbitals, numOfBetaOrbitals) * sizeof(uint16_t)));
+        //The arrays hold spin orbitals of both spins (at most 64 alpha and 64 beta orbitals)
+        std::array<uint16_t, 128> uniqueI{}, uniqueJ{}, commonIJ{};
         uint16_t uniqueISize, uniqueJSize, commonIJSize;
         int8_t sign;
         SlaterDet::CalculateDifferences(detI, detJ,
                                         numOfAlphaOrbitals, numOfBetaOrbitals,
-                                        uniqueI, &uniqueISize,
-                                        uniqueJ, &uniqueJSize,
-                                        commonIJ, &commonIJSize,
+                                        uniqueI.data(), &uniqueISize,
+                                        uniqueJ.data(), &uniqueJSize,
+                                        commonIJ.data(), &commonIJSize,
                                         &sign);
 
         switch (uniqueISize) {
@@ -326,17 +319,14 @@ namespace SCESS::CI {
         //Even spin orbs are alpha spin
         //Odd spin orbs are beta spin
 
-        std::unordered_set<uint32_t> occupiedSpinOrbs;
-        std::unordered_set<uint32_t> virtualSpinOrbs;
-        for (uint32_t i = 0; i < nSpinOrbs; i++)
-            virtualSpinOrbs.insert(i);
-        for (uint32_t i = 0; i < nAlphaElectrons; i++) {
-            virtualSpinOrbs.erase(2 * i);
-            occupiedSpinOrbs.insert(2 * i);
-        }
-        for (uint32_t i = 0; i < nBetaElectrons; i++) {
-            virtualSpinOrbs.erase(2 * i + 1);
-            occupiedSpinOrbs.insert(2 * i + 1);
+        std::vector<uint32_t> occupiedSpinOrbs;
+        std::vector<uint32_t> virtualSpinOrbs;
+        for (uint32_t i = 0; i < nSpinOrbs; i++) {
+            const bool isAlpha = i % 2 == 0;
+            if ((isAlpha && i / 2 < nAlphaElectrons) || (!isAlpha && i / 2 < nBetaElectrons))
+                occupiedSpinOrbs.push_back(i);
+            else
+                virtualSpinOrbs.push_back(i);
         }
 
         if (excitorLevel > occupiedSpinOrbs.size())
@@ -345,41 +335,40 @@ namespace SCESS::CI {
         if (excitorLevel > virtualSpinOrbs.size())
             excitorLevel = virtualSpinOrbs.size();
 
-        uint32_t ex = 1;
-        size_t nDeterminants = 1;
-        for (ex = 1; ex <= excitorLevel; ex++) {
-            nDeterminants += static_cast<size_t>(
-                boost::math::binomial_coefficient<double>(virtualSpinOrbs.size(), ex) *
-                boost::math::binomial_coefficient<double>(occupiedSpinOrbs.size(), ex));
-        }
+        auto CountAlpha = [](const auto &spinOrbs) {
+            return std::ranges::count_if(spinOrbs, [](uint32_t i) { return i % 2 == 0; });
+        };
 
         std::vector<SlaterDet> determinants;
-        determinants.reserve(nDeterminants);
-
         determinants.emplace_back(SlaterDet::MakeReference(nAlphaElectrons, nBetaElectrons));
 
-        for (ex = 1; ex <= excitorLevel; ex++)
-            for (auto &virtualSpinOrbComb: iter::combinations(virtualSpinOrbs, ex))
-                for (auto &occupiedSpinOrbComb: iter::combinations(occupiedSpinOrbs, ex)) {
+        for (uint32_t ex = 1; ex <= excitorLevel; ex++)
+            for (auto &&virtualSpinOrbComb: iter::combinations(virtualSpinOrbs, ex))
+                for (auto &&occupiedSpinOrbComb: iter::combinations(occupiedSpinOrbs, ex)) {
+                    //Only keep spin-conserving excitations (the same number of alpha and beta electrons as the
+                    //reference) as the Hamiltonian cannot couple determinants of different M_s
+                    if (CountAlpha(virtualSpinOrbComb) != CountAlpha(occupiedSpinOrbComb))
+                        continue;
+
                     SlaterDet &det = determinants.emplace_back();
                     det = SlaterDet::MakeReference(nAlphaElectrons, nBetaElectrons);
 
                     for (const auto oSpinOrbIdx: occupiedSpinOrbComb) {
                         if (oSpinOrbIdx % 2 == 0) {
                             // If even then alpha spin
-                            det.GetAlphaOrbitals() ^= 1 << (oSpinOrbIdx / 2);
+                            det.GetAlphaOrbitals() ^= 1ULL << (oSpinOrbIdx / 2);
                         } else {
                             // If odd then beta spin
-                            det.GetBetaOrbitals() ^= 1 << (oSpinOrbIdx / 2);
+                            det.GetBetaOrbitals() ^= 1ULL << (oSpinOrbIdx / 2);
                         }
                     }
                     for (const auto vSpinOrbIdx: virtualSpinOrbComb) {
                         if (vSpinOrbIdx % 2 == 0) {
                             // If even then alpha spin
-                            det.GetAlphaOrbitals() |= 1 << (vSpinOrbIdx / 2);
+                            det.GetAlphaOrbitals() |= 1ULL << (vSpinOrbIdx / 2);
                         } else {
                             // If odd then beta spin
-                            det.GetBetaOrbitals() |= 1 << (vSpinOrbIdx / 2);
+                            det.GetBetaOrbitals() |= 1ULL << (vSpinOrbIdx / 2);
                         }
                     }
                 }
@@ -400,13 +389,41 @@ namespace SCESS::CI {
             for (const auto spinOrbIndx: spinOrbCombination) {
                 // If even then alpha spin
                 if (spinOrbIndx % 2 == 0) {
-                    det.GetAlphaOrbitals() |= 1 << (spinOrbIndx / 2);
+                    det.GetAlphaOrbitals() |= 1ULL << (spinOrbIndx / 2);
                     continue;
                 }
                 // If odd then beta spin
-                det.GetBetaOrbitals() |= 1 << (spinOrbIndx / 2);
+                det.GetBetaOrbitals() |= 1ULL << (spinOrbIndx / 2);
             }
         }
+
+        return determinants;
+    }
+    //
+    std::vector<SlaterDet> EnumerateAllDet(uint32_t nSpinOrbs, uint32_t nAlphaElectrons,
+                                           uint32_t nBetaElectrons) {
+        const uint32_t nSpatialOrbs = nSpinOrbs / 2;
+
+        auto MakeBitStrings = [nSpatialOrbs](uint32_t nElectrons) {
+            std::vector<OrbBitStr> bitStrings;
+            for (auto &&orbCombination: iter::combinations(boost::irange<uint32_t>(0, nSpatialOrbs), nElectrons)) {
+                OrbBitStr bitStr = 0;
+                for (const auto orbIdx: orbCombination)
+                    bitStr |= 1ULL << orbIdx;
+                bitStrings.push_back(bitStr);
+            }
+            return bitStrings;
+        };
+
+        const std::vector<OrbBitStr> alphaStrings = MakeBitStrings(nAlphaElectrons);
+        const std::vector<OrbBitStr> betaStrings = MakeBitStrings(nBetaElectrons);
+
+        //The first determinant is the reference as the lowest orbitals form the first combination
+        std::vector<SlaterDet> determinants;
+        determinants.reserve(alphaStrings.size() * betaStrings.size());
+        for (const OrbBitStr alpha: alphaStrings)
+            for (const OrbBitStr beta: betaStrings)
+                determinants.emplace_back(alpha, beta);
 
         return determinants;
     }
@@ -416,7 +433,7 @@ namespace SCESS::CI {
         size_t numOccupied = 0;
 
         for (size_t i = 0; i < numOfOrbitals; i++)
-            if ((0x1 << i) & orbitalBitStr)
+            if ((1ULL << i) & orbitalBitStr)
                 numOccupied++;
 
         return numOccupied;
@@ -484,8 +501,11 @@ namespace SCESS::CI {
         if (console)
             *console << "   Generating all Slater determinants in Hilbert space...\n";
         auto genDetTime1 = std::chrono::high_resolution_clock::now();
-        std::vector<SlaterDet> determinants = EnumerateAllDet(
-            nSpinOrbs, excitorLevel < 0 ? nElectrons : static_cast<uint32_t>(excitorLevel));
+        //Only the M_s = 0 determinants can couple to the closed-shell ground state
+        std::vector<SlaterDet> determinants =
+                excitorLevel < 0
+                    ? EnumerateAllDet(nSpinOrbs, nElectrons / 2, nElectrons / 2)
+                    : EnumerateDet(nSpinOrbs, nElectrons / 2, nElectrons / 2, static_cast<uint32_t>(excitorLevel));
         auto genDetTime2 = std::chrono::high_resolution_clock::now();
         if (console)
             *console << "   Generated " << determinants.size() << " determinants in " << std::chrono::duration_cast<
@@ -493,7 +513,7 @@ namespace SCESS::CI {
 
 
         if (console) {
-            *console << "   Forming Full CI Hamiltonian Matrix\n";
+            *console << "   Forming CI Hamiltonian Matrix\n";
             *console << "   !!! No symmetry specified; will have to evaluate all " << determinants.size() <<
                     " matrix elements !!!\n";
         }
@@ -504,13 +524,17 @@ namespace SCESS::CI {
             if (thread->ShouldStop())
                 return {};
 
-        for (uint32_t i = 0; i < H.rows(); i++)
+        for (uint32_t i = 0; i < H.rows(); i++) {
+            //Poll for cancellation as building the matrix is the most expensive step
+            if (thread && thread->ShouldStop())
+                return {};
             for (uint32_t j = i; j < H.cols(); j++) {
                 H(i, j) = H(j, i) =
                           CalculateHamiltonianElement(determinants[i], determinants[j],
                                                       nSpatialOrbitals,
                                                       nSpatialOrbitals, HSpin, moSpinTEI);
             }
+        }
 
         if (console)
             *console << "   Diagonalising FCI matrix...\n";
