@@ -1,9 +1,15 @@
-cd ..
-(cd ./Libraries && ./Build_Libraries.sh)
+#!/bin/sh
+# Configures SCESS into ./build and builds it (from any directory)
+#
+#   Scripts/Build.sh [Debug|Release] [cmake --build options...]
+#
+# e.g. Scripts/Build.sh Release --target ViewerSCESSApp
+set -eu
 
-#cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -S ./ -B ./cmake-build-debug
-#cmake --build ./cmake-build-debug --target all -j 10
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG="${1:-Release}"
+[ $# -gt 0 ] && shift
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -G Ninja -S ./ -B ./cmake-build-release
-cmake --build ./cmake-build-release --target all -j 10
-
+# cmake.sh adds Homebrew's LAPACK to CMAKE_PREFIX_PATH and uses ccache when available
+"$ROOT/cmake.sh" -S "$ROOT" -B "$ROOT/build" -G Ninja -DCMAKE_BUILD_TYPE="$CONFIG"
+"$ROOT/cmake.sh" --build "$ROOT/build" "$@"

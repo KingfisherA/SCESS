@@ -1,81 +1,78 @@
-# CMake Build Script for the SCESS project
-# Includes the projectes for the quantum shared libraries, the GUI and the command line executable of SCESS 
+# Build script for SCESS (Schrödinger's Cat's Electronic System Solver)
+#
+#   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+#   cmake --build build
+#
+# Outputs, one folder per target:
+#   build/QuantumSCESS   libQuantumSCESS, the shared library with the quantum chemistry code
+#   build/SCESS          SCESS, the command line driver
+#   build/ViewerSCESS    ViewerSCESS, the graphical viewer
+#                        (macOS: ViewerSCESS.app via cmake --build build --target ViewerSCESSApp)
+#   build/Dahlia         libDahlia, the graphics engine (built from SCESS_DAHLIA_DIR)
 
-cmake_minimum_required(VERSION 3.16)
+# 3.24 for $<LINK_LIBRARY:FRAMEWORK,...> (also Dahlia's minimum)
+cmake_minimum_required(VERSION 3.24...4.0)
 
-set(SCESS_BUILD_TYPES "Debug" "Release")
-if(CMAKE_CONFIGURATION_TYPES)
-#  set(CMAKE_CONFIGURATION_TYPES SCESS_BUILD_TYPES)
-  message(NOTICE "---Multiconfiguration build generator selected---")
-elseif(NOT CMAKE_BUILD_TYPE IN_LIST SCESS_BUILD_TYPES)
-  message(FATAL_ERROR
-    "Invalid build type '${CMAKE_BUILD_TYPE}'.
-    CMAKE_BUILD_TYPE must be any one of the possible values:
-    ${SCESS_BUILD_TYPES}"
-  )
+project(SCESS VERSION 1.0.0 LANGUAGES C CXX)
+if(APPLE)
+  # nfd's macOS file dialog is Objective-C
+  enable_language(OBJC)
 endif()
 
-project("SCESS" LANGUAGES CXX)
-
-if(NOT SCESS_DAHLIA_DIR)
-    message(NOTICE "-- Dahlia Engine directory not set. Setting to default: \"../Dahlia\"")
-    get_filename_component(SCESS_DAHLIA_DIR "../Dahlia" REALPATH)
-    if(NOT (EXISTS "${SCESS_DAHLIA_DIR}"))   
-        message(FATAL_ERROR "!! Cannot find Dahlia directory. Please specify with -DSCESS_DAHLIA_DIR=...")
-    else()
-        message(NOTICE "-- Dahlia Engine directory successfully bound!")
-    endif()
+# ---- Build type -----------------------------------------------------------------------------------
+get_property(SCESS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+set(SCESS_BUILD_TYPES Debug Release)
+if(SCESS_MULTI_CONFIG)
+  set(CMAKE_CONFIGURATION_TYPES ${SCESS_BUILD_TYPES} CACHE STRING "" FORCE)
+else()
+  if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  endif()
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${SCESS_BUILD_TYPES})
+  if(NOT CMAKE_BUILD_TYPE IN_LIST SCESS_BUILD_TYPES)
+    message(FATAL_ERROR "CMAKE_BUILD_TYPE must be one of: ${SCESS_BUILD_TYPES} (got '${CMAKE_BUILD_TYPE}')")
+  endif()
 endif()
 
-get_filename_component(SCESS_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(SCESS_PLATFORM ${CMAKE_SYSTEM_NAME})
-string(TOLOWER ${SCESS_PLATFORM} SCESS_PLATFORM)
-set(SCESS_SRC_DIR ${SCESS_DIR}/src)
-set(SCESS_LIB_DIR ${SCESS_DIR}/Libraries)
-set(SCESS_BIN_DIR ${SCESS_DIR}/bin/${SCESS_PLATFORM})
+set(SCESS_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(SCESS_LIB_DIR ${PROJECT_SOURCE_DIR}/Libraries)
+set(SCESS_ASSETS_DIR ${PROJECT_SOURCE_DIR}/Assets)
 
-find_package(Boost CONFIG COMPONENTS filesystem locale math preprocessor)
-find_package(Libint2 CONFIG REQUIRED)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include(SCESSHelpers)
 
-if(NOT Boost_FOUND)
-    find_package(Boost COMPONENTS REQUIRED filesystem locale)
-endif()
-
+# ---- Dependencies ---------------------------------------------------------------------------------
+find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 find_package(fmt CONFIG REQUIRED)
+find_package(Libint2 CONFIG REQUIRED)
 find_package(Libxc CONFIG REQUIRED)
+find_package(LAPACK REQUIRED)
+find_library(LIB_LAPACKE lapacke REQUIRED)
 
-find_library(DAHLIA_LIBRARIES Dahlia REQUIRED
-  PATHS "${SCESS_DAHLIA_DIR}/bin"
-  PATH_SUFFIXES "${SCESS_PLATFORM}/Release")
-if(NOT (DAHLIA_LIBRARIES STREQUAL "DAHLIA_LIBRARIES-NOTFOUND"))
-    get_filename_component(IMGUI_INCLUDE_DIRS "${SCESS_DAHLIA_DIR}/include/ImGui" REALPATH)
-    get_filename_component(DAHLIA_INCLUDE_DIRS "${SCESS_DAHLIA_DIR}/include" REALPATH)
-
-    if((NOT EXISTS "${IMGUI_INCLUDE_DIRS}") OR (NOT EXISTS "${DAHLIA_INCLUDE_DIRS}"))   
-        message(FATAL_ERROR "!! Cannot find Dahlia Engine include directory and or the Dahlie Engine's ImGui include directory. Please ensure that the include files for ImGui and Dahlia Engine are placed in a directory named 'include' in the folder:  \"${SCESS_DAHLIA_DIR}\" ")
-    else()
-        message(NOTICE "-- Found Dahlia Engine include directories: ${DAHLIA_INCLUDE_DIRS}, ${IMGUI_INCLUDE_DIRS}")
-    endif()
-
-    message("-- Found Dahlia Engine: ${DAHLIA_LIBRARIES}")
+# Dahlia is built as part of SCESS (in the same configuration), as its README recommends. This
+# provides the Dahlia, DahliaTools and ImGui targets and dahlia_compile_shaders(). Dahlia needs
+# glslc, GLFW, GLEW, GLM and FreeType (macOS: brew install shaderc glfw glew glm freetype).
+get_filename_component(SCESS_DAHLIA_DEFAULT_DIR "${PROJECT_SOURCE_DIR}/../Dahlia" REALPATH)
+set(SCESS_DAHLIA_DIR "${SCESS_DAHLIA_DEFAULT_DIR}" CACHE PATH "Dahlia graphics engine source checkout")
+if(NOT EXISTS "${SCESS_DAHLIA_DIR}/src/Dahlia/CMakeLists.txt")
+  message(FATAL_ERROR
+    "\"${SCESS_DAHLIA_DIR}\" is not a Dahlia source checkout (src/Dahlia/CMakeLists.txt is missing). "
+    "Clone Dahlia next to SCESS or specify one with -DSCESS_DAHLIA_DIR=...")
 endif()
+message(STATUS "Building Dahlia from: ${SCESS_DAHLIA_DIR}")
+add_subdirectory("${SCESS_DAHLIA_DIR}" "${CMAKE_BINARY_DIR}/Dahlia")
 
-find_library(DHALIA_TOOLS_LIBRARIES DahliaTools REQUIRED
-        PATHS "${SCESS_DAHLIA_DIR}/bin"
-        PATH_SUFFIXES "${SCESS_PLATFORM}/Release")
-if(NOT (DHALIA_TOOLS_LIBRARIES STREQUAL "DHALIA_TOOLS_LIBRARIES-NOTFOUND"))
-    if(NOT DEFINED DAHLIA_INCLUDE_DIRS)
-        get_filename_component(DAHLIA_INCLUDE_DIRS "${SCESS_DAHLIA_DIR}/include" REALPATH)
-    endif()
+# DahliaTools keeps its include directory private; QuantumSCESS and SCESS use its headers
+# (Dahlia/Tools/*.h, Dahlia/Utilities/Memory.h) without linking libDahlia.
+set(DAHLIA_INCLUDE_DIR "${SCESS_DAHLIA_DIR}/src")
 
-    if((NOT EXISTS "${DAHLIA_INCLUDE_DIRS}"))
-        message(FATAL_ERROR "!! Cannot find Dahlia Engine Tool's include directory !!")
-    endif()
+# Git submodules: ImPlot, nfd and the header only libraries
+add_subdirectory(Libraries)
 
-    message("-- Found Dahlia EngineTools: ${DHALIA_TOOLS_LIBRARIES}")
-endif()
-
-include(Projects/cmake/QuantumSCESS.cmake)
-include(Projects/cmake/SCESS.cmake)
-include(Projects/cmake/ViewerSCESS.cmake)
+# ---- Targets --------------------------------------------------------------------------------------
+include(QuantumSCESS)
+include(SCESS)
+include(ViewerSCESS)

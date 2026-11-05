@@ -1,8 +1,7 @@
 #pragma once
 //
 #include "Dahlia/Layers/Layer.h"
-#include "Dahlia/3D/VertexArray.h"
-#include "Dahlia/3D/ShaderProgram.h"
+#include "Dahlia/Graphics/GraphicsTypes.h"
 #include "Dahlia/Tools/Threading.h"
 //
 #include "Quantum/Basis/BasisSet.h"
@@ -17,15 +16,17 @@
 #include <atomic>
 #include <mutex>
 #include <streambuf>
+#include <vector>
 #include <boost/circular_buffer.hpp>
 #include <glm/vec2.hpp>
 
 
 namespace DH {
+    class Buffer;
     class Camera3D;
-    class ShaderProgram;
-    class VertexArray;
-    class VertexBuffer;
+    class CommandList;
+    class GPUMesh;
+    class GraphicsPipeline;
 }
 
 namespace SCESS {
@@ -155,17 +156,34 @@ namespace SCESS::Viewer {
     //
     class CalculationLayer : public DH::Layer {
     public:
-        CalculationLayer();
+        //targetLayout: attachment formats of the framebuffer the scene is drawn into
+        explicit CalculationLayer(const DH::RenderTargetLayout &targetLayout);
 
         virtual void OnInit() override;
         virtual void OnDestroy() override;
-        virtual void OnUpdate(const sRef<DH::Framebuffer> &screenBuffer, const DH::Camera3D &cam,
-                              const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) override;
         virtual void OnImGuiRender() override;
         virtual void OnEvent(DH::Event &e) override;
 
+        //Records the scene's draws. Must be called inside a render pass targeting a framebuffer with the layout
+        //given to the constructor.
+        void Render(DH::CommandList &cmd, const DH::Camera3D &cam, const glm::mat4 &projectionMatrix);
+
     private:
-        static void UploadTriSurface(DH::VertexArray &vArray, const TriSurf &tri);
+        //A vertex buffer whose contents are replaced from the CPU. Uploads are queued and applied by Flush() at the
+        //start of Render(), before any draws are recorded, so a frame's draws always match its buffer contents.
+        struct DynamicVertexBuffer {
+            sRef<DH::Buffer> buffer;
+            std::vector<float> pending;
+            bool dirty = false;
+            uint32_t elementCount = 0;
+            uint32_t floatsPerElement = 0;
+
+            void Queue(const float *data, size_t floatCount);
+            void Flush();
+        };
+
+        void CreatePipelines();
+        static void UploadTriSurface(DynamicVertexBuffer &vBuffer, const TriSurf &tri);
         void RenderMOIsosurface();
         void SelectMolecule();
         void UploadMolecule();
@@ -196,21 +214,24 @@ namespace SCESS::Viewer {
         int mSelectedMolecule = -1;
         uRef<Molecule> mMolecule;
         BasisSet mMoleculeBasisSet;
-        sRef<DH::VertexArray> mMoleculeVAO;
-        sRef<DH::VertexBuffer> mMoleculeBuffer;
-        sRef<DH::VertexArray> mMoleculeBondVAO;
+        sRef<DH::GPUMesh> mAtomMesh;
+        //Per atom instance data, see UploadMolecule()
+        DynamicVertexBuffer mMoleculeBuffer;
+        sRef<DH::GPUMesh> mBondMesh;
         MoleculeStyle mMolRenderStyle = MoleculeStyle::BallStick;
         bool mRenderMolecule = true;
         float mMoleculeOpacity = 1.0f;
 
-        sRef<DH::VertexArray> mPosTrisurfVAO, mNegTrisurfVAO;
+        DynamicVertexBuffer mPosTrisurfBuffer, mNegTrisurfBuffer;
         bool mIsosurfaceUploaded = false, mIsoWasNull = false;
         TriSurf mNegTrisurf, mPosTrisurf;
         float mIsoOpacity = 1.0f;
 
-        sRef<DH::ShaderProgram> mDiffuseProg;
-        sRef<DH::ShaderProgram> mMoleculeDiffuseProg;
-        sRef<DH::ShaderProgram> mSolidColourProg;
+        DH::RenderTargetLayout mTargetLayout;
+        sRef<DH::GraphicsPipeline> mMoleculePipeline;
+        sRef<DH::GraphicsPipeline> mBondPipeline;
+        //Polygon mode is pipeline state, so the wireframe isosurface needs its own pipeline
+        sRef<DH::GraphicsPipeline> mIsosurfacePipeline, mIsosurfaceWirePipeline;
 
         //Calculation output; the stream writes into mConsoleBuffer which the UI thread reads with Snapshot()
         SyncStringBuf mConsoleBuffer;

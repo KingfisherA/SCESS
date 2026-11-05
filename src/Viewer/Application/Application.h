@@ -18,6 +18,7 @@ namespace DH {
     class MouseButtonReleasedEvent;
     class MouseScrollEvent;
     class CalculationLayer;
+    class CommandList;
     class Framebuffer;
     class Texture2D;
 }
@@ -42,7 +43,7 @@ namespace SCESS::Viewer {
 
     private:
         void OnViewportResize() override;
-        void OnRender() override;
+        void OnRender(DH::CommandList &cmd) override;
         void OnImGuiRender() override;
         bool OnInit() override;
         void OnDestroy() override;

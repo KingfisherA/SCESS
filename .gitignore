@@ -42,16 +42,10 @@ Fonts/
 Screenshots/
 /Old Source/
 /build/
-cmake-build-debug/
-cmake-build-release/
-cmake-build-debug-linux/
-cmake-build-release-linux/
-cmake-build-debug-win/
-cmake-build-release-win/
+cmake-build-*/
 vcpkg_installed/
 CMakeFiles/
 .idea/
 .kdev4/
 .cache/
-/cmake-build-Release-darwin
 *.DS_Store

@@ -4,14 +4,19 @@
 //
 #include <ImGui/imgui.h>
 #include <nfd.h>
+#ifndef GLM_ENABLE_EXPERIMENTAL // Defined by the Dahlia target
 #define GLM_ENABLE_EXPERIMENTAL
+#endif
 #include <glm/gtx/transform.hpp>
 #include<implot.h>
 //
 #include "AtomDraw.h"
 #include "Dahlia/Scene/Camera3D.h"
-#include "Dahlia/3D/VertexArray.h"
-#include "Dahlia/3D/ShaderProgram.h"
+#include "Dahlia/Graphics/Buffer.h"
+#include "Dahlia/Graphics/CommandList.h"
+#include "Dahlia/Graphics/GPUMesh.h"
+#include "Dahlia/Graphics/GraphicsPipeline.h"
+#include "Dahlia/Graphics/ShaderModule.h"
 #include "Dahlia/Maths/Geometry.h"
 #include "Viewer/GUI/ImSpinner.h"
 //
@@ -28,7 +33,6 @@
 #include "Viewer/Application/Application.h"
 #include "Resources/AssetFolder.h"
 #include "Resources/ShaderSources.h"
-#include "Dahlia/Resources/Resources.h"
 #include "Quantum/QMC/QMC.h"
 
 
@@ -37,55 +41,85 @@
 namespace SCESS::Viewer {
     using namespace DH;
 
-    void CalculationLayer::UploadTriSurface(VertexArray &vArray, const TriSurf &tri) {
+    //Push constant blocks; each matches the block declared in both stages of its shader (std140 layout)
+    namespace {
+        //Resources/Shaders/MoleculeDiffuse.*
+        struct MoleculePushConstants {
+            glm::mat4 pvMatrix;
+            glm::vec4 lightPos;
+            glm::vec4 params; //x = opacity
+        };
+
+        //Resources/Shaders/IsosurfaceDiffuse.*
+        struct IsosurfacePushConstants {
+            glm::mat4 pvMatrix;
+            glm::vec4 lightPos;
+            glm::vec4 colour; //a = opacity
+        };
+
+        //Resources/Shaders/SolidColour.*
+        struct SolidColourPushConstants {
+            glm::mat4 mvpMatrix;
+            glm::vec4 colour; //a = opacity
+        };
+
+        //Floats per atom in the molecule instance buffer: (scale) (translation xyz) (colour rgb)
+        constexpr uint32_t MOLECULE_INSTANCE_FLOATS = 7;
+        //Vertex buffer binding for the molecule instance data. GPUMesh::Draw binds the mesh's own attributes to
+        //bindings 0-2, so this must lie outside that range.
+        constexpr uint32_t MOLECULE_INSTANCE_BINDING = 3;
+    }
+
+    void CalculationLayer::DynamicVertexBuffer::Queue(const float *data, size_t floatCount) {
+        pending.assign(data, data + floatCount);
+        dirty = true;
+    }
+
+    void CalculationLayer::DynamicVertexBuffer::Flush() {
+        if (!dirty)
+            return;
+        dirty = false;
+
+        const size_t bytes = pending.size() * sizeof(float);
+        elementCount = (uint32_t) (pending.size() / floatsPerElement);
+        if (bytes == 0)
+            return;
+
+        if (buffer == nullptr)
+            buffer = Buffer::Create({bytes, BufferUsage::Vertex, BufferMemory::Dynamic}, pending.data());
+        else if (buffer->GetSize() != bytes)
+            buffer->Resize(bytes, pending.data());
+        else
+            buffer->Update(pending.data(), bytes);
+    }
+
+    void CalculationLayer::UploadTriSurface(DynamicVertexBuffer &vBuffer, const TriSurf &tri) {
 #ifdef _DEBUG
         if (!tri.HasFinished()) {
             throw std::runtime_error("Trisurface generation thread has not completed.");
         }
 #endif
 
-        if (vArray.GetNoOfVBuffers() != 0) {
-            const sRef<VertexBuffer> &vBuffer = vArray.GetVBuffer(0);
-            vBuffer->StoreData((const float *) (tri.GetTriangles().data()),
-                               tri.GetTriangles().size() * 3 * 3);
-            vArray.UpdateElementLength(tri.GetTriangles().size() * 3);
-        }
+        vBuffer.Queue((const float *) (tri.GetTriangles().data()), tri.GetTriangles().size() * 3 * 3);
     }
 
-    CalculationLayer::CalculationLayer(): Layer("Graph Layer"), mQMCGraphData(1000) {
+    CalculationLayer::CalculationLayer(const RenderTargetLayout &targetLayout): Layer("Graph Layer"),
+        mTargetLayout(targetLayout), mQMCGraphData(1000) {
         mConsoleOutput.std::ios::rdbuf(&mConsoleBuffer);
+
+        mMoleculeBuffer.floatsPerElement = MOLECULE_INSTANCE_FLOATS;
+        //One vertex is three floats
+        mPosTrisurfBuffer.floatsPerElement = 3;
+        mNegTrisurfBuffer.floatsPerElement = 3;
     }
 
     void CalculationLayer::OnInit() {
         ImPlot::CreateContext();
 
-        mDiffuseProg = ShaderProgram::Create(DH::Res::ShaderSources::GetColourDiffuseGLSL());
-        mMoleculeDiffuseProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetMoleculeColourDiffuseGLSL());
-        mSolidColourProg = ShaderProgram::Create(SCESS::Res::ShaderSources::GetSolidColourGLSL());
+        mAtomMesh = GPUMesh::Create(Geometry::CreateQuadsphere(1.0f, 30));
+        mBondMesh = GPUMesh::Create(Geometry::CreateCylinder(0.2f, 0.7f, 20));
 
-        mPosTrisurfVAO = VertexArray::Create();
-        mPosTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
-        mNegTrisurfVAO = VertexArray::Create();
-        mNegTrisurfVAO->AddVertexBuffer(VertexBuffer::Create(BufferUsage::DynamicUpdate));
-
-        mMoleculeVAO = VertexArray::Create();
-        Mesh_F32 sphereMesh = Geometry::CreateQuadsphere(1.0f, 30);
-        mMoleculeVAO->AddVertexBuffer(VertexBuffer::Create(sphereMesh.GetVertexArray().data(),
-                                                           sphereMesh.GetVertexFloatCount()));
-        mMoleculeVAO->AddIndexBuffer(IndexBuffer::Create(sphereMesh.GetIndicesArray().data(),
-                                                         sphereMesh.GetIndexIntCount()));
-
-        // All molecule data is packed in the following format:
-        //(Atom Scale; float) (Atom Translation; vec3) (Atom Colour; vec3) --
-        mMoleculeBuffer = VertexBuffer::Create(BufferUsage::DynamicUpdate);
-        // Atom Scale
-        mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{1, 7, 0, 1});
-        // Atom Translation
-        mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{3, 7, 1, 1});
-        // Atom Colour
-        mMoleculeVAO->AddVertexBuffer(mMoleculeBuffer, VertexSpecification{3, 7, 4, 1});
-
-        mMoleculeBondVAO = VertexArray::Create(Geometry::CreateCylinder(0.2f, 0.7f, 20));
+        CreatePipelines();
 
         auto basisSets = BasisSet::ListBasisSets();
         mBasisSets.assign(basisSets.begin(), basisSets.end());
@@ -94,37 +128,106 @@ namespace SCESS::Viewer {
                                                          std::find(mBasisSets.begin(), mBasisSets.end(), "sto-3g")));
     }
 
-    void CalculationLayer::OnDestroy() {
-        ImPlot::DestroyContext();
-    }
+    void CalculationLayer::CreatePipelines() {
+        namespace Shaders = SCESS::Res::ShaderSources;
 
-    void CalculationLayer::OnUpdate(const sRef<DH::Framebuffer> &screenBuffer, const Camera3D &cam,
-                                    const glm::mat4 &projectionMatrix, const glm::vec2 &nearFarPlanes) {
-        GPUContext *ctx = GPUContext::Get();
-        ctx->SetPolygonMode(GPUContext::PolygonMode::Solid);
-        //ctx->SetFaceCulling(false);
+        //State shared by every pipeline: depth tested, no face culling (the isosurface winding is not consistent),
+        //and alpha blending so the opacity sliders work. The old OpenGL renderer asked for depth testing off, but
+        //Dahlia's text renderer re-enabled it every frame, so it always rendered with depth testing on.
+        GraphicsPipelineDesc base;
+        base.topology = PrimitiveTopology::Triangles;
+        base.raster.cullMode = CullMode::None;
+        base.depth = {true, true, CompareOp::Less};
+        base.blend = BlendPreset::Alpha;
+        base.targetLayout = mTargetLayout;
 
-        glm::mat4 pvMatrix = projectionMatrix * cam.GetViewMatrix();
+        //All three shaders only read positions from the mesh (location 0)
+        const VertexBinding positionBinding{GPUMesh::POSITION_LOCATION, 3 * sizeof(float), false};
+        const VertexAttribute positionAttribute{GPUMesh::POSITION_LOCATION, GPUMesh::POSITION_LOCATION,
+                                                Format::RGB32F, 0};
 
-        if (mMolecule != nullptr && mRenderMolecule) {
-            mMoleculeDiffuseProg->Bind();
-            mMoleculeDiffuseProg->UploadMatF("uMPVMatrix", pvMatrix);
-            mMoleculeDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
-            mMoleculeDiffuseProg->UploadF("uOpacity", mMoleculeOpacity);
-
-            mMoleculeVAO->Bind();
-            mMoleculeVAO->SubmitArrays(Primitive::Triangles, mMolecule->GetNoAtoms());
-            mMoleculeVAO->Unbind();
-
-            mMoleculeDiffuseProg->Unbind();
+        //Atoms: an instanced sphere, one instance per atom
+        {
+            GraphicsPipelineDesc desc = base;
+            desc.vertexShader = ShaderModule::Create(ShaderStage::Vertex, Shaders::GetMoleculeDiffuseVert());
+            desc.fragmentShader = ShaderModule::Create(ShaderStage::Fragment, Shaders::GetMoleculeDiffuseFrag());
+            desc.vertexBindings = {
+                positionBinding,
+                {MOLECULE_INSTANCE_BINDING, MOLECULE_INSTANCE_FLOATS * sizeof(float), true}
+            };
+            desc.vertexAttributes = {
+                positionAttribute,
+                // Atom Scale
+                {1, MOLECULE_INSTANCE_BINDING, Format::R32F, 0},
+                // Atom Translation
+                {2, MOLECULE_INSTANCE_BINDING, Format::RGB32F, 1 * sizeof(float)},
+                // Atom Colour
+                {3, MOLECULE_INSTANCE_BINDING, Format::RGB32F, 4 * sizeof(float)}
+            };
+            desc.pushConstantSize = sizeof(MoleculePushConstants);
+            mMoleculePipeline = GraphicsPipeline::Create(desc);
         }
 
-        if (mMolRenderStyle == MoleculeStyle::BallStick && mMolecule != nullptr && mRenderMolecule) {
-            mSolidColourProg->Bind();
-            // mSolidColourProg->UploadVecF("uLightPos", cam.GetActualPosition());
-            mSolidColourProg->UploadMatF("uPVMatrix", pvMatrix);
-            mSolidColourProg->UploadVecF("uColour", glm::vec3(0.1f));
-            mSolidColourProg->UploadF("uOpacity", mMoleculeOpacity);
+        //Bonds: a cylinder drawn once per bond
+        {
+            GraphicsPipelineDesc desc = base;
+            desc.vertexShader = ShaderModule::Create(ShaderStage::Vertex, Shaders::GetSolidColourVert());
+            desc.fragmentShader = ShaderModule::Create(ShaderStage::Fragment, Shaders::GetSolidColourFrag());
+            desc.vertexBindings = {positionBinding};
+            desc.vertexAttributes = {positionAttribute};
+            desc.pushConstantSize = sizeof(SolidColourPushConstants);
+            mBondPipeline = GraphicsPipeline::Create(desc);
+        }
+
+        //Isosurfaces: unindexed triangle lists, solid or wireframe
+        {
+            GraphicsPipelineDesc desc = base;
+            desc.vertexShader = ShaderModule::Create(ShaderStage::Vertex, Shaders::GetIsosurfaceDiffuseVert());
+            desc.fragmentShader = ShaderModule::Create(ShaderStage::Fragment, Shaders::GetIsosurfaceDiffuseFrag());
+            desc.vertexBindings = {positionBinding};
+            desc.vertexAttributes = {positionAttribute};
+            desc.pushConstantSize = sizeof(IsosurfacePushConstants);
+            mIsosurfacePipeline = GraphicsPipeline::Create(desc);
+
+            desc.raster.polygonMode = PolygonMode::Lines;
+            mIsosurfaceWirePipeline = GraphicsPipeline::Create(desc);
+        }
+    }
+
+    void CalculationLayer::OnDestroy() {
+        ImPlot::DestroyContext();
+
+        mMoleculePipeline.reset();
+        mBondPipeline.reset();
+        mIsosurfacePipeline.reset();
+        mIsosurfaceWirePipeline.reset();
+        mAtomMesh.reset();
+        mBondMesh.reset();
+        mMoleculeBuffer.buffer.reset();
+        mPosTrisurfBuffer.buffer.reset();
+        mNegTrisurfBuffer.buffer.reset();
+    }
+
+    void CalculationLayer::Render(CommandList &cmd, const Camera3D &cam, const glm::mat4 &projectionMatrix) {
+        mMoleculeBuffer.Flush();
+        mPosTrisurfBuffer.Flush();
+        mNegTrisurfBuffer.Flush();
+
+        const glm::mat4 pvMatrix = projectionMatrix * cam.GetViewMatrix();
+        const glm::vec4 lightPos(cam.GetActualPosition(), 0.0f);
+
+        const bool drawMolecule = mMolecule != nullptr && mRenderMolecule;
+
+        if (drawMolecule && mMoleculeBuffer.elementCount != 0) {
+            cmd.BindPipeline(*mMoleculePipeline);
+            cmd.PushConstants(MoleculePushConstants{pvMatrix, lightPos, {mMoleculeOpacity, 0.0f, 0.0f, 0.0f}});
+            cmd.BindVertexBuffer(MOLECULE_INSTANCE_BINDING, *mMoleculeBuffer.buffer);
+            mAtomMesh->Draw(cmd, mMoleculeBuffer.elementCount);
+        }
+
+        if (mMolRenderStyle == MoleculeStyle::BallStick && drawMolecule) {
+            cmd.BindPipeline(*mBondPipeline);
+            const glm::vec4 bondColour(glm::vec3(0.1f), mMoleculeOpacity);
 
             for (const BondPair &bond: mMolecule->GetBonds()) {
                 const Atom &a1 = mMolecule->GetAtom(bond.atom1);
@@ -139,32 +242,22 @@ namespace SCESS::Viewer {
                         glm::mat4(CalculateBondRotMatrix(glm::normalize(dirVec), {0.0f, 0.0f, 1.0f}))
                         * glm::scale(glm::vec3(1.0f, 1.0f, glm::length(dirVec)));
 
-                mSolidColourProg->UploadMatF("uTransformMatrix", transformMat);
-
-                mMoleculeBondVAO->Bind();
-                mMoleculeBondVAO->SubmitArrays();
+                cmd.PushConstants(SolidColourPushConstants{pvMatrix * transformMat, bondColour});
+                mBondMesh->Draw(cmd);
             }
         }
 
-        ctx->SetPolygonMode(mPolygonMode);
+        const auto drawIsosurface = [&](const DynamicVertexBuffer &surface, const glm::vec3 &colour) {
+            if (surface.elementCount == 0)
+                return;
+            cmd.PushConstants(IsosurfacePushConstants{pvMatrix, lightPos, glm::vec4(colour, mIsoOpacity)});
+            cmd.BindVertexBuffer(GPUMesh::POSITION_LOCATION, *surface.buffer);
+            cmd.Draw(surface.elementCount);
+        };
 
-        mDiffuseProg->Bind();
-        mDiffuseProg->UploadVecF("uLightPos", cam.GetActualPosition());
-        mDiffuseProg->UploadMatF("uPVMatrix", pvMatrix);
-        mDiffuseProg->UploadMatF("uTransformMatrix", glm::mat4(1.0f));
-        mDiffuseProg->UploadF("uOpacity", mIsoOpacity);
-
-        mDiffuseProg->UploadVecF("uColour", {1.0f, 0.0f, 0.0f});
-        mPosTrisurfVAO->Bind();
-        mPosTrisurfVAO->SubmitArrays();
-        mPosTrisurfVAO->Unbind();
-
-        mDiffuseProg->UploadVecF("uColour", {0.0f, 0.0f, 1.0f});
-        mNegTrisurfVAO->Bind();
-        mNegTrisurfVAO->SubmitArrays();
-        mNegTrisurfVAO->Unbind();
-
-        mDiffuseProg->Unbind();
+        cmd.BindPipeline(mPolygonMode == PolygonMode::Lines ? *mIsosurfaceWirePipeline : *mIsosurfacePipeline);
+        drawIsosurface(mPosTrisurfBuffer, {1.0f, 0.0f, 0.0f});
+        drawIsosurface(mNegTrisurfBuffer, {0.0f, 0.0f, 1.0f});
     }
 
     void CalculationLayer::RenderMOIsosurface() {
@@ -224,7 +317,7 @@ namespace SCESS::Viewer {
 
         mInvalidateLastSCF = true;
 
-        float *data = new float[mMolecule->GetNoAtoms() * 7];
+        std::vector<float> data(mMolecule->GetNoAtoms() * MOLECULE_INSTANCE_FLOATS);
         for (size_t i = 0; i < mMolecule->GetNoAtoms(); i++) {
             const Atom &a = mMolecule->GetAtom(i);
             const AtomStyle &style = AtomStyle::GetStyle(a.GetAtomSymbol());
@@ -241,9 +334,7 @@ namespace SCESS::Viewer {
             data[i * 7 + 6] = style.mColour.z;
         }
 
-        mMoleculeBuffer->StoreData(data, mMolecule->GetAtoms().size() * 7);
-
-        delete[] data;
+        mMoleculeBuffer.Queue(data.data(), data.size());
     }
 
     bool CalculationLayer::SelectMoleculeFromFile() {
@@ -863,9 +954,9 @@ namespace SCESS::Viewer {
 
                             if ((mPosTrisurf.HasFinished() && mNegTrisurf.HasFinished()) && !mIsosurfaceUploaded) {
                                 // if (mPosTrisurf.triangles.size() != 0)
-                                UploadTriSurface(*mPosTrisurfVAO, mPosTrisurf);
+                                UploadTriSurface(mPosTrisurfBuffer, mPosTrisurf);
                                 // if (mNegTrisurf.triangles.size() != 0)
-                                UploadTriSurface(*mNegTrisurfVAO, mNegTrisurf);
+                                UploadTriSurface(mNegTrisurfBuffer, mNegTrisurf);
 
                                 mIsoWasNull = mPosTrisurf.GetTriangles().empty() && mNegTrisurf.GetTriangles().empty();
 

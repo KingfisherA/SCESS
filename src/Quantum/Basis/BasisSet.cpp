@@ -2,6 +2,8 @@
 #include <boost/filesystem.hpp>
 //
 #include "Resources/AssetFolder.h"
+// libint2 reads basis sets from DATADIR; its CMake target defines it, so replace it with Assets/Basis
+#undef DATADIR
 #define DATADIR SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <libint2/basis.h>
 //

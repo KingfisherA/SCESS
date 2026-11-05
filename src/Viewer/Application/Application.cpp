@@ -6,13 +6,15 @@
 #include "Dahlia/Events/MouseEvents.h"
 #include "Dahlia/Platform/GPUContext.h"
 #include "Dahlia/GUI/Display.h"
-#include "Dahlia/3D/Texture.h"
-#include "Dahlia/3D/Framebuffer.h"
+#include "Dahlia/Graphics/CommandList.h"
+#include "Dahlia/Graphics/Texture.h"
+#include "Dahlia/Graphics/Framebuffer.h"
 #include "Dahlia/GUI/ImGuiLayer.h"
 #include "Dahlia/Utilities/Assert.h"
 
 #include "Viewer/GUI/CalculationLayer.h"
 #include <filesystem>
+#include <string_view>
 
 #include "xc.h"
 #include "Quantum/CC/CC.h"
@@ -34,12 +36,37 @@ int main(int argc, char **argv) {
 
     using namespace SCESS;
 
+    // Metal is the default on macOS, OpenGL 4.1 elsewhere. Override with --metal, --vulkan or --opengl.
+#ifdef __APPLE__
+    DH::GraphicsAPI api = DH::GraphicsAPI::Metal;
+    uint32_t apiMajor = 0, apiMinor = 0;
+#else
+    DH::GraphicsAPI api = DH::GraphicsAPI::OpenGL;
+    uint32_t apiMajor = 4, apiMinor = 1;
+#endif
+    for (int i = 1; i < argc; i++) {
+        const std::string_view arg = argv[i];
+        if (arg == "--metal") {
+            api = DH::GraphicsAPI::Metal;
+            apiMajor = 0;
+            apiMinor = 0;
+        } else if (arg == "--vulkan") {
+            api = DH::GraphicsAPI::Vulkan;
+            apiMajor = 1;
+            apiMinor = 3;
+        } else if (arg == "--opengl") {
+            api = DH::GraphicsAPI::OpenGL;
+            apiMajor = 4;
+            apiMinor = 1;
+        }
+    }
+
     Viewer::Application app;
 
     //Initilise libint2
     Integrals::LibInt::InitLibInt();
 
-    if (!Res::AssetsFolder::Get().Init() || !app.Init(DH::GraphicsAPI::OpenGL, 4, 0)) {
+    if (!Res::AssetsFolder::Get().Init() || !app.Init(api, apiMajor, apiMinor)) {
         std::cout << "Failed to initialise SCESS application. Program will now close. \n";
         std::cout << "Press any key to continue...\n";
 
@@ -76,8 +103,8 @@ namespace SCESS::Viewer {
                                              FramebufferSpecification{
                                                  800, 600, 1,
                                                  {
-                                                     FramebufferAttachment(PixelFormat::RGBA8),
-                                                     FramebufferAttachment(PixelFormat::DEPTH24_STENCIL8)
+                                                     FramebufferAttachment(Format::RGBA8),
+                                                     FramebufferAttachment(Format::D24S8)
                                                  }
                                              }),
                                  mProjectionMatrix(1.0f) {
@@ -95,19 +122,29 @@ namespace SCESS::Viewer {
         //                  size_t((float) mWindow->GetHeight() * dpiFactor));
         mWindow->SetSize(800, 600);
 
-        GPUContext *ctx = GPUContext::Get();
-        ctx->SetDepthTest(false);
-        ctx->SetFaceCulling(false);
-        ctx->SetBlending(true, GPUContext::Blending::Alpha);
-
-        mCalcLayer = new CalculationLayer();
+        // Depth, culling and blending state now lives in the CalculationLayer's pipelines
+        mCalcLayer = new CalculationLayer(mViewportFramebuffer->GetLayout());
         this->PushLayer((Layer*)mCalcLayer);
 
         mCam.SetCentrePosition({0.0f, 0.0f, 0.0f});
         mCam.SetZoom(10.0f);
         UpdateProjectionMatrix();
 
-        TextureLoader loader(Res::AssetsFolder::Get().GetResourcePath("Icon/SCESS Small.png").string());
+        // The window layout is saved per user (the working directory may not be writable, e.g. "/" for
+        // the macOS app bundle), starting from the default layout in Assets on first run
+        {
+            namespace fs = boost::filesystem;
+            const fs::path iniPath = Res::AssetsFolder::GetUserDataDirectory() / "imgui.ini";
+            boost::system::error_code ec;
+            if (!fs::exists(iniPath, ec))
+                fs::copy_file(Res::AssetsFolder::Get().GetResourcePath("imgui.ini"), iniPath, ec);
+            static std::string sIniFilename; // ImGui keeps the pointer
+            sIniFilename = iniPath.string();
+            ImGui::GetIO().IniFilename = sIniFilename.c_str();
+        }
+
+        // Load as RGBA8 so Metal/Vulkan don't have to expand RGB on upload
+        TextureLoader loader(Res::AssetsFolder::Get().GetResourcePath("Icon/SCESS Icon.png").string(), 4);
         mAppIcon = Texture2D::Create(loader);
 
         return true;
@@ -115,6 +152,7 @@ namespace SCESS::Viewer {
 
     void Application::OnDestroy() {
         mAppIcon.reset();
+        GraphicsApp::OnDestroy();
     }
 
 
@@ -123,14 +161,17 @@ namespace SCESS::Viewer {
         UpdateProjectionMatrix();
     }
 
-    void Application::OnRender() {
+    void Application::OnRender(CommandList &cmd) {
         mCam.UpdateCamera((float) mDeltaTime * 0.1f);
 
-        mViewportFramebuffer->Bind();
-        mViewportFramebuffer->Clear({glm::vec3(0.01f), 1.0f});
+        RenderPassDesc pass;
+        pass.target = mViewportFramebuffer.get();
+        pass.clearColour = {glm::vec3(0.01f), 1.0f};
+        cmd.BeginRenderPass(pass);
 
-        for (Layer *layer: mLayerStack)
-            layer->OnUpdate(mViewportFramebuffer, mCam, mProjectionMatrix, {NEAR_PLANE, FAR_PLANE});
+        mCalcLayer->Render(cmd, mCam, mProjectionMatrix);
+
+        cmd.EndRenderPass();
     }
 
     void Application::OnImGuiRender() {
@@ -159,7 +200,7 @@ namespace SCESS::Viewer {
         if (ImGui::BeginPopup("splashScreenPopup")) {
             float imgWidth = 350.0f * dpiFactor;
             ImGui::SetCursorPosX((ImGui::GetWindowWidth() - imgWidth) * 0.5f);
-            ImGui::Image((ImTextureID) (intptr_t) mAppIcon->GetRendererID(), {
+            ImGui::Image((ImTextureID) mAppIcon->GetImGuiID(), {
                              (float) imgWidth,
                              (float) imgWidth
                          });
@@ -227,7 +268,7 @@ namespace SCESS::Viewer {
             ImGui::Combo("Render Style##combo", &selectedItem, items, 2);
 
             for (Layer *layer: mLayerStack)
-                layer->SetRenderStyle((GPUContext::PolygonMode) selectedItem);
+                layer->SetRenderStyle(selectedItem == 1 ? PolygonMode::Lines : PolygonMode::Solid);
 
             ImGui::Unindent();
         }
@@ -259,8 +300,8 @@ namespace SCESS::Viewer {
 
     void Application::UpdateProjectionMatrix() {
         mProjectionMatrix = glm::perspective<float>(glm::radians(45.0f),
-                                                    (float) mViewportFramebuffer->GetSpecification().Width / (float)
-                                                    mViewportFramebuffer->GetSpecification().Height, NEAR_PLANE,
+                                                    (float) mViewportFramebuffer->GetSpecification().width / (float)
+                                                    mViewportFramebuffer->GetSpecification().height, NEAR_PLANE,
                                                     FAR_PLANE);
     }
 
