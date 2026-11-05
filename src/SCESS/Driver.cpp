@@ -259,112 +259,83 @@ namespace SCESS::Driver {
 #pragma region F12 theories
     //
     //
+    namespace {
+        //Prepares a F12 calculation, printing its progress
+        F12::F12Calculation PrepareF12(const char *obsName, const char *cabsName, const Molecule &mol,
+                                       bool buildQMCIntegrals = false) {
+            std::stringstream console;
+            F12::F12Calculation calc = F12::PrepareF12Calculation(obsName, cabsName, mol, nullptr, &console,
+                                                                  buildQMCIntegrals);
+            fmt::print("{}", console.str());
+            return calc;
+        }
+    }
+    //
     void MP2_F12_Fixed(const char *obsName, const char *cabsName, const Molecule &mol,
                        const char *moleculeName) {
-        auto atoms = mol.GetAtomsLibInt();
+        const F12::F12Calculation calc = PrepareF12(obsName, cabsName, mol);
 
-        F12BasisSet f12BasisSet(obsName, cabsName, atoms);
-
-        fmt::print("Evaluating overlap, kinetic, nuclear & eri integrals...\n");
-        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, atoms);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n");
-        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Obtaining UHF reference...\n");
-        HF::HF_Wfn uhfWfn = HF::UHF(
-            Integrals::F12::ExtractHFIntegrals(configInts,
-                                               f12BasisSet.GetHFIndices().first,
-                                               f12BasisSet.GetNoHFFuncs()),
-            mol.GetNoElectrons() / 2,
-            mol.GetNoElectrons() / 2,
-            mol.CalculateVnn(),
-            std::numeric_limits<double>::epsilon());
-
-        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-        fmt::print("Canonicalising f12 integrals...\n");
-        Eigen::MatrixXd F;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn.D_Alpha,
-                                                 uhfWfn.C_Alpha,
-                                                 configInts,
-                                                 f12Ints,
-                                                 true,
-                                                 &F);
-
-        fmt::print("Evaluating CABS singles correction...\n");
-
-        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
-
-        auto f12Result = F12::MP2_F12_Fixed(uhfWfn, configInts, f12Ints, f12Idxs);
+        auto f12Result = F12::MP2_F12_Fixed(calc.hfWfn, calc.ints, calc.idxs);
 
         fmt::print("\n\n--- MP2 F12 Single Point Energy ---\n");
         fmt::print(" --- Fixed amplitude approximation used --- \n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
-        fmt::print("  E(HF) = {} hartrees\n", uhfWfn.E_HF);
-        fmt::print("  E(CABS singles correction) = {} hartrees\n", ECABSSingles);
+        fmt::print("  OBS = {}, CABS = {}\n", obsName, cabsName);
+        fmt::print("  E(HF) = {} hartrees\n", calc.hfWfn.E_HF);
+        fmt::print("  E(CABS singles correction) = {} hartrees\n", calc.E_CABSSingles);
         fmt::print("  E(MP2) = {} hartrees\n", f12Result.E_MP2);
         fmt::print("  E(F12 MP2) = {} hartrees\n", f12Result.E_F12_MP2);
-        fmt::print("  E(Total) = {} hartrees\n\n", uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
+        fmt::print("  E(Total) = {} hartrees\n\n", calc.hfWfn.E_HF + calc.E_CABSSingles + f12Result.E_MP2 +
                                                    f12Result.E_F12_MP2);
     }
     //
     void MP2_F12_Optimise(const char *obsName, const char *cabsName, const Molecule &mol,
                           const char *moleculeName) {
-        auto atoms = mol.GetAtomsLibInt();
+        const F12::F12Calculation calc = PrepareF12(obsName, cabsName, mol);
 
-        F12BasisSet f12BasisSet(obsName, cabsName, atoms);
-
-        fmt::print("Evaluating overlap, kinetic, nuclear & eri integrals...\n");
-        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, atoms);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n");
-        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Obtaining UHF reference...\n");
-        HF::HF_Wfn uhfWfn = HF::UHF(
-            Integrals::F12::ExtractHFIntegrals(configInts,
-                                               f12BasisSet.GetHFIndices().first,
-                                               f12BasisSet.GetNoHFFuncs()),
-            mol.GetNoElectrons() / 2,
-            mol.GetNoElectrons() / 2,
-            mol.CalculateVnn(),
-            std::numeric_limits<double>::epsilon());
-
-        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-        fmt::print("Canonicalising f12 integrals...\n");
-        Eigen::MatrixXd F;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn.D_Alpha,
-                                                 uhfWfn.C_Alpha,
-                                                 configInts,
-                                                 f12Ints,
-                                                 true,
-                                                 &F);
-
-        fmt::print("Evaluating CABS singles correction...\n");
-
-        //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
-        //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
-
-        auto f12Result = F12::MP2_F12_Optimise(uhfWfn, configInts, f12Ints, f12Idxs);
+        auto f12Result = F12::MP2_F12_Optimise(calc.hfWfn, calc.ints, calc.idxs);
 
         fmt::print("\n\n--- MP2 F12 Single Point Energy ---\n");
         fmt::print(" --- Optimised amplitudes used --- \n");
         fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
-        fmt::print("  E(HF) = {} hartrees\n", uhfWfn.E_HF);
-        fmt::print("  E(CABS singles correction) = {} hartrees\n", ECABSSingles);
+        fmt::print("  OBS = {}, CABS = {}\n", obsName, cabsName);
+        fmt::print("  E(HF) = {} hartrees\n", calc.hfWfn.E_HF);
+        fmt::print("  E(CABS singles correction) = {} hartrees\n", calc.E_CABSSingles);
         fmt::print("  E(MP2) = {} hartrees\n", f12Result.E_MP2);
         fmt::print("  E(F12 MP2) = {} hartrees\n", f12Result.E_F12_MP2);
-        fmt::print("  E(Total) = {} hartrees\n\n", uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
+        fmt::print("  E(Total) = {} hartrees\n\n", calc.hfWfn.E_HF + calc.E_CABSSingles + f12Result.E_MP2 +
                                                    f12Result.E_F12_MP2);
+    }
+    //
+    void CCSD_F12b(const char *obsName, const char *cabsName, const Molecule &mol,
+                   const char *moleculeName) {
+        fmt::print(fmt::emphasis::bold, "--- Performing CCSD-F12b calculation on {} ---\n",
+                   moleculeName ? moleculeName : "unknown");
+
+        const F12::F12Calculation calc = PrepareF12(obsName, cabsName, mol);
+
+        std::stringstream console;
+        const F12::CCSD_F12bResult result = F12::CCSD_F12b(calc, nullptr, &console);
+        fmt::print("{}\n", console.str());
+
+        if (!result.converged) {
+            fmt::print(fg(fmt::color::crimson), "CCSD-F12b failed to converge\n");
+            return;
+        }
+
+        fmt::print("\n\n--- CCSD-F12b Single Point Energy ---\n");
+        fmt::print(" --- 3C(FIX) ansatz with the CABS approximation --- \n");
+        fmt::print("  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
+        fmt::print("  OBS = {}, CABS = {}\n", obsName, cabsName);
+        fmt::print("  E(HF) = {:.10f} hartrees\n", calc.hfWfn.E_HF);
+        fmt::print("  E(CABS singles correction) = {:.10f} hartrees\n", calc.E_CABSSingles);
+        fmt::print("  E(MP2) = {:.10f} hartrees\n", result.E_MP2);
+        fmt::print("  E(CCSD, with geminal coupling) = {:.10f} hartrees\n", result.E_CCSD);
+        fmt::print("      of which E(coupling) = {:.10f} hartrees\n", result.E_Coupling);
+        fmt::print("  E(F12 geminals) = {:.10f} hartrees\n", result.E_F12);
+        fmt::print("  E(CCSD-F12b correlation) = {:.10f} hartrees\n", result.CorrelationEnergy());
+        fmt::print(fg(fmt::color::green), "  E(Total) = {:.10f} hartrees\n\n",
+                   calc.hfWfn.E_HF + calc.E_CABSSingles + result.CorrelationEnergy());
     }
     //
     //
@@ -376,61 +347,23 @@ namespace SCESS::Driver {
     //
     void CCSD_QMC_MP2_F12(const char *obsName, const char *cabsName,
                           const Molecule &mol, const char *moleculeName) {
-        auto atoms = mol.GetAtomsLibInt();
+        const F12::F12Calculation calc = PrepareF12(obsName, cabsName, mol, true);
 
-        F12BasisSet f12BasisSet(obsName, cabsName, atoms);
-
-        fmt::print("Evaluating overlap, kinetic, nuclear & eri integrals...\n");
-        Integrals::MolInts configInts = Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, atoms);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n");
-        Integrals::F12::F12Integrals f12Ints = Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-        fmt::print(fg(fmt::color::green), "Done!\n");
-
-        fmt::print("Obtaining UHF reference...\n");
-        const uint32_t alphaElectrons = mol.GetNoElectrons() / 2;
-        const uint32_t &betaElectrons = alphaElectrons;
-        HF::HF_Wfn uhfWfn = HF::UHF(
-            Integrals::F12::ExtractHFIntegrals(configInts, 0,
-                                               f12BasisSet.GetNoHFFuncs()),
-            alphaElectrons,
-            betaElectrons,
-            mol.CalculateVnn(),
-            std::numeric_limits<double>::epsilon());
-
-        F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-        fmt::print("Canonicalising f12 integrals...\n");
-        Eigen::MatrixXd F;
-        Integrals::Transforms::TransformF12Basis(f12BasisSet,
-                                                 uhfWfn.D_Alpha,
-                                                 uhfWfn.C_Alpha,
-                                                 configInts,
-                                                 f12Ints,
-                                                 true,
-                                                 &F);
-
-        fmt::print("Evaluating CABS singles correction...\n");
-        //Need to correct the reference energy with a perturbation by singly exciting into the CABS virtuals.
-        //Correct the fact that there is a large basis set error in the non-correlated HF energy
-        double ECABSSingles = F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
-
-        double ECCQMC_F12 = F12_QMC::CCSD_QMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
-        double ECorrelation = ECCQMC_F12 - uhfWfn.E_HF;
+        double ECCQMC_F12 = F12_QMC::CCSD_QMC_MP2_F12(calc.hfWfn, calc.ints, calc.idxs);
+        double ECorrelation = ECCQMC_F12 - calc.hfWfn.E_HF;
 
         fmt::print(fg(fmt::color::white), "\n\n--- CCSD QMC F12 Single Point Energy ---\n");
         fmt::print(fg(fmt::color::white), " --- Fixed amplitude approximation used --- \n");
         fmt::print(fg(fmt::color::white), "  Molecule = {}\n", moleculeName ? moleculeName : "unknown");
         fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n",
-                   uhfWfn.E_HF);
+                   calc.hfWfn.E_HF);
         fmt::print(fg(fmt::color::white), "  E(CABS singles correction) = {:.8} hartrees\n",
-                   ECABSSingles);
+                   calc.E_CABSSingles);
         fmt::print(fg(fmt::color::white), "  E(CCQMC_F12) = {:.8} hartrees\n",
                    ECorrelation);
         fmt::print(fg(fmt::color::green), "  E(Total) = {:.8} hartrees\n\n",
-                   uhfWfn.E_HF +
-                   ECABSSingles +
+                   calc.hfWfn.E_HF +
+                   calc.E_CABSSingles +
                    ECorrelation);
     }
     //

@@ -7,6 +7,7 @@
 #include "Driver.h"
 #include "Tests.h"
 //
+#include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Integrals/IntegralsLibInt.h"
 #include "Quantum/Molecule.h"
 //
@@ -83,6 +84,7 @@ int main(int argc, char *argv[]) {
     CCQMC,
     MP2_F12_Fixed,
     MP2_F12_Opt,
+    CCSD_F12b,
     CCSD_QMC_MP2_F12
   } selectedMethod;
   enum class MoleculeEnum : int { H2, LiH, NH3, H2O } selectedMol;
@@ -98,6 +100,7 @@ int main(int argc, char *argv[]) {
       {"ccqmc", MethodEnum::CCQMC},
       {"mp2_f12_fixed", MethodEnum::MP2_F12_Fixed},
       {"mp2_f12_opt", MethodEnum::MP2_F12_Opt},
+      {"ccsd_f12b", MethodEnum::CCSD_F12b},
       {"ccsd_qmc_mp2_f12", MethodEnum::CCSD_QMC_MP2_F12}};
   std::unordered_map<std::string, MoleculeEnum> moleculeMap = {
       {"H2", MoleculeEnum::H2},
@@ -131,21 +134,14 @@ int main(int argc, char *argv[]) {
   fmt::print("    - Molecule = ");
   fmt::print(fg(fmt::color::green), "{}\n", moleculeStr);
 
-  // Accept both the original and lower case basis set names. Insert into a
-  // separate set as inserting while iterating can rehash and invalidate the
-  // iterators
-  const auto availableBasisSets = BasisSet::ListBasisSets();
-  auto basisSets = availableBasisSets;
-  for (const auto &bs : availableBasisSets)
-    basisSets.insert(boost::algorithm::to_lower_copy(bs));
-
-  auto &selectedBasisSet = args[2];
-  boost::algorithm::to_lower(selectedBasisSet);
-  if (!basisSets.contains(selectedBasisSet)) {
-    fmt::print(fg(fmt::color::red), "{} is not an avaliable basis set",
-               selectedBasisSet);
+  // Basis set names are case-insensitive and 6-31G* style names are accepted
+  const BasisSetInfo *obsInfo = BasisLibrary::Find(args[2]);
+  if (!obsInfo) {
+    fmt::print(fg(fmt::color::red), "{} is not an avaliable basis set\n",
+               args[2]);
     return 1;
   }
+  const std::string selectedBasisSet = obsInfo->name;
   fmt::print("    - Basis Set = ");
   fmt::print(fg(fmt::color::green), "{}\n", selectedBasisSet);
 
@@ -198,22 +194,34 @@ int main(int argc, char *argv[]) {
     break;
   }
 
+  std::string cabsName;
   const char *cabsBasisSet = nullptr;
   if (selectedMethod == MethodEnum::MP2_F12_Fixed ||
       selectedMethod == MethodEnum::MP2_F12_Opt ||
+      selectedMethod == MethodEnum::CCSD_F12b ||
       selectedMethod == MethodEnum::CCSD_QMC_MP2_F12) {
-    if (!options.contains("CABS")) {
-      fmt::print(fg(fmt::color::crimson),
-                 "F12 method selected but no CABS basis set was specified\n");
-      return 1;
+    if (options.contains("CABS")) {
+      const BasisSetInfo *cabsInfo = BasisLibrary::Find(options.at("CABS"));
+      if (!cabsInfo) {
+        fmt::print(fg(fmt::color::crimson), "CABS basis set {} is invalid\n",
+                   options.at("CABS"));
+        return 1;
+      }
+      cabsName = cabsInfo->name;
+    } else {
+      cabsName = BasisLibrary::DefaultCABS(selectedBasisSet);
+      if (cabsName.empty()) {
+        fmt::print(fg(fmt::color::crimson),
+                   "F12 method selected but no CABS basis set was specified "
+                   "and {} has no default CABS. Use --CABS\n",
+                   selectedBasisSet);
+        return 1;
+      }
     }
-    boost::algorithm::to_lower(options.at("CABS"));
-    if (!basisSets.contains(options.at("CABS"))) {
-      fmt::print(fg(fmt::color::crimson), "CABS basis set {} is invalid\n",
-                 options.at("CABS"));
-      return 1;
-    }
-    cabsBasisSet = options.at("CABS").c_str();
+    fmt::print("    - CABS = ");
+    fmt::print(fg(fmt::color::green), "{}{}\n", cabsName,
+               options.contains("CABS") ? "" : " (default)");
+    cabsBasisSet = cabsName.c_str();
   }
 
   fmt::print("\n\n");
@@ -253,6 +261,10 @@ int main(int argc, char *argv[]) {
   case MethodEnum::MP2_F12_Opt:
     Driver::MP2_F12_Optimise(selectedBasisSet.c_str(), cabsBasisSet, mol,
                              moleculeName);
+    break;
+  case MethodEnum::CCSD_F12b:
+    Driver::CCSD_F12b(selectedBasisSet.c_str(), cabsBasisSet, mol,
+                      moleculeName);
     break;
   case MethodEnum::CCSD_QMC_MP2_F12:
     Driver::CCSD_QMC_MP2_F12(selectedBasisSet.c_str(), cabsBasisSet, mol,
@@ -305,6 +317,7 @@ void PrintHelpDialog() {
       "        - MP2_F12_Fixed = MP2 F12 theory with the fixed amplitude "
       "approximation \n"
       "        - MP2_F12_Opt   = MP2 F12 theory with the optimised amplitudes\n"
+      "        - CCSD_F12b     = CCSD-F12b with the 3C(FIX) ansatz\n"
       "\n");
   fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, "    QMC + F12\n");
   fmt::print(
@@ -312,8 +325,12 @@ void PrintHelpDialog() {
       "        - CCSD_QMC_MP2_F12 = CCSD-QMC with first-order T2' operator\n"
       "\n"
       "Note!\n"
-      "    F12 theories require the --CABS option to be specified and set to "
-      "one of the available basis sets.\n"
+      "    F12 theories use the --CABS option to choose the complementary "
+      "auxiliary basis set.\n"
+      "    Without it the OptRI set matching the orbital basis set is used "
+      "where one exists\n"
+      "    (e.g. cc-pVDZ-F12 -> cc-pVDZ-F12-OptRI, cc-pVDZ & aug-cc-pVDZ -> "
+      "aug-cc-pVDZ-OptRI).\n"
       "\n");
   fmt::print(fmt::emphasis::bold, "    Testing\n");
   fmt::print("        SCESS test = Run the regression tests against reference "
@@ -327,11 +344,18 @@ void PrintHelpDialog() {
 
   if (SCESS::Res::AssetsFolder::Get().Init()) {
     fmt::print("--- Available Basis Sets ---\n");
-    auto basisSets = SCESS::BasisSet::ListBasisSets();
-    for (const auto &basisSet : basisSets) {
-      fmt::print("    - ");
-      fmt::print(fg(fmt::color::silver) | fmt::emphasis::italic, "{}\n",
-                 basisSet);
+    for (const std::string &family : SCESS::BasisLibrary::ListFamilies()) {
+      fmt::print(fmt::emphasis::bold, "    {}{}\n", family,
+                 family == SCESS::BasisLibrary::CABS_FAMILY
+                     ? " (complementary auxiliary basis sets for --CABS)"
+                     : "");
+      for (const auto &info : SCESS::BasisLibrary::List()) {
+        if (info.family != family)
+          continue;
+        fmt::print("        - ");
+        fmt::print(fg(fmt::color::silver) | fmt::emphasis::italic, "{}\n",
+                   info.name);
+      }
     }
     fmt::print("\n");
   } else {
@@ -343,6 +367,8 @@ void PrintHelpDialog() {
   fmt::print("--- Additional Options ---\n"
              "    --CABS = Sets the complementary auxiliary basis set for a "
              "F12 theory. Can be set to any of the available basis sets\n"
+             "    Basis set names are case-insensitive and 6-31G* style names "
+             "are accepted\n"
              "\n");
 }
 //

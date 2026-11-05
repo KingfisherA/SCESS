@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TensorOperations.h"
+#include "TensorParallel.h"
 #include <array>
 #include <type_traits>
 #include <unsupported/Eigen/CXX11/Tensor>

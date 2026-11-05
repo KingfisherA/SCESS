@@ -27,6 +27,7 @@
 #include "Quantum/DFT/DFT.h"
 #include "Quantum/CC/CC.h"
 #include "Quantum/CI/CI.h"
+#include "Quantum/F12/F12.h"
 //
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 //
@@ -121,11 +122,34 @@ namespace SCESS::Viewer {
 
         CreatePipelines();
 
-        auto basisSets = BasisSet::ListBasisSets();
-        mBasisSets.assign(basisSets.begin(), basisSets.end());
-        mSelectedBasisSet = std::max(0,
-                                     (int) std::distance(mBasisSets.begin(),
-                                                         std::find(mBasisSets.begin(), mBasisSets.end(), "sto-3g")));
+        //Orbital basis sets exclude the CABS family; every basis set may be used as a CABS, CABS family first
+        for (const BasisSetInfo &info: BasisLibrary::List()) {
+            if (BasisLibrary::IsCABS(info))
+                mCABSSets.insert(mCABSSets.begin() + std::ranges::count_if(mCABSSets, BasisLibrary::IsCABS), info);
+            else {
+                mBasisSets.push_back(info);
+                mCABSSets.push_back(info);
+            }
+        }
+        const BasisSetInfo *sto3gInfo = BasisLibrary::Find("sto-3g");
+        const auto sto3g = std::ranges::find_if(mBasisSets, [sto3gInfo](const BasisSetInfo &info) {
+            return sto3gInfo && info.name == sto3gInfo->name;
+        });
+        mSelectedBasisSet = sto3g == mBasisSets.end() ? 0 : (int) std::distance(mBasisSets.begin(), sto3g);
+        SelectDefaultCABS();
+    }
+
+    void CalculationLayer::SelectDefaultCABS() {
+        if (!mCABSFollowsOBS || mBasisSets.empty())
+            return;
+
+        const std::string defaultCABS = BasisLibrary::DefaultCABS(mBasisSets[mSelectedBasisSet].name);
+        const auto it = std::ranges::find_if(mCABSSets, [&defaultCABS](const BasisSetInfo &info) {
+            return info.name == defaultCABS;
+        });
+        //Without a default keep the previous choice
+        if (it != mCABSSets.end())
+            mSelectedCABS = (int) std::distance(mCABSSets.begin(), it);
     }
 
     void CalculationLayer::CreatePipelines() {
@@ -358,7 +382,7 @@ namespace SCESS::Viewer {
     }
 
     void CalculationLayer::ExecuteCalculation() {
-        if (mMolecule == nullptr)
+        if (mMolecule == nullptr || mBasisSets.empty())
             return;
 
         mPosTrisurf.Reset();
@@ -367,15 +391,22 @@ namespace SCESS::Viewer {
         mOrbitalsOrdered = false;
         mSelectedMO = -1;
 
-        mCalcBasisSet = mBasisSets[mSelectedBasisSet];
-        mMoleculeBasisSet = BasisSet(mCalcBasisSet, *mMolecule);
+        mCalcBasisSet = mBasisSets[mSelectedBasisSet].name;
 
         //Correlated methods are all built on an RHF reference
         if (mCorrelationMethod != CorrelationMethod::None)
             mSCFMethod = SCFMethod::RHF;
 
-        mCalcSCFMethod = mSCFMethod;
         mCalcCorrelationMethod = mCorrelationMethod;
+
+        //F12 methods build their own OBS + CABS integrals and reference, so they produce no SCF result (orbitals)
+        if (IsF12Method(mCalcCorrelationMethod)) {
+            ExecuteF12Calculation();
+            return;
+        }
+
+        mMoleculeBasisSet = BasisSet(mCalcBasisSet, *mMolecule);
+        mCalcSCFMethod = mSCFMethod;
 
         //Decide on the UI thread whether the RHF reference can be reused; it must exist and be for this
         //molecule and basis set
@@ -510,6 +541,70 @@ namespace SCESS::Viewer {
                                     : mCalcSCFMethod == SCFMethod::RHF;
             if (ranRHF)
                 mInvalidateLastSCF = cancelled || failed;
+            mCalculationThread.MarkAsFinished();
+        });
+    }
+    //
+    void CalculationLayer::ExecuteF12Calculation() {
+        mCalcSCFMethod = SCFMethod::None;
+        const std::string cabsName = mCABSSets[mSelectedCABS].name;
+
+        mConsoleOutput.clear();
+        mConsoleBuffer.Clear();
+        mF12Result.reset();
+
+        mCalculationThread.Start([this, cabsName]() {
+            try {
+                const F12::F12Calculation calc = F12::PrepareF12Calculation(mCalcBasisSet, cabsName, *mMolecule,
+                                                                            &mCalculationThread, &mConsoleOutput);
+                F12Result result;
+                result.method = mCalcCorrelationMethod;
+                result.cabs = cabsName;
+                result.E_HF = calc.hfWfn.E_HF;
+                result.E_CABSSingles = calc.E_CABSSingles;
+
+                bool succeeded = !mCalculationThread.ShouldStop();
+                if (succeeded)
+                    switch (mCalcCorrelationMethod) {
+                        case CorrelationMethod::MP2_F12_Fixed:
+                        case CorrelationMethod::MP2_F12_Opt: {
+                            const F12::MP2F12Result mp2 =
+                                    mCalcCorrelationMethod == CorrelationMethod::MP2_F12_Fixed
+                                        ? F12::MP2_F12_Fixed(calc.hfWfn, calc.ints, calc.idxs)
+                                        : F12::MP2_F12_Optimise(calc.hfWfn, calc.ints, calc.idxs);
+                            result.E_MP2 = mp2.E_MP2;
+                            result.E_F12 = mp2.E_F12_MP2;
+                            mConsoleOutput << std::setprecision(12)
+                                    << "E(MP2) = " << mp2.E_MP2 << " hartrees\n"
+                                    << "E(F12 MP2) = " << mp2.E_F12_MP2 << " hartrees\n"
+                                    << "E(Total) = " << result.Total() << " hartrees\n";
+                            break;
+                        }
+                        case CorrelationMethod::CCSD_F12b: {
+                            const F12::CCSD_F12bResult ccsd = F12::CCSD_F12b(calc, &mCalculationThread,
+                                                                             &mConsoleOutput);
+                            succeeded = ccsd.converged;
+                            result.E_MP2 = ccsd.E_MP2;
+                            result.E_CCSD = ccsd.E_CCSD;
+                            result.E_Coupling = ccsd.E_Coupling;
+                            result.E_F12 = ccsd.E_F12;
+                            break;
+                        }
+                        default:
+                            succeeded = false;
+                            break;
+                    }
+
+                if (succeeded && !mCalculationThread.ShouldStop())
+                    mF12Result = result;
+            } catch (const std::exception &e) {
+                mConsoleOutput << "Calculation failed: " << e.what() << '\n';
+            }
+
+            if (mCalculationThread.ShouldStop())
+                mConsoleOutput << "Calculation cancelled\n";
+
+            std::cout << mConsoleBuffer.Snapshot();
             mCalculationThread.MarkAsFinished();
         });
     }
@@ -700,15 +795,27 @@ namespace SCESS::Viewer {
                     std::lock_guard<std::mutex> lock(mQMCGraphMutex);
                     mQMCGraphData.clear();
                 }
+                ImGui::Unindent(100.0);
+
+                ImGui::SeparatorText("Explicitly Correlated (F12)");
+                ImGui::Indent(100.0);
+                if (ImGui::RadioButton("MP2-F12 (fixed amplitudes)", reinterpret_cast<int *>(&mCorrelationMethod), 6)) {
+                    mCorrelationMethod = CorrelationMethod::MP2_F12_Fixed;
+                    mSCFMethod = SCFMethod::RHF;
+                }
+                if (ImGui::RadioButton("MP2-F12 (optimised amplitudes)", reinterpret_cast<int *>(&mCorrelationMethod), 7)) {
+                    mCorrelationMethod = CorrelationMethod::MP2_F12_Opt;
+                    mSCFMethod = SCFMethod::RHF;
+                }
+                if (ImGui::RadioButton("CCSD-F12b", reinterpret_cast<int *>(&mCorrelationMethod), 8)) {
+                    mCorrelationMethod = CorrelationMethod::CCSD_F12b;
+                    mSCFMethod = SCFMethod::RHF;
+                }
                 ImGui::Unindent(200.0);
 
-                ImGui::SeparatorText("Basis Sets");
-                ImGui::Indent(100.0);
-                for (int i = 0; i < mBasisSets.size(); i++)
-                    if (ImGui::RadioButton(mBasisSets[i].c_str(), &mSelectedBasisSet, i))
-                        mInvalidateLastSCF = true;
-
-                ImGui::Unindent(100.0);
+                DrawBasisSetSelection();
+                if (IsF12Method(mCorrelationMethod))
+                    DrawCABSSelection();
 
                 if (mSCFMethod == SCFMethod::KS_DFT) {
                     ImGui::SeparatorText("DFT Molecular Grid");
@@ -719,11 +826,11 @@ namespace SCESS::Viewer {
                     ImGui::Unindent(100.0);
                 }
 
-                if (!mCalculationThread.IsRunning() && mRHFWfn.has_value()) {
+                if (!mCalculationThread.IsRunning() && mRHFWfn.has_value() && !IsF12Method(mCorrelationMethod)) {
                     ImGui::Checkbox("Use Last SCF Result", &mUseLastSCF);
                     ImGui::SameLine();
                 }
-                if (mInvalidateLastSCF) {
+                if (mInvalidateLastSCF && !IsF12Method(mCorrelationMethod)) {
                     ImGui::TextDisabled("SCF will be re-run");
                 }
 
@@ -759,6 +866,68 @@ namespace SCESS::Viewer {
             }
         }
         ImGui::End();
+    }
+
+    void CalculationLayer::DrawBasisSetSelection() {
+        ImGui::SeparatorText("Basis Sets");
+        if (mBasisSets.empty()) {
+            ImGui::TextDisabled("No basis sets were found in Assets/Basis");
+            return;
+        }
+        ImGui::Indent(100.0);
+        //One collapsible group per family; the group holding the selected basis set starts open
+        for (const std::string &family: BasisLibrary::ListFamilies()) {
+            if (family == BasisLibrary::CABS_FAMILY)
+                continue;
+
+            ImGui::SetNextItemOpen(mBasisSets[mSelectedBasisSet].family == family, ImGuiCond_Appearing);
+            if (!ImGui::TreeNode(family.c_str()))
+                continue;
+            for (int i = 0; i < (int) mBasisSets.size(); i++)
+                if (mBasisSets[i].family == family &&
+                    ImGui::RadioButton(mBasisSets[i].name.c_str(), &mSelectedBasisSet, i)) {
+                    mInvalidateLastSCF = true;
+                    SelectDefaultCABS();
+                }
+            ImGui::TreePop();
+        }
+        ImGui::Unindent(100.0);
+    }
+
+    void CalculationLayer::DrawCABSSelection() {
+        ImGui::SeparatorText("Complementary Auxiliary Basis Set (CABS)");
+        if (mCABSSets.empty() || mBasisSets.empty())
+            return;
+        ImGui::Indent(100.0);
+        if (ImGui::BeginCombo("##cabsSelection", mCABSSets[mSelectedCABS].name.c_str())) {
+            std::string lastFamily;
+            for (int i = 0; i < (int) mCABSSets.size(); i++) {
+                const BasisSetInfo &info = mCABSSets[i];
+                if (info.family != lastFamily) {
+                    ImGui::SeparatorText(info.family == BasisLibrary::CABS_FAMILY
+                                             ? "CABS (OptRI)"
+                                             : info.family.c_str());
+                    lastFamily = info.family;
+                }
+                const bool selected = i == mSelectedCABS;
+                if (ImGui::Selectable(info.name.c_str(), selected)) {
+                    mSelectedCABS = i;
+                    mCABSFollowsOBS = false;
+                }
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Match basis set", &mCABSFollowsOBS))
+            SelectDefaultCABS();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Use the OptRI set recommended for the orbital basis set, e.g.\n"
+                              "cc-pVDZ-F12 -> cc-pVDZ-F12-OptRI, cc-pVDZ & aug-cc-pVDZ -> aug-cc-pVDZ-OptRI");
+        if (mCABSFollowsOBS && BasisLibrary::DefaultCABS(mBasisSets[mSelectedBasisSet].name).empty())
+            ImGui::TextDisabled("%s has no matching CABS; choose one above", mBasisSets[mSelectedBasisSet].name.c_str());
+        ImGui::Unindent(100.0);
     }
 
     void CalculationLayer::DrawResultsPanel() {
@@ -813,7 +982,37 @@ namespace SCESS::Viewer {
                         ImGui::Unindent();
                     };
 
-                    switch (mCorrelationMethod) {
+                    auto DrawF12 = [this]() {
+                        if (!mF12Result)return;
+                        const F12Result &r = *mF12Result;
+                        ImGui::SeparatorText(CorrelationMethodToStr(r.method));
+                        ImGui::Indent();
+                        ImGui::BulletText("OBS: %s, CABS: %s", mCalcBasisSet.c_str(), r.cabs.c_str());
+                        ImGui::Text("E(HF) = %.8f hartrees", r.E_HF);
+                        ImGui::Text("E(CABS singles correction) = %.8f hartrees", r.E_CABSSingles);
+                        ImGui::Text("E(MP2) = %.8f hartrees", r.E_MP2);
+                        if (r.method == CorrelationMethod::CCSD_F12b) {
+                            ImGui::Text("E(CCSD, with geminal coupling) = %.8f hartrees", r.E_CCSD);
+                            ImGui::Text("    of which E(coupling) = %.8f hartrees", r.E_Coupling);
+                            ImGui::Text("E(F12 geminals) = %.8f hartrees", r.E_F12);
+                        } else
+                            ImGui::Text("E(F12 MP2) = %.8f hartrees", r.E_F12);
+                        ImGui::Text("E(%s correlation) = %.8f hartrees", CorrelationMethodToStr(r.method),
+                                    r.Correlation());
+                        ImGui::TextColored({0.0, 1.0, 0.0, 1.0},
+                                           "E(Total) = E(HF) + E(CABS singles) + E(correlation) = %.8f hartrees",
+                                           r.Total());
+                        ImGui::Unindent();
+                    };
+
+                    switch (mCalcCorrelationMethod) {
+                        case CorrelationMethod::MP2_F12_Fixed:
+                        case CorrelationMethod::MP2_F12_Opt:
+                        case CorrelationMethod::CCSD_F12b: {
+                            DrawF12();
+                            break;
+                        }
+
                         case CorrelationMethod::CCSD_T: {
                             DrawCCSD_T();
                             DrawMP2();

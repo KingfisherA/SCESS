@@ -23,12 +23,15 @@ SCESS [method] [molecule] [basis set] [additional options]
     F12:
         - MP2_F12_Fixed = MP2 F12 theory with the fixed amplitude approximation 
         - MP2_F12_Opt   = MP2 F12 theory with the optimised amplitudes
+        - CCSD_F12b     = CCSD-F12b with the 3C(FIX) ansatz
 
     QMC + F12:
         - CCSD_QMC_MP2_F12 = CCSD-QMC with first-order T2' operator
 
 Note!
-    F12 theories require the --CABS option to be specified and set to one of the available basis sets.
+    F12 theories use the --CABS option to choose the complementary auxiliary basis set. Without it the
+    OptRI set matching the orbital basis set is used where one exists (e.g. cc-pVDZ-F12 -> cc-pVDZ-F12-OptRI,
+    cc-pVDZ & aug-cc-pVDZ -> aug-cc-pVDZ-OptRI).
 
 --- Available Molecules ---
     - H2  = Hydrogen 
@@ -37,12 +40,13 @@ Note!
     - NH3 = Ammonia
 
 --- Available Basis Sets ---
-    - sto-3g
-    - cc-pVDZ
-    - cc-pVTZ
-    - def2-svp.1
-    - def2-TZVP
-    - 6-21g
+    Pople:     STO-3G, 3-21G, 6-21G, 6-31G, 6-31G(d), 6-31G(d,p), 6-31+G(d), 6-311G(d,p), 6-311+G(d,p)
+    Dunning:   cc-pVDZ, cc-pVTZ, cc-pVQZ, cc-pV5Z, aug-cc-pVDZ, aug-cc-pVTZ, aug-cc-pVQZ
+    Karlsruhe: def2-SVP, def2-SVPD, def2-TZVP, def2-TZVPP, def2-TZVPD, def2-QZVP, def2-QZVPD
+    F12:       cc-pVDZ-F12, cc-pVTZ-F12, cc-pVQZ-F12
+    CABS:      cc-pVDZ-F12-OptRI, cc-pVTZ-F12-OptRI, cc-pVQZ-F12-OptRI,
+               aug-cc-pVDZ-OptRI, aug-cc-pVTZ-OptRI, aug-cc-pVQZ-OptRI
+    Names are case-insensitive and 6-31G* style names are accepted.
 
 --- Additional Options ---
     --CABS = Sets the complementary auxiliary basis set for a F12 theory. Can be set to any of the available basis sets

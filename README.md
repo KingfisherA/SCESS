@@ -23,10 +23,11 @@ viewer to explore the solutions. It is made up of:
         - UHF (with DIIS)
         - Kohn-Sham DFT
     - Correlation methods:
-        - MP2 and MP2-F12
+        - MP2 and MP2-F12 (fixed and optimised amplitudes)
         - Full-CI
         - CCSD (with DIIS)
         - CCSD(T)
+        - CCSD-F12b (3C(FIX) ansatz with the CABS approximation, closed-shell spatial-orbital CCSD)
         - CCQMC and FCIQMC
         - CCSD-QMC[MP2-F12]
 
@@ -103,7 +104,32 @@ can be moved anywhere and started from Finder. The bundle is ad-hoc signed.
 ./build/ViewerSCESS/ViewerSCESS --opengl     # or --metal / --vulkan
 ./build/SCESS/SCESS                          # prints the available methods, molecules and basis sets
 ./build/SCESS/SCESS RHF H2O sto-3g
+./build/SCESS/SCESS CCSD_F12b H2O cc-pVDZ-F12                      # CABS defaults to cc-pVDZ-F12-OptRI
+./build/SCESS/SCESS CCSD_F12b H2O cc-pVDZ --CABS aug-cc-pVDZ-OptRI
 ```
+
+## Basis sets
+The basis sets are Basis Set Exchange JSON files in `Assets/Basis`, one folder per family. The folder is the family
+shown in the viewer and the help text, and the file name (without `.json`) is the basis set name. Names are
+case-insensitive, and `6-31G*`-style names are accepted for the `6-31G(d)`-style files.
+
+| Folder      | Basis sets                                                                 |
+|-------------|----------------------------------------------------------------------------|
+| `Pople`     | STO-3G, 3-21G, 6-21G, 6-31G, 6-31G(d), 6-31G(d,p), 6-31+G(d), 6-311G(d,p), 6-311+G(d,p) |
+| `Dunning`   | cc-pVXZ (X = D, T, Q, 5), aug-cc-pVXZ (X = D, T, Q)                        |
+| `Karlsruhe` | def2-SVP, def2-SVPD, def2-TZVP, def2-TZVPP, def2-TZVPD, def2-QZVP, def2-QZVPD |
+| `F12`       | cc-pVXZ-F12 (X = D, T, Q)                                                  |
+| `CABS`      | cc-pVXZ-F12-OptRI and aug-cc-pVXZ-OptRI (X = D, T, Q)                      |
+
+The new sets cover H–Kr where the family defines them (no ECPs are used). F12 methods need a complementary auxiliary
+basis set: pass `--CABS` to the command line driver, or choose one in the viewer when an F12 method is selected. By
+default the matching OptRI set is used (`cc-pVXZ-F12` → `cc-pVXZ-F12-OptRI`, `cc-pVXZ` and `aug-cc-pVXZ` →
+`aug-cc-pVXZ-OptRI`). Any basis set can be used as the CABS; the OBS is projected out of the union of the two.
+F12 integrals are evaluated with Libint2, so their basis sets are limited to its maximum angular momentum (4 for a
+default build), which excludes cc-pV5Z and the QZ OptRI sets.
+
+To add a basis set, download it from the Basis Set Exchange in JSON format and put it in one of these folders (or a
+new one).
 
 Both programs find the `Assets` folder (basis sets, molecules and periodic table data) in this order:
 
@@ -149,4 +175,5 @@ Installed separately: Boost, fmt, LAPACK/LAPACKE, Libxc, Libint2, GLFW, GLEW, GL
 - The basis set assets do not have individual references, but all of them are derived from the
   [Basis Set Exchange](https://www.basissetexchange.org/).
 - This software is unstable and may crash. The coupled cluster methods in particular can use large
-  amounts of memory. Use at your own risk!
+  amounts of memory. Use at your own risk! (The F12 methods only store the integrals with an occupied
+  pair and the OBS integrals, so H₂O/cc-pVTZ-F12 CCSD-F12b needs about 2.5 GB.)

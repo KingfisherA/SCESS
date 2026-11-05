@@ -15,6 +15,7 @@ Run everything from this directory, because `mp2f12_port.py` and `gamma_scan.py`
 | `cabs_check2.py` | CABS canonicalisation and CABS singles (H₂O; edit `geom` for H₂) | §8.1 |
 | `f12_ints.py` | Gaussian-geminal integrals from PySCF range-separated ERIs; run it directly for self-tests | §8 |
 | `mp2f12_port.py` | MP2-F12 port, Fock trace bug, independent B, optimised energies | §8 |
+| `ccsdf12b_check.py` | CCSD-F12b: PySCF RCCSD with the geminal couplings added to its amplitude update and energy | — |
 | `gamma_scan.py` | Geminal-exponent scan against the MRCC value in `Tests.cpp` | §8.2 |
 | `einsum_trace.cpp` | `Einsum` with a repeated index sums over both positions instead of taking the trace | §8.2 |
 | `selfjoin.cpp` | `DH::Thread::MarkAsFinished()` self-join aborts the process | §2.2 |
@@ -31,6 +32,7 @@ python3 f12_ints.py                 # self-tests, ~1 s
 python3 mp2f12_port.py H2           # ~5 s
 python3 mp2f12_port.py H2O          # ~3.5 min
 python3 gamma_scan.py               # ~30 s
+python3 ccsdf12b_check.py H2        # ~5 s; also H2O (a few minutes)
 
 c++ -std=c++20 -I../../src -I../../Libraries/Eigen einsum_trace.cpp -o einsum_trace && ./einsum_trace
 c++ -std=c++20 -I../../../Dahlia/src -DDH_API= selfjoin.cpp -o selfjoin && ./selfjoin

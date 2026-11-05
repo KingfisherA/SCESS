@@ -13,9 +13,7 @@ namespace SCESS::F12 {
 using namespace Eigen;
 //
 //
-MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
-                              const Integrals::MolInts &mints,
-                              const Integrals::F12::F12Integrals &f12Ints,
+MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn, const F12MOIntegrals &ints,
                               F12Idxs f12Idxs, Tensor2 *F_out, TEITensor *V_out,
                               TEITensor *X_out, TEITensor *B_out) {
   // * We assume that the reference wavefunction is actually a closed shell RHF
@@ -23,14 +21,15 @@ MP2F12Result MP2_F12_Optimise(const HF_Wfn &refWfn,
   //   MO basis set and are in physicists' notation
   // * Spin is integrated out: each spatial pair ij has an opposite-spin
   //   component, and for i < j also a same-spin component
-  const TEITensor &eri = mints.eri;
-  const MP2F12Intermediates ints =
-      EvaluateMP2F12Intermediates(mints, f12Ints, f12Idxs);
-  const Tensor2 &F_ = ints.F;
-  const TEITensor &V_ = ints.V;
-  const TEITensor &X_ = ints.X;
-  const TEITensor &B_ = ints.B;
-  const TEITensor &C_ = ints.C;
+  // <ij|pq> integrals
+  const TEITensor &eri = ints.eri;
+  const MP2F12Intermediates intermediates =
+      EvaluateMP2F12Intermediates(ints, f12Idxs);
+  const Tensor2 &F_ = intermediates.F;
+  const TEITensor &V_ = intermediates.V;
+  const TEITensor &X_ = intermediates.X;
+  const TEITensor &B_ = intermediates.B;
+  const TEITensor &C_ = intermediates.C;
 
   // Calculate conventional MP2 energy
   const double E_MP2 = EvaluateMP2Energy(eri, refWfn.Ep_Alpha, f12Idxs);

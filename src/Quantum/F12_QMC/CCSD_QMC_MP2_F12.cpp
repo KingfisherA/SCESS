@@ -109,21 +109,9 @@ namespace SCESS::F12_QMC {
     //
     //
     double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
-                            const Integrals::MolInts &mints,
-                            const Integrals::F12::F12Integrals &f12Ints,
+                            const F12::F12MOIntegrals &ints,
                             F12::F12Idxs f12Idxs) {
         using namespace QMC::CC;
-        enum {
-            //All OBS orbitals
-            P, Q, R, S
-        };
-        TensorSliceIndices idxs = {
-            //All OBS indices
-            {P, {0, f12Idxs.nOBS}},
-            {Q, {0, f12Idxs.nOBS}},
-            {R, {0, f12Idxs.nOBS}},
-            {S, {0, f12Idxs.nOBS}}
-        };
 
         fmt::print("\n\n--- CCSD Quantum Monte Carlo MP2 F12; CCSD[MP2-F12] ---\n\n");
 
@@ -144,22 +132,19 @@ namespace SCESS::F12_QMC {
         constexpr uint32_t TRUNCATION_LEVEL = 2;
 
 
-        //The integrals from TransformF12Basis are in physicists' notation but the antisymmetrisation expects
-        //chemists' notation
+        //The F12 integrals are in physicists' notation but the antisymmetrisation expects chemists' notation
         TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ConvertPhysicistsToChemists(
-                Slice<Indices<P, Q, R, S> >(idxs, mints.eri)));
+            Integrals::Transforms::ConvertPhysicistsToChemists(ints.eriOBS));
 
-        MatrixXd h = mints.T.block(0, 0, f12Idxs.nOBS, f12Idxs.nOBS) +
-                     mints.V.block(0, 0, f12Idxs.nOBS, f12Idxs.nOBS);
+        MatrixXd h = ints.h.topLeftCorner(f12Idxs.nOBS, f12Idxs.nOBS);
         MatrixXd HSpin = CI::GenerateHCoreSpin(h);
 
         fmt::print("Evaluating F12 T2'(1) Intermediates...\n");
         Tensor2 F_pq;
         TEITensor V_ijxy, C_xyab, X_xywz, B_xywz;
-        F12::MP2_F12_Fixed(refWfn, mints, f12Ints, f12Idxs, &F_pq, &V_ijxy, &C_xyab, &X_xywz, &B_xywz);
+        F12::MP2_F12_Fixed(refWfn, ints, f12Idxs, &F_pq, &V_ijxy, &C_xyab, &X_xywz, &B_xywz);
         TEITensor V_pqxy, h_pqxy;
-        F12::EvaluateAdditionalMP2Intermediates(mints, f12Ints, f12Idxs,
+        F12::EvaluateAdditionalMP2Intermediates(ints, f12Idxs,
                                                 &V_pqxy, &h_pqxy);
         fmt::print(fg(fmt::color::green), "Done!\n");
 

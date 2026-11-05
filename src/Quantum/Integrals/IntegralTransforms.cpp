@@ -1,10 +1,8 @@
 #include<Quantum/Q_PCH.h>
 #include"IntegralTransforms.h"
 //
-#include "IntegralsF12.h"
+#include "Tensor/TensorEinsum.h"
 #include "Tensor/TensorOperations.h"
-#include "Quantum/HF/HF.h"
-#include "Quantum/Basis/BasisSet.h"
 
 //
 //
@@ -20,83 +18,41 @@ namespace SCESS::Integrals::Transforms {
     TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B,
                            const Eigen::MatrixXd &C, const Eigen::MatrixXd &D, bool convertChemToPhys) {
         //Note that the tei tensors are in chemists’ notation
+        //tei(p,q,r,s)= C(mu,p)*C(nu,q)*tei(mu, nu, kap, lam)*C(kap,r)*C(lam, s), done one index at a time
+        enum { Mu, Nu, Kap, Lam, P, Q, R, S };
 
-        //tei(p,q,r,s)= C(mu,p)*C(nu,q)*tei(mu, nu, kap, lam)*C(kap,r)*C(lam, s)
+        //Each quarter transform is evaluated into a new tensor before the previous one is released, so at most two
+        //four-index tensors are alive at once
+        //From (mu nu | kap lam) to (mu nu | kap s)
+        TEITensor transformed = Evaluate(Einsum<Indices<Mu, Nu, Kap, Lam>, Indices<Lam, S>, Indices<Mu, Nu, Kap, S> >(
+            tei, MatrixToTensor(D)));
+        //From (mu nu | kap s) to (mu nu | r s)
+        transformed = Evaluate(Einsum<Indices<Mu, Nu, Kap, S>, Indices<Kap, R>, Indices<Mu, Nu, R, S> >(
+            transformed, MatrixToTensor(C)));
+        //From (mu nu | r s) to (mu q | r s)
+        transformed = Evaluate(Einsum<Indices<Mu, Nu, R, S>, Indices<Nu, Q>, Indices<Mu, Q, R, S> >(
+            transformed, MatrixToTensor(B)));
+        //From (mu q | r s) to (p q | r s)
+        transformed = Evaluate(Einsum<Indices<Mu, Q, R, S>, Indices<Mu, P>, Indices<P, Q, R, S> >(
+            transformed, MatrixToTensor(A)));
 
-        TEITensor transformed1(tei.dimensions());
-        transformed1.setZero();
-        TEITensor transformed2(tei.dimensions());
-        transformed2.setZero();
-        TEITensor transformed3(tei.dimensions());
-        transformed3.setZero();
-        TEITensor transformed4(tei.dimensions());
-        transformed4.setZero();
+        if (convertChemToPhys)
+            //p q r s -> p r q s
+            transformed = Evaluate(Einsum<Indices<P, Q, R, S>, Indices<P, R, Q, S> >(transformed));
 
-        for (Index s = 0; s < tei.dimension(3); ++s) {
-            for (Index mu = 0; mu < tei.dimension(0); ++mu)
-                for (Index nu = 0; nu < tei.dimension(1); ++nu)
-                    for (Index kap = 0; kap < tei.dimension(2); ++kap)
-                        for (Index lam = 0; lam < tei.dimension(3); ++lam)
-                            //From <mu nu | kap lam> to <mu nu | kap s>
-                            //Einsum("mnkl,ls->mnks")
-                            transformed1(mu, nu, kap, s) += D(lam, s) * tei(mu, nu, kap, lam);
-
-            for (Index r = 0; r < tei.dimension(2); ++r) {
-                for (Index mu = 0; mu < tei.dimension(0); ++mu)
-                    for (Index nu = 0; nu < tei.dimension(1); ++nu)
-                        for (Index kap = 0; kap < tei.dimension(2); ++kap)
-                            //From <mu nu | kap s> to <mu nu | r s>
-                            //Einsum("mnks,kr->mnrs")
-                            transformed2(mu, nu, r, s) += C(kap, r) * transformed1(mu, nu, kap, s);
-
-                for (Index q = 0; q < tei.dimension(1); ++q) {
-                    for (Index mu = 0; mu < tei.dimension(0); ++mu)
-                        for (Index nu = 0; nu < tei.dimension(1); ++nu)
-                            //From <mu nu | r s> to <mu q | r s>
-                            //Einsum("mnrs,nq->mqrs")
-                            transformed3(mu, q, r, s) += B(nu, q) * transformed2(mu, nu, r, s);
-
-                    for (Index p = 0; p < tei.dimension(0); ++p) {
-                        for (Index mu = 0; mu < tei.dimension(0); ++mu)
-                            //From <mu q | r s> to <p q | r s>
-                            //Einsum("mqrs,mp->pqrs")
-                            transformed4(p, q, r, s) += A(mu, p) * transformed3(mu, q, r, s);
-                    }
-                }
-            }
-        }
-
-        if (convertChemToPhys) {
-            transformed3 = transformed4;
-            //mu, nu, kap, lam -> mu, kap, nu, lam
-            transformed4 = transformed3.Shuffle4({0, 2, 1, 3});
-        }
-
-        return transformed4;
+        return transformed;
     }
     //
-    void TransformF12Basis(const F12BasisSet &basisSet,
-                           const Eigen::MatrixXd &HF_Density,
-                           const Eigen::MatrixXd &C_HF,
-                           MolInts &mints,
-                           F12::F12Integrals &f12Ints,
-                           bool convertChemToPhys,
-                           Eigen::MatrixXd *fockOut) {
-        using namespace Eigen;
-
-        const auto nOBS = (Index) basisSet.GetNoHFFuncs();
-        const auto nCABS = (Index) basisSet.GetNoCABSFuncs();
-        const auto N = (Index) basisSet.GetNumOfFuncs();
-
-        assert(N == mints.S.rows());
-
-        MatrixXd &S = mints.S;
-        MatrixXd &T = mints.T;
-        MatrixXd &V = mints.V;
-        TEITensor &eri = mints.eri;
+    MatrixXd BuildCABSCoefficients(const MatrixXd &S,
+                                   const MatrixXd &F_AO,
+                                   const MatrixXd &C_HF,
+                                   const Index nOBS,
+                                   const Index nCABS) {
+        const Index N = nOBS + nCABS;
+        assert(N == S.rows() && N == F_AO.rows());
 
         //Inverse of HF block of matrix
-        MatrixXd SInv = S.block(0, 0, nOBS, nOBS).inverse();
+        const MatrixXd SInv = S.block(0, 0, nOBS, nOBS).inverse();
 
         //Projector Matrix
         MatrixXd P = MatrixXd::Zero(N, N);
@@ -116,7 +72,7 @@ namespace SCESS::Integrals::Transforms {
 
         //Canonical orthogonalisation with normalisation. The OBS directions have been projected out so the
         //projected overlap has (at least) nOBS null eigenvalues; only the remaining directions span the CABS
-        auto S_tmp = P.transpose() * S * P;
+        const MatrixXd S_tmp = P.transpose() * S * P;
         SelfAdjointEigenSolver<MatrixXd> orthogonalEig(S_tmp);
         MatrixXd U = orthogonalEig.eigenvectors().real();
         VectorXd s = orthogonalEig.eigenvalues().real();
@@ -133,27 +89,10 @@ namespace SCESS::Integrals::Transforms {
         for (Index k = 0; k < (Index) cabsDirections.size(); ++k)
             X.col(k) = U.col(cabsDirections[k]) / std::sqrt(s(cabsDirections[k]));
 
-        MatrixXd P_Prime = P * X;
+        const MatrixXd P_Prime = P * X;
 
-        //Fock matrix built in CABS virtual orbitals
-        MatrixXd F; {
-            MatrixXd G = MatrixXd::Zero(N, N);
-            //HF Density matrix
-            const MatrixXd &D = HF_Density;
-            for (Index i = 0; i < N; i++)
-                for (Index j = 0; j < N; j++)
-                    for (Index mu = 0; mu < nOBS; mu++)
-                        for (Index nu = 0; nu < nOBS; nu++) {
-                            double J = eri(i, j, mu, nu);
-                            double K = eri(i, nu, mu, j);
-
-                            G(i, j) += D(mu, nu) * (2.0 * J - K);
-                        }
-
-            F = T + V + G;
-        }
-
-        MatrixXd F_Prime = P_Prime.transpose() * F * P_Prime;
+        //Canonicalise the CABS with the Fock operator
+        const MatrixXd F_Prime = P_Prime.transpose() * F_AO * P_Prime;
         SelfAdjointEigenSolver<MatrixXd> fockEig(F_Prime);
 
         //Matrix which transforms both the OBS and CABS into the projected canonicalised basis set
@@ -163,30 +102,7 @@ namespace SCESS::Integrals::Transforms {
         MatrixXd Q = MatrixXd::Zero(N, N);
         Q.block(0, 0, nOBS, nOBS) = C_HF;
         Q.block(0, nOBS, N, (Index) cabsDirections.size()) = P_Prime * fockEig.eigenvectors().real();
-
-        auto TransformF12Tensor = [&Q, convertChemToPhys](TEITensor &tei) {
-            tei = TransformTEI(tei, Q, convertChemToPhys);
-        };
-
-        auto TransformF12Matrix = [&Q](MatrixXd &m) {
-            m = Q.transpose() * m * Q;
-        };
-
-        //Transform the configuration integrals
-        TransformF12Matrix(F);
-        TransformF12Matrix(S);
-        TransformF12Matrix(T);
-        TransformF12Matrix(V);
-        TransformF12Tensor(eri);
-
-        //Transform the F12 integrals
-        TransformF12Tensor(f12Ints.f12);
-        TransformF12Tensor(f12Ints.f12Sq);
-        TransformF12Tensor(f12Ints.f12DelSq);
-        TransformF12Tensor(f12Ints.f12Repulsion);
-
-        if (fockOut)
-            *fockOut = std::move(F);
+        return Q;
     }
     //
     TEITensor AntisymmetriseTEI(const TEITensor &tei) {

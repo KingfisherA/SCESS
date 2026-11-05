@@ -52,9 +52,9 @@ namespace SCESS::F12_QMC {
                                         uint32_t nBetaOrbitals);
     //
     //
+    //ints must include F12MOIntegrals::eri_oxpq (PrepareF12Calculation with buildQMCIntegrals)
     double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
-                            const Integrals::MolInts &mints,
-                            const Integrals::F12::F12Integrals &f12Ints,
+                            const F12::F12MOIntegrals &ints,
                             F12::F12Idxs f12Idxs);
     //
     //

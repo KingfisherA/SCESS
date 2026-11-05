@@ -11,6 +11,7 @@
 #include "Quantum/CI/CI.h"
 #include "Quantum/DFT/DFT.h"
 #include "Quantum/CC/CC.h"
+#include "Quantum/F12/F12.h"
 #include "Viewer/Isosurfaces/Isosurfaces.h"
 //
 #include <atomic>
@@ -57,8 +58,17 @@ namespace SCESS::Viewer {
         CCSD_T = 2,
         FCI = 3,
         FCIQMC = 4,
-        CCQMC = 5
+        CCQMC = 5,
+        //Explicitly correlated (F12) methods; these use their own OBS + CABS integrals and closed-shell reference
+        MP2_F12_Fixed = 6,
+        MP2_F12_Opt = 7,
+        CCSD_F12b = 8
     };
+    //
+    inline bool IsF12Method(CorrelationMethod method) {
+        return method == CorrelationMethod::MP2_F12_Fixed || method == CorrelationMethod::MP2_F12_Opt ||
+               method == CorrelationMethod::CCSD_F12b;
+    }
     //
     enum class DFTGridRes : int {
         Low = 0,
@@ -87,6 +97,9 @@ namespace SCESS::Viewer {
             case CorrelationMethod::FCI: return "FCI";
             case CorrelationMethod::CCQMC: return "CC";
             case CorrelationMethod::FCIQMC: return "FCI";
+            case CorrelationMethod::MP2_F12_Fixed: return "MP2-F12 (fixed amplitudes)";
+            case CorrelationMethod::MP2_F12_Opt: return "MP2-F12 (optimised amplitudes)";
+            case CorrelationMethod::CCSD_F12b: return "CCSD-F12b";
         }
     }
     //
@@ -195,10 +208,11 @@ namespace SCESS::Viewer {
 
         inline bool HaveCorrelationResult() {
             return mCCSDWfn.has_value() || mCCSD_TWfn.has_value() || mFCIWfn.has_value()
-                   || mMP2Energy.has_value() || mQMCEnergy != 0.0;
+                   || mMP2Energy.has_value() || mQMCEnergy != 0.0 || mF12Result.has_value();
         }
 
         void ExecuteCalculation();
+        void ExecuteF12Calculation();
         void StopCalculation();
         //void DrawProgressScreen();
         void OrderOrbitals();
@@ -207,9 +221,17 @@ namespace SCESS::Viewer {
         void DrawMolSelectPanel();
         void DrawConsolePanel();
         void DrawQMCGraph();
+        void DrawBasisSetSelection();
+        void DrawCABSSelection();
+        //Selects the default CABS of the selected orbital basis set, if it has one
+        void SelectDefaultCABS();
 
-        std::vector<std::string> mBasisSets;
+        //Orbital basis sets (every family except CABS) and the sets offered as a CABS (CABS family first)
+        std::vector<BasisSetInfo> mBasisSets, mCABSSets;
         int mSelectedBasisSet = 0;
+        int mSelectedCABS = 0;
+        //Until the user picks a CABS, the CABS follows the default of the selected orbital basis set
+        bool mCABSFollowsOBS = true;
 
         int mSelectedMolecule = -1;
         uRef<Molecule> mMolecule;
@@ -261,6 +283,26 @@ namespace SCESS::Viewer {
         std::optional<double> mMP2Energy;
 
         std::optional<CI::CI_Wfn> mFCIWfn;
+
+        //Result of the last F12 calculation
+        struct F12Result {
+            CorrelationMethod method = CorrelationMethod::None;
+            std::string cabs;
+            double E_HF = 0.0;
+            double E_CABSSingles = 0.0;
+            double E_MP2 = 0.0;
+            //MP2-F12 geminal correction or, for CCSD-F12b, the geminal energy
+            double E_F12 = 0.0;
+            //CCSD-F12b only
+            double E_CCSD = 0.0;
+            double E_Coupling = 0.0;
+
+            [[nodiscard]] double Correlation() const {
+                return (method == CorrelationMethod::CCSD_F12b ? E_CCSD : E_MP2) + E_F12;
+            }
+            [[nodiscard]] double Total() const { return E_HF + E_CABSSingles + Correlation(); }
+        };
+        std::optional<F12Result> mF12Result;
 
         std::string mCalcBasisSet;
 

@@ -10,6 +10,7 @@ add_library(QuantumSCESS SHARED
   "${SCESS_SRC_DIR}/Quantum/CC/CCSD-DIIS.cpp"
   "${SCESS_SRC_DIR}/Quantum/CC/CCSD.cpp"
   "${SCESS_SRC_DIR}/Quantum/CC/CCSD_T.cpp"
+  "${SCESS_SRC_DIR}/Quantum/CC/RCCSD.cpp"
   "${SCESS_SRC_DIR}/Quantum/CC/CC.h"
   "${SCESS_SRC_DIR}/Quantum/CI/CI.h"
   "${SCESS_SRC_DIR}/Quantum/DFT/DFT.cpp"
@@ -18,6 +19,8 @@ add_library(QuantumSCESS SHARED
   "${SCESS_SRC_DIR}/Quantum/DFT/XC.h"
   "${SCESS_SRC_DIR}/Quantum/F12/F12.h"
   "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12_Optimise.cpp"
+  "${SCESS_SRC_DIR}/Quantum/F12/CCSD_F12b.cpp"
+  "${SCESS_SRC_DIR}/Quantum/F12/F12Setup.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/HF.h"
   "${SCESS_SRC_DIR}/Quantum/HF/RHF.cpp"
   "${SCESS_SRC_DIR}/Quantum/HF/UHF.cpp"
@@ -29,6 +32,7 @@ add_library(QuantumSCESS SHARED
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/MolGrid.h"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Grid/Quadrature.h"
+  "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralBlocks.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/IntegralImporter.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.cpp"
   "${SCESS_SRC_DIR}/Quantum/Integrals/Integrals.h"
@@ -45,6 +49,7 @@ add_library(QuantumSCESS SHARED
   "${SCESS_SRC_DIR}/Quantum/F12/F12SinglesCorrection.cpp"
   "${SCESS_SRC_DIR}/Tensor/TensorOperations.h"
   "${SCESS_SRC_DIR}/Tensor/TensorEinsum.h"
+  "${SCESS_SRC_DIR}/Tensor/TensorParallel.h"
   "${SCESS_SRC_DIR}/Tensor/TensorSlice.h"
   "${SCESS_SRC_DIR}/Quantum/F12/MP2_F12_Fixed.cpp"
   "${SCESS_SRC_DIR}/Quantum/F12_QMC/F12_QMC.h"
@@ -65,6 +70,9 @@ target_compile_definitions(QuantumSCESS
   PUBLIC
     # Fallback assets location when no settings.json or bundled Assets folder is found
     SCESS_SOURCE_ASSETS_DIR="${SCESS_ASSETS_DIR}"
+    # Enables Eigen's ThreadPoolDevice for the multithreaded tensor contractions (Tensor/TensorParallel.h). Must be
+    # defined identically in every translation unit which includes the Eigen Tensor module
+    EIGEN_USE_THREADS
   PRIVATE
     EIGEN_USE_BLAS
     EIGEN_USE_LAPACKE

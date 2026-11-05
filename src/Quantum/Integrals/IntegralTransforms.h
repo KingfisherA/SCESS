@@ -38,22 +38,21 @@ namespace SCESS::Integrals::Transforms {
         bool convertChemToPhys = false);
     //
     /**
-     * Transforms all integrals (f12 and eri) in the OBS into MO integrals and:
-     * - Project out linear dependence of the HF and CABS basis sets
-     * - Makes CABS canonicalise the Fock operator
-     * - Converts from chemists to physicists' notation
-     * These are the requirements for the CABS to be used in orbital-sensitive CCSD-F12
-     * This function also calculates the CABS single basis set error correction energy if the
-     * parameter passed to cabsSingleCorrection is not nullptr.
-     * @param C_HF The Hartree Fock Wavefunction coefficients
+     * Coefficients of the canonical OBS + CABS molecular orbitals in the AO basis of the OBS + CABS functions:
+     * - The first nOBS columns are the Hartree-Fock orbitals (which only have OBS components)
+     * - The OBS is projected out of the OBS + CABS functions and the remainder orthonormalised, giving the CABS
+     * - The CABS is then canonicalised with the Fock operator
+     * These are the requirements for the CABS to be used in orbital-sensitive F12 methods. Should the CABS functions
+     * be linearly dependent on the OBS the redundant CABS orbitals are left as zero columns.
+     * @param S AO overlap over the OBS + CABS functions (the OBS functions first)
+     * @param F_AO AO Fock matrix over the OBS + CABS functions built from the OBS reference density
+     * @param C_HF The Hartree Fock Wavefunction coefficients (nOBS x nOBS)
      */
-    void TransformF12Basis(const F12BasisSet &basisSet,
-                           const Eigen::MatrixXd &HF_Density,
-                           const Eigen::MatrixXd &C_HF,
-                           MolInts &mints,
-                           F12::F12Integrals &f12Ints,
-                           bool convertChemToPhys = true,
-                           Eigen::MatrixXd *fockOut = nullptr);
+    Eigen::MatrixXd BuildCABSCoefficients(const Eigen::MatrixXd &S,
+                                          const Eigen::MatrixXd &F_AO,
+                                          const Eigen::MatrixXd &C_HF,
+                                          Eigen::Index nOBS,
+                                          Eigen::Index nCABS);
     //
     /**
      * Produce a tensor with < i j || k l>=<i j | k l> - <i j | l k>

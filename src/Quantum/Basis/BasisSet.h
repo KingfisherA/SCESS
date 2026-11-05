@@ -1,8 +1,10 @@
 #pragma once
+#include<filesystem>
 #include<string>
 #include<vector>
 #include<unordered_set>
 #include<libint2.hpp>
+#include<nlohmann/json.hpp>
 //
 #include "CGF.h"
 
@@ -15,6 +17,46 @@ namespace SCESS {
 namespace SCESS {
     //
     //
+    //A basis set file in Assets/Basis. Basis sets are organised into one folder per family; the family is the name of
+    //the folder and the basis set name is the file name without the .json extension.
+    struct BasisSetInfo {
+        std::string name;
+        std::string family;
+        std::filesystem::path path;
+    };
+    //
+    //The basis sets available in Assets/Basis (Basis Set Exchange JSON files)
+    class BasisLibrary {
+    public:
+        //Family of the complementary auxiliary basis sets, which are not used as orbital basis sets
+        static constexpr const char *CABS_FAMILY = "CABS";
+
+        //Every basis set, ordered by family (Pople, Dunning, Karlsruhe, F12, CABS, then any other) and then name
+        static const std::vector<BasisSetInfo> &List();
+        //The families in display order
+        static std::vector<std::string> ListFamilies();
+        //Case-insensitive lookup which also accepts the 6-31G* style names of the 6-31G(d) style files.
+        //Returns nullptr if there is no such basis set.
+        static const BasisSetInfo *Find(const std::string &name);
+        //As Find() but throws if the basis set does not exist
+        static const BasisSetInfo &Get(const std::string &name);
+        //The recommended CABS for an orbital basis set (e.g. cc-pVDZ-F12 -> cc-pVDZ-F12-OptRI) or an empty string
+        static std::string DefaultCABS(const std::string &obsName);
+
+        static bool IsCABS(const BasisSetInfo &info) { return info.family == CABS_FAMILY; }
+
+        //Loads the parsed JSON file of a basis set
+        static nlohmann::json LoadJSON(const std::string &name);
+        //Builds the libint2 shells of a basis set for the given atoms. Shells use solid harmonics unless the basis set
+        //file marks them as Cartesian (gto_cartesian). Throws if an atom has no basis functions or a shell exceeds the
+        //maximum angular momentum libint2 was built with.
+        static std::vector<libint2::Shell> LoadShells(const std::string &name, const std::vector<libint2::Atom> &atoms);
+        static libint2::BasisSet LoadLibIntBasisSet(const std::string &name, const std::vector<libint2::Atom> &atoms) {
+            return libint2::BasisSet(LoadShells(name, atoms));
+        }
+    };
+    //
+    //
     class BasisSet {
     public:
         BasisSet() = default;
@@ -25,7 +67,8 @@ namespace SCESS {
         BasisSet &operator=(const BasisSet &) = default;
         BasisSet &operator=(BasisSet &&) = default;
 
-        static std::unordered_set<std::string> ListBasisSets();
+        //Names of every basis set in Assets/Basis, see BasisLibrary for families and ordering
+        static std::vector<std::string> ListBasisSets();
 
         void LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol);
         void AddCGF(const CGF &cgf);

@@ -51,6 +51,11 @@ namespace SCESS::Driver {
                           const char *cabsName,
                           const Molecule &mol,
                           const char *moleculeName = nullptr);
+    //CCSD-F12b (3C(FIX) ansatz, CABS approximation) driver
+    void CCSD_F12b(const char *obsName,
+                   const char *cabsName,
+                   const Molecule &mol,
+                   const char *moleculeName = nullptr);
 
 
     // -- F12 QMC theories --

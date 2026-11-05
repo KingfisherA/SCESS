@@ -32,68 +32,6 @@ namespace SCESS::Integrals {
     // Operator parameters must be passed with their concrete type (e.g. point charges or geminal
     // contraction): libint2 rejects type-erased parameters with std::bad_cast.
     template<typename... Params>
-    static TEITensor EvaluateTwoElectronTensor(const libint2::BasisSet &basisSet, Operator op,
-                                               const Params &... params) {
-        TEITensor teiTensor(
-            (Eigen::Index) basisSet.nbf(),
-            (Eigen::Index) basisSet.nbf(),
-            (Eigen::Index) basisSet.nbf(),
-            (Eigen::Index) basisSet.nbf());
-        // Screened shell quartets are skipped below so must already be zero
-        teiTensor.setZero();
-
-        Engine integralEngine(op,
-                              basisSet.max_nprim(),
-                              static_cast<int>(basisSet.max_l()),
-                              0,
-                              std::numeric_limits<double>::epsilon(),
-                              params...);
-
-        const auto &shell2bf = basisSet.shell2bf();
-        const auto &results = integralEngine.results();
-
-        for (Eigen::Index s1 = 0; s1 < basisSet.size(); s1++) {
-            uint32_t n1 = basisSet[s1].size();
-            uint32_t bf1 = shell2bf[s1];
-            for (Eigen::Index s2 = 0; s2 < basisSet.size(); s2++) {
-                uint32_t n2 = basisSet[s2].size();
-                uint32_t bf2 = shell2bf[s2];
-                for (Eigen::Index s3 = 0; s3 < basisSet.size(); s3++) {
-                    uint32_t n3 = basisSet[s3].size();
-                    uint32_t bf3 = shell2bf[s3];
-                    for (Eigen::Index s4 = 0; s4 < basisSet.size(); s4++) {
-                        uint32_t n4 = basisSet[s4].size();
-                        uint32_t bf4 = shell2bf[s4];
-
-                        integralEngine.compute(
-                            basisSet[s1], basisSet[s2], basisSet[s3], basisSet[s4]);
-                        const double *integrals = results[0];
-                        if (integrals == nullptr)
-                            continue;
-
-                        for (uint32_t f1 = 0, f1234 = 0; f1 < n1; f1++) {
-                            uint32_t i = f1 + bf1;
-                            for (uint32_t f2 = 0; f2 < n2; f2++) {
-                                uint32_t j = f2 + bf2;
-                                for (uint32_t f3 = 0; f3 < n3; f3++) {
-                                    uint32_t k = f3 + bf3;
-                                    for (uint32_t f4 = 0; f4 < n4; f4++, ++f1234) {
-                                        uint32_t l = f4 + bf4;
-                                        teiTensor(i, j, k, l) =
-                                                integrals[f1234];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return teiTensor;
-    }
-    //
-    template<typename... Params>
     static TEITensor EvaluateTwoElectronTensor(const F12BasisSet &basisSet, Operator op,
                                                const Params &... params) {
         TEITensor teiTensor(
@@ -269,7 +207,11 @@ namespace SCESS::Integrals {
     }
     //
     TEITensor LibInt::TwoElectronRepulsionTensor(const libint2::BasisSet &basisSet) {
-        return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
+        std::vector<Shell> shells;
+        shells.reserve(basisSet.size());
+        for (size_t s = 0; s < basisSet.size(); s++)
+            shells.push_back(basisSet[s]);
+        return F12::AOTwoElectronTensor(shells, shells.size(), F12::Operator2e::Coulomb);
     }
     //
 #pragma endregion
@@ -311,18 +253,18 @@ namespace SCESS::Integrals {
     }
     //
     TEITensor F12::TwoElectronRepulsionTensor(const F12BasisSet &basisSet) {
-        return EvaluateTwoElectronTensor(basisSet, Operator::coulomb);
+        return AOTwoElectronTensor(basisSet.GetShells(), basisSet.GetNumShells(), Operator2e::Coulomb);
     }
     //
     F12::F12Integrals F12::EvaluateF12Integrals(const F12BasisSet &basisSet, double gamma) {
-        LibIntCGF slaterGeminal = CalculateSlaterContraction(gamma);
-        LibIntCGF slaterGeminalSquared = CalculateSlaterSquaredContraction(slaterGeminal);
+        const auto &shells = basisSet.GetShells();
+        const size_t nShells = basisSet.GetNumShells();
 
         F12Integrals mints;
-        mints.f12 = TwoElectronCGFF12Tensor(basisSet, slaterGeminal);
-        mints.f12Sq = TwoElectronCGFF12Tensor(basisSet, slaterGeminalSquared);
-        mints.f12DelSq = TwoElectronCGFDelF12SquaredTensor(basisSet, slaterGeminal);
-        mints.f12Repulsion = TwoElectronCGFF12RepulsionTensor(basisSet, slaterGeminal);
+        mints.f12 = AOTwoElectronTensor(shells, nShells, Operator2e::F12, gamma);
+        mints.f12Sq = AOTwoElectronTensor(shells, nShells, Operator2e::F12Squared, gamma);
+        mints.f12DelSq = AOTwoElectronTensor(shells, nShells, Operator2e::DelF12Squared, gamma);
+        mints.f12Repulsion = AOTwoElectronTensor(shells, nShells, Operator2e::F12Coulomb, gamma);
 
         return mints;
     }

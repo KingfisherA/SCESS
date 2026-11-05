@@ -2,10 +2,6 @@
 #include <string>
 
 #include "Resources/AssetFolder.h"
-// libint2 reads basis sets from DATADIR; its CMake target defines it, so replace it with Assets/Basis
-#undef DATADIR
-#define DATADIR                                                                \
-  SCESS::Res::AssetsFolder::Get().GetResourcePath("Basis").string()
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <libint2/basis.h>
@@ -58,6 +54,14 @@ constexpr double He_FCI = -2.8929575257;
 constexpr double H2_CABS_SINGLES = -0.0099723;
 constexpr double H2_MP2_F12_FIXED = -0.022091052;
 constexpr double H2_MP2_F12_OPT = -0.021554970;
+// H2 / STO-3G CCSD-F12b with the cc-pVDZ CABS. From PySCF's RCCSD with the
+// geminal couplings added in Scripts/verification/ccsdf12b_check.py
+constexpr double H2_CCSD_F12B_CCSD = -0.0158468216;
+constexpr double H2_CCSD_F12B_COUPLING = 0.0007516386;
+// H2O / STO-3G CCSD-F12b with the cc-pVDZ CABS, also from ccsdf12b_check.py
+constexpr double H2O_CCSD_F12B_CCSD = -0.0431035721;
+constexpr double H2O_CCSD_F12B_COUPLING = 0.0009008077;
+constexpr double H2O_CCSD_F12B_F12 = -0.3009608300;
 } // namespace Reference
 //
 static int gFailures = 0;
@@ -79,7 +83,8 @@ static bool CheckEnergy(const char *label, double value, double reference,
 void ProfileMolInts() {
   Molecule hydrogen = Molecule::GenerateWaterMolecule();
 
-  libint2::BasisSet basisSet("sto-3g", hydrogen.GetAtomsLibInt());
+  libint2::BasisSet basisSet =
+      BasisLibrary::LoadLibIntBasisSet("sto-3g", hydrogen.GetAtomsLibInt());
 
   libint2::Engine intEngine =
       libint2::Engine(libint2::Operator::coulomb, basisSet.max_nprim(),
@@ -314,19 +319,11 @@ void TestF12Integrals() {
   constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
   Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
 
-  auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
-
-  F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-  Integrals::MolInts configInts =
-      Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-  Integrals::F12::F12Integrals f12Ints =
-      Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-
-  HF::HF_Wfn uhfWfn = HF::UHF(
-      Integrals::F12::ExtractHFIntegrals(configInts, 0, 2), 1, 1,
-      hydrogenMolecule.CalculateVnn(), std::numeric_limits<double>::epsilon());
-  Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
-                                           uhfWfn.C_Alpha, configInts, f12Ints);
+  const F12::F12Calculation calc = F12::PrepareF12Calculation(
+      BASIS_SET_NAME, CABS_BASIS_SET_NAME, hydrogenMolecule, nullptr, nullptr,
+      true);
+  const F12BasisSet &f12BasisSet = calc.basisSet;
+  const F12::F12MOIntegrals &ints = calc.ints;
 
   std::cout << std::setprecision(15);
 
@@ -340,85 +337,61 @@ void TestF12Integrals() {
   std::cout << "  * Indicies = [" << f12BasisSet.GetCABSIndices().first
             << " ... " << f12BasisSet.GetCABSIndices().second << "]\n";
 
-  std::cout << "--All are in physicists' notation--\n";
+  std::cout << "--All are in physicists' notation, i, j occupied and p, q over "
+               "the OBS + CABS--\n";
 
   std::cout << "------------------------------------\n";
-  std::cout << "      <ij | 1/r12 | kl>\n";
+  std::cout << "      <pq | 1/r12 | rs> (OBS)\n";
   std::cout << "------------------------------------\n";
-  Utilities::PrintTensor(configInts.eri);
-
-  std::cout << "\n\n------------------------------------\n";
-  std::cout << "      <ij | f(12) | kl>\n";
-  std::cout << "------------------------------------\n";
-  Utilities::PrintTensor(f12Ints.f12);
+  Utilities::PrintTensor(ints.eriOBS);
 
   std::cout << "\n\n------------------------------------\n";
-  std::cout << "      <ij | f(12)^2 | kl>\n";
+  std::cout << "      <ij | 1/r12 | pq>\n";
   std::cout << "------------------------------------\n";
-  Utilities::PrintTensor(f12Ints.f12Sq);
+  Utilities::PrintTensor(ints.eri);
 
   std::cout << "\n\n------------------------------------\n";
-  std::cout << "      <ij | |Del 1/r12|^2 | kl>\n";
+  std::cout << "      <ij | f(12) | pq>\n";
   std::cout << "------------------------------------\n";
-  Utilities::PrintTensor(f12Ints.f12DelSq);
+  Utilities::PrintTensor(ints.f12);
+
+  std::cout << "\n\n------------------------------------\n";
+  std::cout << "      <ij | f(12)^2 | pq>\n";
+  std::cout << "------------------------------------\n";
+  Utilities::PrintTensor(ints.f12Sq);
+
+  std::cout << "\n\n------------------------------------\n";
+  std::cout << "      <ij | |Del f(12)|^2 | pq>\n";
+  std::cout << "------------------------------------\n";
+  Utilities::PrintTensor(ints.f12DelSq);
 
   std::cout << "\n\n\n------------------------------------\n";
-  std::cout << "      <ij | f(12)/r12 | kl>\n";
+  std::cout << "      <ij | f(12)/r12 | pq>\n";
   std::cout << "------------------------------------\n";
-  Utilities::PrintTensor(f12Ints.f12Repulsion);
+  Utilities::PrintTensor(ints.f12Repulsion);
 
   std::cout << "Press any key to continue..\n";
   std::cin.get();
 }
 //
 void TestMP2_F12_Optimise() {
-  constexpr const char *BASIS_SET_NAME = "sto-3g";
-  constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
   Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
-
-  auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
-
-  F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-  Integrals::MolInts configInts =
-      Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-  Integrals::F12::F12Integrals f12Ints =
-      Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-
-  HF::HF_Wfn uhfWfn = HF::UHF(
-      Integrals::F12::ExtractHFIntegrals(configInts, 0, 2), 1, 1,
-      hydrogenMolecule.CalculateVnn(), std::numeric_limits<double>::epsilon());
-
-  F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-  Eigen::MatrixXd F;
-  Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
-                                           uhfWfn.C_Alpha, configInts, f12Ints,
-                                           true, &F);
-
-  // Need to correct the reference energy with a perturbation by singly exciting
-  // into the CABS virtuals. Correct the fact that there is a large basis set
-  // error in the non-correlated HF energy
-  double ECABSSingles =
-      F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
-
-  // configInts.eri = eriImported;
-  auto f12Result = F12::MP2_F12_Optimise(uhfWfn, configInts, f12Ints, f12Idxs);
+  const F12::F12Calculation calc =
+      F12::PrepareF12Calculation("sto-3g", "cc-pVDZ", hydrogenMolecule);
+  auto f12Result = F12::MP2_F12_Optimise(calc.hfWfn, calc.ints, calc.idxs);
 
   std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
   std::cout << " --- Geminal amplitudes are optimised --- \n";
   std::cout << "  Molecule = Hydrogen (H2)\n";
-  std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
-  std::cout << "  E(CABS singles correction) = " << ECABSSingles
+  std::cout << "  E(HF) = " << calc.hfWfn.E_HF << " hartrees\n";
+  std::cout << "  E(CABS singles correction) = " << calc.E_CABSSingles
             << " hartrees\n";
   std::cout << "  E(MP2) = " << f12Result.E_MP2 << " hartrees\n";
   std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
   std::cout << "  E(Total) = "
-            << uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
+            << calc.hfWfn.E_HF + calc.E_CABSSingles + f12Result.E_MP2 +
                    f12Result.E_F12_MP2
             << " hartrees\n\n";
-  CheckEnergy("E(HF)", uhfWfn.E_HF, Reference::H2_RHF, 1e-8);
-  CheckEnergy("E(CABS singles)", ECABSSingles, Reference::H2_CABS_SINGLES,
-              1e-7);
   CheckEnergy("E(MP2)", f12Result.E_MP2, Reference::H2_MP2, 1e-8);
   CheckEnergy("E(F12 MP2, optimised)", f12Result.E_F12_MP2,
               Reference::H2_MP2_F12_OPT, 1e-8);
@@ -428,70 +401,28 @@ void TestMP2_F12_Optimise() {
 }
 //
 void TestMP2_F12_Fixed() {
-  constexpr const char *BASIS_SET_NAME = "sto-3g";
-  constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
   Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
-
-  // auto &hAtom = hydrogenMolecule.GetAtoms().back();
-  // auto hPos = hAtom.GetPos();
-  // hPos.x() = 1000.0;
-  // hAtom.SetPos(hPos);
-
-  auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
-
-  F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-
-  std::cout << "Evaluating overlap, kinetic, nuclear & eri integrals...\n";
-  Integrals::MolInts configInts =
-      Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-  std::cout << "Done!\n";
-
-  std::cout << "Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n";
-  Integrals::F12::F12Integrals f12Ints =
-      Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-  std::cout << "Done!\n";
-
-  std::cout << "Obtaining UHF reference...\n";
-  HF::HF_Wfn uhfWfn = HF::UHF(Integrals::F12::ExtractHFIntegrals(
-                                  configInts, 0, f12BasisSet.GetNoHFFuncs()),
-                              hydrogenMolecule.GetNoElectrons() / 2,
-                              hydrogenMolecule.GetNoElectrons() / 2,
-                              hydrogenMolecule.CalculateVnn(),
-                              std::numeric_limits<double>::epsilon());
-
-  F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-  std::cout << "Canonicalising f12 integrals...\n";
-  Eigen::MatrixXd F;
-  Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
-                                           uhfWfn.C_Alpha, configInts, f12Ints,
-                                           true, &F);
-
-  std::cout << "Evaluating CABS singles correction...\n";
-  // Need to correct the reference energy with a perturbation by singly exciting
-  // into the CABS virtuals. Correct the fact that there is a large basis set
-  // error in the non-correlated HF energy
-  double ECABSSingles =
-      F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
-
-  // configInts.eri = eriImported;
-  auto f12Result = F12::MP2_F12_Fixed(uhfWfn, configInts, f12Ints, f12Idxs);
+  std::stringstream console;
+  const F12::F12Calculation calc = F12::PrepareF12Calculation(
+      "sto-3g", "cc-pVDZ", hydrogenMolecule, nullptr, &console);
+  std::cout << console.str();
+  auto f12Result = F12::MP2_F12_Fixed(calc.hfWfn, calc.ints, calc.idxs);
 
   std::cout << "\n\n--- MP2 F12 Single Point Energy ---\n";
   std::cout << " --- Fixed amplitude approximation used --- \n";
   std::cout << "  Molecule = Hydrogen (H2)\n";
-  std::cout << "  E(HF) = " << uhfWfn.E_HF << " hartrees\n";
-  std::cout << "  E(CABS singles correction) = " << ECABSSingles
+  std::cout << "  E(HF) = " << calc.hfWfn.E_HF << " hartrees\n";
+  std::cout << "  E(CABS singles correction) = " << calc.E_CABSSingles
             << " hartrees\n";
   std::cout << "  E(MP2) = " << f12Result.E_MP2 << " hartrees\n";
   std::cout << "  E(F12 MP2) = " << f12Result.E_F12_MP2 << " hartrees\n";
   std::cout << "  E(Total) = "
-            << uhfWfn.E_HF + ECABSSingles + f12Result.E_MP2 +
+            << calc.hfWfn.E_HF + calc.E_CABSSingles + f12Result.E_MP2 +
                    f12Result.E_F12_MP2
             << " hartrees\n\n";
-  CheckEnergy("E(HF)", uhfWfn.E_HF, Reference::H2_RHF, 1e-8);
-  CheckEnergy("E(CABS singles)", ECABSSingles, Reference::H2_CABS_SINGLES,
-              1e-7);
+  CheckEnergy("E(HF)", calc.hfWfn.E_HF, Reference::H2_RHF, 1e-8);
+  CheckEnergy("E(CABS singles)", calc.E_CABSSingles,
+              Reference::H2_CABS_SINGLES, 1e-7);
   CheckEnergy("E(MP2)", f12Result.E_MP2, Reference::H2_MP2, 1e-8);
   CheckEnergy("E(F12 MP2, fixed)", f12Result.E_F12_MP2,
               Reference::H2_MP2_F12_FIXED, 1e-8);
@@ -501,65 +432,28 @@ void TestMP2_F12_Fixed() {
 }
 //
 void TestCCQMC_MP2_F12() {
-  constexpr const char *BASIS_SET_NAME = "sto-3g";
-  constexpr const char *CABS_BASIS_SET_NAME = "cc-pVDZ";
   Molecule hydrogenMolecule = Molecule::GenerateHydrogenMolecule();
-
-  // auto &hAtom = hydrogenMolecule.GetAtoms().back();
-  // auto hPos = hAtom.GetPos();
-  // hPos.x() = 3.0;
-  // hAtom.SetPos(hPos);
-
-  auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
-
-  F12BasisSet f12BasisSet(BASIS_SET_NAME, CABS_BASIS_SET_NAME, h2Atoms);
-
-  fmt::print("Evaluating overlap, kinetic, nuclear & eri integrals...\n");
-  Integrals::MolInts configInts =
-      Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, h2Atoms);
-  fmt::print(fg(fmt::color::green), "Done!\n");
-
-  fmt::print("Evaluating f12, f12^2, f12/r12 & |del f12|^2  integrals...\n");
-  Integrals::F12::F12Integrals f12Ints =
-      Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-  fmt::print(fg(fmt::color::green), "Done!\n");
-
-  fmt::print("Obtaining UHF reference...\n");
-  HF::HF_Wfn uhfWfn = HF::UHF(
-      Integrals::F12::ExtractHFIntegrals(configInts, 0, 2), 1, 1,
-      hydrogenMolecule.CalculateVnn(), std::numeric_limits<double>::epsilon());
-
-  F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-  fmt::print("Canonicalising f12 integrals...\n");
-  Eigen::MatrixXd F;
-  Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
-                                           uhfWfn.C_Alpha, configInts, f12Ints,
-                                           true, &F);
-
-  fmt::print("Evaluating CABS singles correction...\n");
-  // Need to correct the reference energy with a perturbation by singly exciting
-  // into the CABS virtuals. Correct the fact that there is a large basis set
-  // error in the non-correlated HF energy
-  double ECABSSingles =
-      F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs);
+  const F12::F12Calculation calc = F12::PrepareF12Calculation(
+      "sto-3g", "cc-pVDZ", hydrogenMolecule, nullptr, nullptr, true);
 
   double ECCQMC_F12 =
-      F12_QMC::CCSD_QMC_MP2_F12(uhfWfn, configInts, f12Ints, f12Idxs);
-  double ECorrelation = ECCQMC_F12 - uhfWfn.E_HF;
+      F12_QMC::CCSD_QMC_MP2_F12(calc.hfWfn, calc.ints, calc.idxs);
+  double ECorrelation = ECCQMC_F12 - calc.hfWfn.E_HF;
 
   fmt::print(fg(fmt::color::white),
              "\n\n--- CCSD QMC F12 Single Point Energy ---\n");
   fmt::print(fg(fmt::color::white),
              " --- Fixed amplitude approximation used --- \n");
   fmt::print(fg(fmt::color::white), "  Molecule = Hydrogen (H2)\n");
-  fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n", uhfWfn.E_HF);
+  fmt::print(fg(fmt::color::white), "  E(HF) = {:.8} hartrees\n",
+             calc.hfWfn.E_HF);
   fmt::print(fg(fmt::color::white),
-             "  E(CABS singles correction) = {:.8} hartrees\n", ECABSSingles);
+             "  E(CABS singles correction) = {:.8} hartrees\n",
+             calc.E_CABSSingles);
   fmt::print(fg(fmt::color::white), "  E(CCQMC_F12) = {:.8} hartrees\n",
              ECorrelation);
   fmt::print(fg(fmt::color::green), "  E(Total) = {:.8} hartrees\n\n",
-             uhfWfn.E_HF + ECABSSingles + ECorrelation);
+             calc.hfWfn.E_HF + calc.E_CABSSingles + ECorrelation);
 
   fmt::print(fg(fmt::color::dark_green), "\nPress any key to continue..\n");
   std::cin.get();
@@ -575,7 +469,7 @@ void TestUHF() {
 
   auto h2Atoms = hydrogenMolecule.GetAtomsLibInt();
 
-  libint2::BasisSet basisSet("cc-pVDZ", h2Atoms);
+  libint2::BasisSet basisSet = BasisLibrary::LoadLibIntBasisSet("cc-pVDZ", h2Atoms);
 
   Integrals::MolInts mints =
       Integrals::LibInt::EvaluateMolecularIntegrals(basisSet, h2Atoms);
@@ -642,34 +536,13 @@ int RunRegressionTests() {
   fmt::print(fmt::emphasis::bold, "\n--- H2 / STO-3G MP2-F12 (cc-pVDZ CABS) ---\n");
   {
     Molecule mol = Molecule::GenerateHydrogenMolecule();
-    auto atoms = mol.GetAtomsLibInt();
-    F12BasisSet f12BasisSet("sto-3g", "cc-pVDZ", atoms);
-
+    const F12::F12Calculation calc =
+        F12::PrepareF12Calculation("sto-3g", "cc-pVDZ", mol);
+    CheckEnergy("E(CABS singles)", calc.E_CABSSingles,
+                Reference::H2_CABS_SINGLES, 1e-7);
     auto RunF12 = [&](bool optimise) {
-      Integrals::MolInts configInts =
-          Integrals::F12::EvaluateMolecularIntegrals(f12BasisSet, atoms);
-      Integrals::F12::F12Integrals f12Ints =
-          Integrals::F12::EvaluateF12Integrals(f12BasisSet);
-      HF::HF_Wfn uhfWfn = HF::UHF(
-          Integrals::F12::ExtractHFIntegrals(configInts, 0,
-                                             f12BasisSet.GetNoHFFuncs()),
-          mol.GetNoElectrons() / 2, mol.GetNoElectrons() / 2,
-          mol.CalculateVnn(), 1e-12);
-      F12::F12Idxs f12Idxs = F12::GenerateF12Idxs(f12BasisSet, uhfWfn);
-
-      Eigen::MatrixXd F;
-      Integrals::Transforms::TransformF12Basis(f12BasisSet, uhfWfn.D_Alpha,
-                                               uhfWfn.C_Alpha, configInts,
-                                               f12Ints, true, &F);
-      if (!optimise)
-        CheckEnergy(
-            "E(CABS singles)",
-            F12::EvaluateCABSSinglesCorrection(MatrixToTensor(F), f12Idxs),
-            Reference::H2_CABS_SINGLES, 1e-7);
-
-      return optimise
-                 ? F12::MP2_F12_Optimise(uhfWfn, configInts, f12Ints, f12Idxs)
-                 : F12::MP2_F12_Fixed(uhfWfn, configInts, f12Ints, f12Idxs);
+      return optimise ? F12::MP2_F12_Optimise(calc.hfWfn, calc.ints, calc.idxs)
+                      : F12::MP2_F12_Fixed(calc.hfWfn, calc.ints, calc.idxs);
     };
 
     F12::MP2F12Result fixed = RunF12(false);
@@ -678,6 +551,85 @@ int RunRegressionTests() {
                 Reference::H2_MP2_F12_FIXED, 1e-8);
     CheckEnergy("E(F12 MP2, optimised)", RunF12(true).E_F12_MP2,
                 Reference::H2_MP2_F12_OPT, 1e-8);
+  }
+
+  fmt::print(fmt::emphasis::bold,
+             "\n--- H2 / STO-3G CCSD-F12b (cc-pVDZ CABS) ---\n");
+  {
+    Molecule mol = Molecule::GenerateHydrogenMolecule();
+    const F12::F12Calculation calc =
+        F12::PrepareF12Calculation("sto-3g", "cc-pVDZ", mol);
+    const F12::CCSD_F12bResult result = F12::CCSD_F12b(calc);
+    CheckEnergy("E(CCSD, with geminal coupling)", result.E_CCSD,
+                Reference::H2_CCSD_F12B_CCSD, 1e-8);
+    CheckEnergy("E(geminal coupling)", result.E_Coupling,
+                Reference::H2_CCSD_F12B_COUPLING, 1e-8);
+    CheckEnergy("E(F12 geminals)", result.E_F12, Reference::H2_MP2_F12_FIXED,
+                1e-8);
+  }
+
+  fmt::print(fmt::emphasis::bold,
+             "\n--- H2O / STO-3G CCSD-F12b (cc-pVDZ CABS) ---\n");
+  {
+    // PySCF uses fewer significant figures for the STO-3G coefficients, which
+    // shifts these by up to 1e-7
+    Molecule mol = Molecule::GenerateWaterMolecule();
+    const F12::F12Calculation calc =
+        F12::PrepareF12Calculation("sto-3g", "cc-pVDZ", mol);
+    const F12::CCSD_F12bResult result = F12::CCSD_F12b(calc);
+    CheckEnergy("E(CCSD, with geminal coupling)", result.E_CCSD,
+                Reference::H2O_CCSD_F12B_CCSD, 1e-6);
+    CheckEnergy("E(geminal coupling)", result.E_Coupling,
+                Reference::H2O_CCSD_F12B_COUPLING, 1e-7);
+    CheckEnergy("E(F12 geminals)", result.E_F12, Reference::H2O_CCSD_F12B_F12,
+                2e-7);
+  }
+
+  fmt::print(fmt::emphasis::bold,
+             "\n--- Closed-shell (spatial orbital) CCSD ---\n");
+  {
+    Molecule h2 = Molecule::GenerateHydrogenMolecule();
+    BasisSet h2Basis("sto-3g", h2);
+    Integrals::MolInts h2Ints;
+    HF::HF_Wfn h2RHF = RunRHF(h2, h2Basis, h2Ints);
+    CheckEnergy("H2 E(CCSD correlation)",
+                CC::RCCSD_DIIS(h2RHF, h2Ints).E_CCSD, Reference::H2_CCSD,
+                1e-8);
+
+    Molecule water = Molecule::GenerateWaterMolecule();
+    BasisSet waterBasis("sto-3g", water);
+    Integrals::MolInts waterInts;
+    HF::HF_Wfn waterRHF = RunRHF(water, waterBasis, waterInts);
+    const double E_RCCSD = CC::RCCSD_DIIS(waterRHF, waterInts).E_CCSD;
+    CheckEnergy("H2O E(CCSD correlation)", E_RCCSD, Reference::H2O_CCSD, 1e-7);
+    // Same integrals and orbitals, so the spin-orbital CCSD must agree to its
+    // convergence threshold
+    CheckEnergy("H2O E(CCSD), spatial vs spin orbitals", E_RCCSD,
+                CC::CCSD_DIIS(waterRHF, waterInts).E_CCSD, 1e-6);
+  }
+
+  fmt::print(fmt::emphasis::bold, "\n--- Basis set library ---\n");
+  {
+    auto CheckName = [](const char *label, const std::string &value,
+                        const std::string &reference) {
+      const bool pass = value == reference;
+      fmt::print(pass ? fg(fmt::color::green) : fg(fmt::color::crimson),
+                 "  [{}] {}: {} (reference {})\n", pass ? "PASS" : "FAIL",
+                 label, value, reference);
+      if (!pass)
+        gFailures++;
+    };
+    auto Found = [](const char *name) -> std::string {
+      const BasisSetInfo *info = BasisLibrary::Find(name);
+      return info ? info->name : "<not found>";
+    };
+    CheckName("Find(6-31g**)", Found("6-31g**"), "6-31G(d,p)");
+    CheckName("Find(CC-PVDZ)", Found("CC-PVDZ"), "cc-pVDZ");
+    CheckName("DefaultCABS(cc-pVTZ-F12)",
+              BasisLibrary::DefaultCABS("cc-pVTZ-F12"), "cc-pVTZ-F12-OptRI");
+    CheckName("DefaultCABS(cc-pVDZ)", BasisLibrary::DefaultCABS("cc-pVDZ"),
+              "aug-cc-pVDZ-OptRI");
+    CheckName("DefaultCABS(sto-3g)", BasisLibrary::DefaultCABS("sto-3g"), "");
   }
 
   if (gFailures == 0)
