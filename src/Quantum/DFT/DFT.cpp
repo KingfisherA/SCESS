@@ -4,6 +4,8 @@
 #include "Quantum/DFT/DFT.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Integrals/Integrals.h"
+#include "Quantum/Integrals/IntegralTransforms.h"
+#include "Quantum/HF/DIIS.h"
 #include "Quantum/Integrals/Grid/MolGrid.h"
 #include "XC.h"
 #include "Quantum/Integrals/Grid/Quadrature.h"
@@ -15,8 +17,6 @@ namespace SCESS::DFT {
     using namespace Quadrature;
     //
     //
-    MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
-                                    const MatrixXd &Density);
     MatrixXd CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs);
     void CalculateXCMatrix(const MolGrid &grid,
                            MatrixXd &ExchangeCorr,
@@ -99,8 +99,8 @@ namespace SCESS::DFT {
         constexpr uint32_t MAX_ITERATIONS = 500;
         constexpr size_t MAX_DIIS_SIZE = 6;
 
-        //Fock matrices and their error vectors for Pulay DIIS extrapolation
-        std::vector<MatrixXd> F_DIIS, DIIS_Errors;
+        //Pulay DIIS extrapolation of the Fock matrices, from the second Fock matrix
+        HF::FockDIIS diis(MAX_DIIS_SIZE);
         double commutatorRMS = 1.0;
         bool converged = false;
 
@@ -121,35 +121,9 @@ namespace SCESS::DFT {
                 MatrixXd error = U.transpose() * (F * D * S - S * D * F) * U;
                 commutatorRMS = std::sqrt(error.cwiseAbs2().mean());
 
-                F_DIIS.push_back(F);
-                DIIS_Errors.push_back(error);
-                if (F_DIIS.size() > MAX_DIIS_SIZE) {
-                    F_DIIS.erase(F_DIIS.begin());
-                    DIIS_Errors.erase(DIIS_Errors.begin());
-                }
-
-                const Index DIIS_Size = (Index) F_DIIS.size();
-                if (DIIS_Size >= 2) {
-                    MatrixXd B = MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1, -1.0);
-                    B(DIIS_Size, DIIS_Size) = 0.0;
-
-                    double maxVal = 0.0;
-                    for (Index i = 0; i < DIIS_Size; i++)
-                        for (Index j = i; j < DIIS_Size; j++) {
-                            B(i, j) = B(j, i) = DIIS_Errors[i].cwiseProduct(DIIS_Errors[j]).sum();
-                            maxVal = std::max(maxVal, abs(B(i, j)));
-                        }
-                    if (maxVal > 0.0)
-                        B.block(0, 0, DIIS_Size, DIIS_Size) /= maxVal;
-
-                    VectorXd rhs = VectorXd::Zero(DIIS_Size + 1);
-                    rhs(DIIS_Size) = -1.0;
-                    VectorXd coeffs = B.fullPivLu().solve(rhs);
-
-                    F_Extrapolated = MatrixXd::Zero(F.rows(), F.cols());
-                    for (Index i = 0; i < DIIS_Size; i++)
-                        F_Extrapolated += coeffs(i) * F_DIIS[i];
-                }
+                diis.Add({F}, {error});
+                if (diis.Size() >= 2)
+                    F_Extrapolated = diis.Extrapolate()[0];
             }
 
             MatrixXd Fprime = U.transpose() * F_Extrapolated * U;
@@ -162,7 +136,7 @@ namespace SCESS::DFT {
 
             MolGrid.SetDensity(D);
 
-            J = CreateColoumbMatrixTEI(tei, D);
+            J = Integrals::Transforms::CoulombMatrix(tei, D);
             //Exchange-correlation energy
             double E_XC = 0.0;
             CalculateXCMatrix(MolGrid, ExchangeCorr, E_XC);
@@ -203,43 +177,18 @@ namespace SCESS::DFT {
         return KS_Wfn{E_KS, F, D, C, Ep, Occ};
     }
     //
-    MatrixXd CreateColoumbMatrixTEI(const TEITensor &tei,
-                                    const MatrixXd &Density) {
-        MatrixXd J = MatrixXd::Zero(Density.rows(), Density.cols());
-
-        for (Index i = 0; i < J.rows(); i++)
-            for (Index j = 0; j < J.rows(); j++)
-                for (Index k = 0; k < J.rows(); k++)
-                    for (Index l = 0; l < J.rows(); l++) {
-                        //Coulomb integral; <ik | jl> = (ij | kl)
-                        J(i, j) += Density(k, l) * tei(i, j, k, l);
-                    }
-
-        return J;
-    }
-    //
     MatrixXd CreateDensityMatrix(const MatrixXd &C, uint32_t Nelecs) {
-        MatrixXd D = MatrixXd::Zero(C.rows(), C.rows());
-        for (int i = 0; i < D.rows(); i++) {
-            for (int j = 0; j < D.rows(); j++) {
-                for (int k = 0; k < (Nelecs / 2); k++) {
-                    D(i, j) += C(i, k) * C(j, k);
-                }
-            }
-        }
-
-        return D;
+        const auto occupied = C.leftCols(Nelecs / 2);
+        return occupied * occupied.transpose();
     }
     //
     void CalculateXCMatrix(const MolGrid &grid,
                            MatrixXd &ExchangeCorr,
                            double &E_XC) {
-        for (Index i = 0; i < ExchangeCorr.size(); i++)
-            ExchangeCorr.data()[i] = 0.0;
-
         VectorXd densities = grid.GetDensities();
-        VectorXd weights = grid.GetWeights();
-        MatrixXd amplitudes = grid.GetAmplitudes();
+        const VectorXd &weights = grid.GetWeights();
+        //Basis function values, one row per grid point
+        const MatrixXd &amplitudes = grid.GetAmplitudes();
 
         VectorXd ex; // exchange energy
         VectorXd vxa; // exchange potential (spin-up)
@@ -265,13 +214,8 @@ namespace SCESS::DFT {
 
         VectorXd wva = weights.cwiseProduct((vxa + vxb + vca + vcb) * 0.5);
 
-        for (uint32_t i = 0; i < amplitudes.rows(); i++) {
-            VectorXd row = amplitudes.row(i);
-            VectorXd wva_i = wva.cwiseProduct(row);
-            for (uint32_t j = 0; j < amplitudes.rows(); j++) {
-                ExchangeCorr(i, j) = wva_i.dot(amplitudes.row(j));
-            }
-        }
+        //V_xc(mu, nu) = sum_p w_p v_p phi_mu(p) phi_nu(p)
+        ExchangeCorr = amplitudes.transpose() * (amplitudes.array().colwise() * wva.array()).matrix();
     }
     //
     //

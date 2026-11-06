@@ -45,6 +45,16 @@ constexpr double H2O_T = -0.0000673499;
 constexpr double H2O_FCI = -75.0125022529;
 // LDA (Slater + VWN5) on a converged grid
 constexpr double H2O_LDA = -74.7319604693;
+// H2O / cc-pVDZ with solid harmonic d functions and H2O / 6-31G, from
+// Scripts/verification/spherical_check.py (PySCF with SCESS's basis set files)
+constexpr double H2O_DZ_RHF = -76.0267859418;
+constexpr double H2O_DZ_MP2 = -0.2039840885;
+constexpr double H2O_DZ_CCSD = -0.2133077024;
+constexpr double H2O_DZ_T = -0.0030574132;
+constexpr double H2O_DZ_LDA = -75.8546697669;
+constexpr double H2O_631G_RHF = -75.9839769556;
+constexpr double H2O_631G_CISD = -76.1140647850;
+constexpr double H2O_631G_FCI = -76.1208485488;
 // He / def2-TZVP
 constexpr double He_RHF = -2.8598954257;
 constexpr double He_FCI = -2.8929575257;
@@ -490,6 +500,42 @@ int RunRegressionTests() {
     return HF::RHF(mol, basis, 1e-10, 100, &mints, nullptr, &ss);
   };
 
+  fmt::print(fmt::emphasis::bold,
+             "\n--- libint2 integrals against the CGF integrals ---\n");
+  {
+    // The libint2 functions are linear combinations T of the Cartesian CGFs,
+    // so every libint2 integral is the CGF integral transformed by T. 6-31G(d)
+    // has Cartesian d shells and cc-pVDZ solid harmonic d shells.
+    Molecule water = Molecule::GenerateWaterMolecule();
+    for (const char *name : {"6-31G(d)", "cc-pVDZ"}) {
+      BasisSet basis(name, water);
+      const Eigen::MatrixXd &T = basis.CartesianToSpherical();
+      const Integrals::MolInts libint =
+          Integrals::EvaluateMolecularIntegrals(basis, water.GetAtoms());
+      const Integrals::MolInts cgf =
+          Integrals::EvaluateMolecularIntegralsCGF(basis, water.GetAtoms());
+
+      auto MaxDiff = [&T](const Eigen::MatrixXd &a, const Eigen::MatrixXd &b) {
+        return (T.transpose() * b * T - a).cwiseAbs().maxCoeff();
+      };
+      const std::string label = std::string(name) + " ";
+      CheckEnergy((label + "max |S diff|").c_str(), MaxDiff(libint.S, cgf.S),
+                  0.0, 1e-10);
+      CheckEnergy((label + "max |T diff|").c_str(), MaxDiff(libint.T, cgf.T),
+                  0.0, 1e-10);
+      // The CGF Boys function clamps its argument to >= 1e-8, which limits the
+      // nuclear attraction and ERIs of functions centred on the same point to
+      // about 1e-7 (libint2 reproduces PySCF's RHF energy to 1e-8)
+      CheckEnergy((label + "max |V diff|").c_str(), MaxDiff(libint.V, cgf.V),
+                  0.0, 1e-6);
+      const Integrals::TEITensor eri =
+          Integrals::Transforms::TransformTEI(cgf.eri, T);
+      const Eigen::Tensor<double, 0> eriDiff =
+          (eri - libint.eri).abs().maximum();
+      CheckEnergy((label + "max |ERI diff|").c_str(), eriDiff(0), 0.0, 1e-7);
+    }
+  }
+
   fmt::print(fmt::emphasis::bold, "\n--- H2 / STO-3G ---\n");
   {
     Molecule mol = Molecule::GenerateHydrogenMolecule();
@@ -521,16 +567,65 @@ int RunRegressionTests() {
     CheckEnergy("E(MP2 correlation)",
                 HF::MP2_RHF_ClosedShellAO(rhf, mints.eri), Reference::H2O_MP2,
                 1e-7);
-    CC::CCSD_Wfn ccsd = CC::CCSD_T(rhf, mints);
+    const CC::RCCSD_Wfn ccsd = CC::RCCSD_T(rhf, mints);
     CheckEnergy("E(CCSD correlation)", ccsd.E_CCSD, Reference::H2O_CCSD,
-                1e-6);
-    CheckEnergy("E(T)", ccsd.E_T, Reference::H2O_T, 1e-7);
+                1e-7);
+    CheckEnergy("E(T)", ccsd.E_T, Reference::H2O_T, 1e-8);
+    // The spin-orbital reference implementation, converged less tightly
+    const CC::CCSD_Wfn spinCCSD = CC::CCSD_T(rhf, mints);
+    CheckEnergy("E(T), closed-shell vs spin orbitals", ccsd.E_T,
+                spinCCSD.E_T, 1e-7);
     CheckEnergy("E(FCI)", CI::CI(rhf, mints, mol.CalculateVnn()).E_CI(0),
                 Reference::H2O_FCI, 1e-6);
 
     DFT::KS_Wfn ks =
         DFT::KS_DFT(mol, basis, Quadrature::MolGrid::MEDIUM_RES, nullptr);
     CheckEnergy("E(LDA)", ks.E_KS, Reference::H2O_LDA, 1e-5);
+  }
+
+  fmt::print(fmt::emphasis::bold,
+             "\n--- H2O / cc-pVDZ (solid harmonic d functions) ---\n");
+  {
+    Molecule mol = Molecule::GenerateWaterMolecule();
+    BasisSet basis("cc-pVDZ", mol);
+    Integrals::MolInts mints;
+    HF::HF_Wfn rhf = RunRHF(mol, basis, mints);
+
+    CheckEnergy("E(RHF)", rhf.E_HF, Reference::H2O_DZ_RHF, 1e-8);
+    std::stringstream ss;
+    CheckEnergy("E(UHF)",
+                HF::UHF(mints, 5, 5, mol.CalculateVnn(), 1e-10, 100, nullptr,
+                        &ss)
+                    .E_HF,
+                Reference::H2O_DZ_RHF, 1e-8);
+    CheckEnergy("E(MP2 correlation)",
+                HF::MP2_RHF_ClosedShellAO(rhf, mints.eri),
+                Reference::H2O_DZ_MP2, 1e-8);
+    const CC::RCCSD_Wfn ccsd = CC::RCCSD_T(rhf, mints);
+    CheckEnergy("E(CCSD correlation)", ccsd.E_CCSD, Reference::H2O_DZ_CCSD,
+                1e-7);
+    CheckEnergy("E(T)", ccsd.E_T, Reference::H2O_DZ_T, 1e-7);
+
+    // The grid error is 3e-5 hartrees on the high resolution grid and 8e-6 on
+    // the ultrafine grid (PySCF used its level 9 grid)
+    DFT::KS_Wfn ks =
+        DFT::KS_DFT(mol, basis, Quadrature::MolGrid::ULTRAFINE_RES, nullptr);
+    CheckEnergy("E(LDA)", ks.E_KS, Reference::H2O_DZ_LDA, 1e-5);
+  }
+
+  fmt::print(fmt::emphasis::bold, "\n--- H2O / 6-31G CI ---\n");
+  {
+    Molecule mol = Molecule::GenerateWaterMolecule();
+    BasisSet basis("6-31G", mol);
+    Integrals::MolInts mints;
+    HF::HF_Wfn rhf = RunRHF(mol, basis, mints);
+    CheckEnergy("E(RHF)", rhf.E_HF, Reference::H2O_631G_RHF, 1e-8);
+    // 2241 determinants: Davidson with the sparse Hamiltonian
+    CheckEnergy("E(CISD)", CI::CI(rhf, mints, mol.CalculateVnn(), 2).E_CI(0),
+                Reference::H2O_631G_CISD, 1e-8);
+    // 1656369 determinants: Davidson with string-driven Hamiltonian products
+    CheckEnergy("E(FCI)", CI::CI(rhf, mints, mol.CalculateVnn()).E_CI(0),
+                Reference::H2O_631G_FCI, 1e-8);
   }
 
   fmt::print(fmt::emphasis::bold, "\n--- H2 / STO-3G MP2-F12 (cc-pVDZ CABS) ---\n");

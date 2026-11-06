@@ -11,6 +11,21 @@ namespace SCESS::Integrals::Transforms {
     //
     using namespace Eigen;
     //
+    MatrixXd CoulombMatrix(const TEITensor &eri, const MatrixXd &D) {
+        const Index n = D.rows();
+        //The column-major (mu nu | lam sig) is the n^2 x n^2 matrix M(mu + n nu, lam + n sig), so vec(J) = M vec(D)
+        const Map<const MatrixXd> M(eri.data(), n * n, n * n);
+        const Map<const VectorXd> vecD(D.data(), n * n);
+        VectorXd vecJ = M * vecD;
+        return Map<MatrixXd>(vecJ.data(), n, n);
+    }
+    //
+    MatrixXd ExchangeMatrix(const TEITensor &eri, const MatrixXd &D) {
+        enum { Mu, Nu, Lam, Sig };
+        return TensorToMatrix(Evaluate(Einsum<Indices<Mu, Lam, Nu, Sig>, Indices<Lam, Sig>, Indices<Mu, Nu> >(
+            eri, MatrixToTensor(D))));
+    }
+    //
     TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C, bool convertChemToPhys) {
         return TransformTEI(tei, C, C, C, C, convertChemToPhys);
     }

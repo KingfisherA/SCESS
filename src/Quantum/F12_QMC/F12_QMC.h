@@ -1,5 +1,6 @@
 #pragma once
 //
+#include <optional>
 #include "Quantum/CI/CI.h"
 #include "Quantum/F12/F12.h"
 //
@@ -52,10 +53,12 @@ namespace SCESS::F12_QMC {
                                         uint32_t nBetaOrbitals);
     //
     //
-    //ints must include F12MOIntegrals::eri_oxpq (PrepareF12Calculation with buildQMCIntegrals)
+    //ints must include F12MOIntegrals::eri_oxpq (PrepareF12Calculation with buildQMCIntegrals). seed defaults to the
+    //time.
     double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
                             const F12::F12MOIntegrals &ints,
-                            F12::F12Idxs f12Idxs);
+                            F12::F12Idxs f12Idxs,
+                            std::optional<uint64_t> seed = std::nullopt);
     //
     //
 }

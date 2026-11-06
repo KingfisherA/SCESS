@@ -31,11 +31,15 @@ namespace SCESS::Quadrature {
 
         void Create(Resolution resolution);
 
-        [[nodiscard]] Eigen::VectorXd GetWeights() const;
+        //Integration weights of every grid point (atomic grids in order)
+        [[nodiscard]] const Eigen::VectorXd &GetWeights() const { return mWeights; }
         [[nodiscard]] Eigen::VectorXd GetDensities() const;
-        [[nodiscard]] Eigen::MatrixXd GetAmplitudes() const;
+        //Values of the basis functions (BasisSet::GetNoFunctions(), the functions of the integrals) at every grid
+        //point, one row per point
+        [[nodiscard]] const Eigen::MatrixXd &GetAmplitudes() const { return mAmplitudes; }
         void CorrectDensities();
 
+        //Sets rho = 2 phi^T D phi at every grid point (D is the density of one spin over the basis functions)
         void SetDensity(const Eigen::MatrixXd &D);
         [[nodiscard]] double CalculateDensity() const;
 
@@ -51,6 +55,10 @@ namespace SCESS::Quadrature {
 
         uint32_t mAngularPoints = 0;
         size_t mGridSize = 0;
+
+        //Basis function values (points x functions) and weights of every grid point
+        Eigen::MatrixXd mAmplitudes;
+        Eigen::VectorXd mWeights;
 
         const Molecule *mMolecule = nullptr;
         const BasisSet *mBasisSet = nullptr;

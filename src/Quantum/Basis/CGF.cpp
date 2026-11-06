@@ -85,8 +85,13 @@ namespace SCESS {
                                                             const BasisSet &basisSet) {
         static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
                       "Can only instantiate template with a floating point type");
+        //The MO coefficients are over the basis functions; express the orbital in the Cartesian CGFs which are
+        //evaluated below
+        Eigen::VectorXd cgfCoeffs = basisSet.HasShells()
+                                        ? Eigen::VectorXd(basisSet.CartesianToSpherical() * coeffsIn)
+                                        : coeffsIn;
         return [
-                    coeffs = coeffsIn,
+                    coeffs = std::move(cgfCoeffs),
                     &basisSet,
                     gaussianData = std::vector<T>()
                 ](T x, T y, T z) mutable -> T {

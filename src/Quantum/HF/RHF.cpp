@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 //
 #include "HF.h"
+#include "DIIS.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Basis/CGF.h"
 #include "Quantum/Integrals/Integrals.h"
@@ -128,12 +129,8 @@ namespace SCESS::HF {
         if (console)
             *console << "Beginning SCF iterations...\n";
 
-        std::vector<MatrixXd> DIIS_Errors;
-        DIIS_Errors.reserve(7);
-
-        //Fock DIIS matrices
-        std::vector<MatrixXd> F_DIIS;
-        F_DIIS.reserve(7);
+        //DIIS is turned on at the fourth iteration, discarding the first two (poorest) Fock matrices
+        FockDIIS diis(6);
 
         Index scfIter = 1;
         for (; scfIter < scfMaxIterations + 1; scfIter++) {
@@ -162,49 +159,16 @@ namespace SCESS::HF {
                 break;
             }
 
-            DIIS_Errors.push_back(DIIS_Error);
-            F_DIIS.push_back(F);
+            diis.Add({F}, {DIIS_Error});
 
             MatrixXd F_Extrapolated = F;
             if (scfIter >= 4) {
-                //Turn on DIIS
-
                 if (scfIter == 4) {
-                    F_DIIS.erase(F_DIIS.begin(), F_DIIS.begin() + 2);
-                    DIIS_Errors.erase(DIIS_Errors.begin(), DIIS_Errors.begin() + 2);
+                    diis.DiscardOldest(2);
                     if (console)
                         *console << "Turning on DIIS \n";
                 }
-
-                Index DIIS_Size = F_DIIS.size();
-
-                if (DIIS_Size > 6) {
-                    F_DIIS.erase(F_DIIS.begin());
-                    DIIS_Errors.erase(DIIS_Errors.begin());
-                    DIIS_Size -= 1;
-                }
-
-                MatrixXd ErrorMat = MatrixXd::Constant(DIIS_Size + 1, DIIS_Size + 1, -1.0);
-                ErrorMat(ErrorMat.rows() - 1, ErrorMat.cols() - 1) = 0.0;
-
-                double maxVal = 0.0;
-                for (Index i = 0; i < DIIS_Errors.size(); i++)
-                    for (Index j = i; j < DIIS_Errors.size(); j++) {
-                        ErrorMat(i, j) = ErrorMat(j, i) = DIIS_Errors[i].cwiseProduct(DIIS_Errors[j]).sum();
-                        maxVal = std::max(maxVal, abs(ErrorMat(i, j)));
-                    }
-
-                if (maxVal > 0.0)
-                    ErrorMat.block(0, 0, ErrorMat.rows() - 1, ErrorMat.cols() - 1) /= maxVal;
-
-                VectorXd Residual = VectorXd::Zero(DIIS_Size + 1);
-                Residual(Residual.rows() - 1) = -1.0;
-
-                VectorXd DIISCoeffs = ErrorMat.lu().solve(Residual);
-
-                F_Extrapolated = MatrixXd::Zero(F.rows(), F.cols());
-                for (Index i = 0; i < F_DIIS.size(); i++)
-                    F_Extrapolated += DIISCoeffs(i) * F_DIIS[i];
+                F_Extrapolated = diis.Extrapolate()[0];
             }
 
             DiagonaliseFock(F_Extrapolated);
@@ -248,20 +212,8 @@ namespace SCESS::HF {
     //
     MatrixXd ConstructGRHF(const MatrixXd &D,
                            const TEITensor &eri) {
-        MatrixXd G = MatrixXd::Zero(D.rows(), D.rows());
-
-        for (Index i = 0; i < G.rows(); i++)
-            for (Index j = 0; j < G.rows(); j++)
-                for (Index k = 0; k < G.rows(); k++)
-                    for (Index l = 0; l < G.rows(); l++) {
-                        //Coulomb integral; <ik | jl> = (ij | kl)
-                        double J = eri(i, j, k, l);
-                        //Exchange integral; <ij | kl> = (ik | jl)
-                        double K = eri(i, k, j, l);
-                        G(i, j) += D(k, l) * (J - 0.5 * K);
-                    }
-
-        return G;
+        //G = J - K / 2 for the closed-shell density D
+        return Integrals::Transforms::CoulombMatrix(eri, D) - 0.5 * Integrals::Transforms::ExchangeMatrix(eri, D);
     }
     //
     MatrixXd ProjectOrbitalDensity(const BasisSet &set1,
@@ -278,16 +230,8 @@ namespace SCESS::HF {
     //
     MatrixXd ConstructDensityRHF(const MatrixXd &Coeffs,
                                  Index nElecPairs) {
-        MatrixXd Density = MatrixXd::Zero(Coeffs.rows(), Coeffs.rows());
-        for (Index i = 0; i < Density.rows(); i++) {
-            for (Index j = 0; j < Density.rows(); j++) {
-                for (Index k = 0; k < nElecPairs; k++) {
-                    Density(i, j) += 2.0 * Coeffs(i, k) * Coeffs(j, k);
-                }
-            }
-        }
-
-        return Density;
+        const auto occupied = Coeffs.leftCols(nElecPairs);
+        return 2.0 * occupied * occupied.transpose();
     }
     //
     double CalculateDelta(const MatrixXd &oldDensity,
@@ -325,9 +269,38 @@ namespace SCESS::HF {
                                  const TEITensor &aoERI,
                                  const DH::Thread *thread,
                                  std::stringstream *console) {
-        //<ab | ij > [MO Basis] = <mu kappa | nu lambda> [AO Basis]
-        const TEITensor moTEI = Integrals::Transforms::TransformTEI(aoERI, wfn.C_Alpha);
-        return MP2_RHF_ClosedShell(wfn, moTEI, thread, console);
+        const VectorXi &occ = wfn.Occ_Alpha;
+        const VectorXd &ep = wfn.Ep_Alpha;
+        const Index nOcc = std::distance(occ.begin(), std::find(occ.begin(), occ.end(), 0));
+        const Index nVirt = occ.size() - nOcc;
+
+        if (console) {
+            *console << std::setprecision(12);
+            *console << "--- Moller Plesset Order 2 Correction ---\n";
+        }
+
+        //Only (a i | b j) is needed. The last index is transformed first, so starting with an occupied index the
+        //largest intermediate is N^3 x nOcc rather than N^4
+        const MatrixXd C_Occ = wfn.C_Alpha.leftCols(nOcc), C_Virt = wfn.C_Alpha.rightCols(nVirt);
+        const TEITensor aibj = Integrals::Transforms::TransformTEI(aoERI, C_Virt, C_Occ, C_Virt, C_Occ);
+        if (thread && thread->ShouldStop())
+            return 0.0;
+
+        double E_MP2 = 0.0;
+        for (Index j = 0; j < nOcc; j++)
+            for (Index b = 0; b < nVirt; b++)
+                for (Index i = 0; i < nOcc; i++)
+                    for (Index a = 0; a < nVirt; a++) {
+                        const double iajb = aibj(a, i, b, j), ibja = aibj(b, i, a, j);
+                        E_MP2 -= iajb * (2.0 * iajb - ibja) /
+                                (ep[nOcc + a] + ep[nOcc + b] - ep[i] - ep[j]);
+                    }
+
+        if (console) {
+            *console << "MP2 Correction Energy: " << E_MP2 << '\n';
+            *console << "E(Hartree Fock) + E(MP2) = " << wfn.E_HF + E_MP2 << " hartrees\n\n\n";
+        }
+        return E_MP2;
     }
     //
     double MP2_RHF_ClosedShell(const HF_Wfn &wfn,

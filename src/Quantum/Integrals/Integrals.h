@@ -148,13 +148,19 @@ namespace SCESS::Integrals {
 
     /**
      * Evaluate all the required integrals for a qunatum calculation on a given molecule.
-     * These include the overlap, kinetic, potential and two-electron integrals.
+     * These include the overlap, kinetic, potential and two-electron integrals, over the basis set's functions
+     * (BasisSet::GetNoFunctions()) with libint2 on every hardware thread.
      * @param molecule The molecule to evaluate the integrals on
      * @return Configuration integrals
      */
     MolInts EvaluateMolecularIntegrals(const BasisSet &basisSet,
                                        const std::vector<Atom> &atoms,
                                        const DH::Thread *thread = nullptr);
+    //As EvaluateMolecularIntegrals with the hand-written integrals over the Cartesian CGFs (slow; used for basis
+    //sets built from CGFs alone and to test the libint2 integrals)
+    MolInts EvaluateMolecularIntegralsCGF(const BasisSet &basisSet,
+                                          const std::vector<Atom> &atoms,
+                                          const DH::Thread *thread = nullptr);
     //
     //Overlap Integrals
     double Overlap1D(double gamma,
@@ -189,8 +195,6 @@ namespace SCESS::Integrals {
      * @return The tei in chemist's notation
      */
     TEITensor EvaluateERITensor(const BasisSet &basisSet, const DH::Thread *thread = nullptr);
-    TEITensor ERITensorMultithread(const BasisSet &basisSet,
-                                   const DH::Thread *parentThread = nullptr);
     //Calculates <ij | 1/r12 | kl> (I1) for a contracted gaussian
     double ERI_CGF(const CGF &c1, const CGF &c2,
                    const CGF &c3, const CGF &c4,

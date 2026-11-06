@@ -278,8 +278,8 @@ namespace SCESS::Viewer {
         //Written by the calculation thread when it finishes
         std::atomic<bool> mInvalidateLastSCF = false;
 
-        std::optional<CC::CCSD_Wfn> mCCSDWfn;
-        std::optional<CC::CCSD_Wfn> mCCSD_TWfn;
+        std::optional<CC::RCCSD_Wfn> mCCSDWfn;
+        std::optional<CC::RCCSD_Wfn> mCCSD_TWfn;
         std::optional<double> mMP2Energy;
 
         std::optional<CI::CI_Wfn> mFCIWfn;

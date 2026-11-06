@@ -61,7 +61,7 @@ namespace SCESS::Integrals::F12 {
      * hardware thread with the 8-fold permutational symmetry of the (real, symmetric) operators
      */
     TEITensor AOTwoElectronTensor(const std::vector<libint2::Shell> &shells, size_t nShells, Operator2e op,
-                                  double gamma = 1.0);
+                                  double gamma = 1.0, const DH::Thread *thread = nullptr);
     //
     //AO ERIs (mu nu | lam sig) over the OBS functions only
     TEITensor OBSTwoElectronRepulsionTensor(const F12BasisSet &basisSet);

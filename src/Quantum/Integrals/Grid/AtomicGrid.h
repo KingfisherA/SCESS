@@ -49,6 +49,8 @@ namespace SCESS::Quadrature {
                     uint32_t lebedevOffset);
 
         void SetDensity(const Eigen::MatrixXd &D);
+        //Sets the density of every grid point from the densities of this grid's points (in order)
+        void SetDensities(const Eigen::Ref<const Eigen::VectorXd> &densities);
 
         void ScaleDensity(double s);
         void UpdateDensity() const;

@@ -5,7 +5,9 @@
 //
 #include "CI.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
+#include "Tensor/TensorParallel.h"
 //
+#include <Eigen/Sparse>
 #include "Dahlia/Tools/Threading.h"
 
 
@@ -239,61 +241,63 @@ namespace SCESS::CI {
                                        size_t numOfBetaOrbitals,
                                        const MatrixXd &HSpin,
                                        const TEITensor &spinERI) {
-        if (numOfAlphaOrbitals != numOfBetaOrbitals)
-            throw std::runtime_error(
-                "Only RHF determinants with equal numbers of alpha and beta number of electrons are supported currently");
+        return CalculateHamiltonianElement(detI, detJ, numOfAlphaOrbitals, numOfBetaOrbitals,
+                                           DenseSpinOrbitalIntegrals{HSpin, spinERI});
+    }
+    //
+    SpinOrbitalIntegrals MakeSpinOrbitalIntegrals(const HFWfn &rhfWfn, const Integrals::MolInts &mints) {
+        const MatrixXd &C = rhfWfn.C_Alpha;
+        return SpinOrbitalIntegrals{
+            C.transpose() * (mints.T + mints.V) * C,
+            Integrals::Transforms::TransformTEI(mints.eri, C)
+        };
+    }
+    //
+    std::vector<SlaterDet> ConnectedDeterminants(SlaterDet det, uint32_t nSpatialOrbitals) {
+        const OrbBitStr mask = nSpatialOrbitals >= 64 ? ~0ULL : (1ULL << nSpatialOrbitals) - 1;
+        auto Occupied = [nSpatialOrbitals](OrbBitStr str) {
+            std::vector<uint32_t> orbs;
+            for (uint32_t i = 0; i < nSpatialOrbitals; i++)
+                if (str >> i & 1ULL)
+                    orbs.push_back(i);
+            return orbs;
+        };
+        const OrbBitStr alpha = det.GetAlphaOrbitals(), beta = det.GetBetaOrbitals();
+        const std::vector<uint32_t> occA = Occupied(alpha), occB = Occupied(beta);
+        const std::vector<uint32_t> virA = Occupied(~alpha & mask), virB = Occupied(~beta & mask);
 
-        //The arrays hold spin orbitals of both spins (at most 64 alpha and 64 beta orbitals)
-        std::array<uint16_t, 128> uniqueI{}, uniqueJ{}, commonIJ{};
-        uint16_t uniqueISize, uniqueJSize, commonIJSize;
-        int8_t sign;
-        SlaterDet::CalculateDifferences(detI, detJ,
-                                        numOfAlphaOrbitals, numOfBetaOrbitals,
-                                        uniqueI.data(), &uniqueISize,
-                                        uniqueJ.data(), &uniqueJSize,
-                                        commonIJ.data(), &commonIJSize,
-                                        &sign);
+        //Single and double replacements of one string
+        auto SameSpin = [](OrbBitStr str, const std::vector<uint32_t> &occ, const std::vector<uint32_t> &vir,
+                           std::vector<OrbBitStr> &singles, std::vector<OrbBitStr> &doubles) {
+            for (uint32_t i: occ)
+                for (uint32_t a: vir)
+                    singles.push_back(str ^ (1ULL << i) ^ (1ULL << a));
+            for (size_t i = 0; i < occ.size(); i++)
+                for (size_t j = i + 1; j < occ.size(); j++)
+                    for (size_t a = 0; a < vir.size(); a++)
+                        for (size_t b = a + 1; b < vir.size(); b++)
+                            doubles.push_back(str ^ (1ULL << occ[i]) ^ (1ULL << occ[j]) ^
+                                              (1ULL << vir[a]) ^ (1ULL << vir[b]));
+        };
+        std::vector<OrbBitStr> singlesA, doublesA, singlesB, doublesB;
+        SameSpin(alpha, occA, virA, singlesA, doublesA);
+        SameSpin(beta, occB, virB, singlesB, doublesB);
 
-        switch (uniqueISize) {
-            case 0: {
-                double element = 0.0;
-
-                for (uint16_t m = 0; m < commonIJSize; m++)
-                    element += HSpin(commonIJ[m], commonIJ[m]);
-
-                for (uint16_t m = 0; m < commonIJSize - 1; m++)
-                    for (uint16_t n = m + 1; n < commonIJSize; n++)
-                        element += spinERI(commonIJ[m], commonIJ[n], commonIJ[m], commonIJ[n]);
-
-                return element;
-            }
-
-            case 1: {
-                auto m = uniqueI[0];
-                auto p = uniqueJ[0];
-
-                double element = HSpin(m, p);
-
-                for (uint16_t k = 0; k < commonIJSize; k++) {
-                    auto n = commonIJ[k];
-                    element += spinERI(m, n, p, n);
-                }
-
-                return sign * element;
-            }
-            case 2: {
-                double element = spinERI(uniqueI[0],
-                                         uniqueI[1],
-                                         uniqueJ[0],
-                                         uniqueJ[1]);
-
-                return sign * element;
-            }
-
-            default: {
-                return 0.0;
-            }
-        }
+        std::vector<SlaterDet> connected;
+        connected.reserve(singlesA.size() + doublesA.size() + singlesB.size() + doublesB.size() +
+                          singlesA.size() * singlesB.size());
+        for (OrbBitStr a: singlesA)
+            connected.emplace_back(a, beta);
+        for (OrbBitStr a: doublesA)
+            connected.emplace_back(a, beta);
+        for (OrbBitStr b: singlesB)
+            connected.emplace_back(alpha, b);
+        for (OrbBitStr b: doublesB)
+            connected.emplace_back(alpha, b);
+        for (OrbBitStr a: singlesA)
+            for (OrbBitStr b: singlesB)
+                connected.emplace_back(a, b);
+        return connected;
     }
     //
     OrbBitStr MixAlphaAndBeta(OrbBitStr alphaList,
@@ -464,102 +468,355 @@ namespace SCESS::CI {
 #pragma region Configuration Interaction Impl
     //
     //
+    DavidsonResult Davidson(const std::function<MatrixXd(const MatrixXd &)> &sigma,
+                            const VectorXd &diagonal,
+                            const MatrixXd &guess,
+                            const double residualTolerance,
+                            const size_t maxIterations,
+                            const DH::Thread *thread) {
+        const Index n = diagonal.size();
+        const Index nRoots = guess.cols();
+        //The subspace collapses onto the current Ritz vectors when it would exceed this size
+        const Index maxSubspace = std::min<Index>(n, std::max<Index>(4 * nRoots, 12));
+
+        //Orthonormal basis of the subspace and H times it
+        MatrixXd V = HouseholderQR<MatrixXd>(guess).householderQ() * MatrixXd::Identity(n, nRoots);
+        MatrixXd S = sigma(V);
+
+        DavidsonResult result;
+        for (size_t iteration = 0; iteration < maxIterations; iteration++) {
+            if (thread && thread->ShouldStop())
+                return {};
+
+            const MatrixXd subspaceH = V.transpose() * S;
+            const SelfAdjointEigenSolver<MatrixXd> eig(0.5 * (subspaceH + subspaceH.transpose()));
+            const VectorXd theta = eig.eigenvalues().head(nRoots);
+            const MatrixXd Y = eig.eigenvectors().leftCols(nRoots);
+            MatrixXd X = V * Y;
+            MatrixXd SX = S * Y;
+            const MatrixXd R = SX - X * theta.asDiagonal();
+
+            result.eigenvalues = theta;
+            result.eigenvectors = X;
+
+            //Diagonally preconditioned corrections of the unconverged roots
+            std::vector<VectorXd> corrections;
+            for (Index k = 0; k < nRoots; k++) {
+                if (R.col(k).norm() < residualTolerance)
+                    continue;
+                VectorXd t(n);
+                for (Index i = 0; i < n; i++) {
+                    double denominator = theta(k) - diagonal(i);
+                    if (std::abs(denominator) < 1e-8)
+                        denominator = denominator < 0.0 ? -1e-8 : 1e-8;
+                    t(i) = R(i, k) / denominator;
+                }
+                corrections.push_back(std::move(t));
+            }
+            if (corrections.empty()) {
+                result.converged = true;
+                return result;
+            }
+
+            if (V.cols() + (Index) corrections.size() > maxSubspace) {
+                V = std::move(X);
+                S = std::move(SX);
+            }
+
+            //Orthogonalise the corrections against the subspace (twice for numerical stability) and append them
+            std::vector<VectorXd> added;
+            for (VectorXd &t: corrections) {
+                for (int pass = 0; pass < 2; pass++) {
+                    t -= V * (V.transpose() * t);
+                    for (const VectorXd &a: added)
+                        t -= a.dot(t) * a;
+                }
+                const double norm = t.norm();
+                if (norm > 1e-10)
+                    added.push_back(t / norm);
+            }
+            if (added.empty()) {
+                result.converged = true;
+                return result;
+            }
+
+            MatrixXd newV(n, (Index) added.size());
+            for (Index k = 0; k < newV.cols(); k++)
+                newV.col(k) = added[k];
+            const MatrixXd newS = sigma(newV);
+
+            const Index m = V.cols();
+            V.conservativeResize(n, m + newV.cols());
+            V.rightCols(newV.cols()) = newV;
+            S.conservativeResize(n, m + newS.cols());
+            S.rightCols(newS.cols()) = newS;
+        }
+        return result;
+    }
+    //
+    namespace {
+        //E_pq |string> = sign |target> (a+_p a_q) over the orbitals of one spin
+        struct StringReplacement {
+            uint32_t target;
+            //p + n q, the row of (pq|rs) in the n^2 x n^2 integral matrix
+            uint32_t pq;
+            double sign;
+        };
+        //
+        //Every string of nElectrons in nOrbitals orbitals, in the order of EnumerateAllDet, with every replacement
+        //E_pq of each string (including p == q)
+        struct StringSpace {
+            std::vector<OrbBitStr> strings;
+            std::vector<std::vector<StringReplacement> > replacements;
+
+            StringSpace(uint32_t nOrbitals, uint32_t nElectrons) {
+                for (auto &&combination: iter::combinations(boost::irange<uint32_t>(0, nOrbitals), nElectrons)) {
+                    OrbBitStr str = 0;
+                    for (const auto orb: combination)
+                        str |= 1ULL << orb;
+                    strings.push_back(str);
+                }
+                std::unordered_map<OrbBitStr, uint32_t> index;
+                index.reserve(strings.size());
+                for (uint32_t i = 0; i < strings.size(); i++)
+                    index.emplace(strings[i], i);
+
+                replacements.resize(strings.size());
+                for (uint32_t i = 0; i < strings.size(); i++) {
+                    const OrbBitStr str = strings[i];
+                    for (uint32_t q = 0; q < nOrbitals; q++) {
+                        if (!(str >> q & 1ULL))
+                            continue;
+                        for (uint32_t p = 0; p < nOrbitals; p++) {
+                            if (p != q && (str >> p & 1ULL))
+                                continue;
+                            const OrbBitStr target = str ^ (1ULL << q) ^ (1ULL << p);
+                            //The electrons between p and q which the moved electron passes
+                            const uint32_t lo = std::min(p, q), hi = std::max(p, q);
+                            const OrbBitStr between = hi - lo > 1 ? ((1ULL << hi) - 1) & ~((1ULL << (lo + 1)) - 1) : 0;
+                            const double sign = std::popcount(str & between) % 2 ? -1.0 : 1.0;
+                            replacements[i].push_back({index.at(target), p + nOrbitals * q, sign});
+                        }
+                    }
+                }
+            }
+        };
+        //
+        //Full CI Hamiltonian products over the alpha x beta string products of a closed-shell determinant space
+        //(Knowles & Handy, Chem. Phys. Lett. 111, 315 (1984); Olsen et al., J. Chem. Phys. 89, 2185 (1988)). A CI
+        //vector is the matrix C(I_beta, I_alpha), the determinant order of EnumerateAllDet.
+        class FCISigma {
+        public:
+            FCISigma(const SpinOrbitalIntegrals &ints, uint32_t nOrbitals, uint32_t nElectronsPerSpin)
+                : mSpace(nOrbitals, nElectronsPerSpin), mN(nOrbitals) {
+                const Index n = nOrbitals;
+                mG = Map<const MatrixXd>(ints.eri.data(), n * n, n * n);
+                //k_pq = h_pq - 1/2 sum_r (pr|rq)
+                mK = ints.h;
+                for (Index p = 0; p < n; p++)
+                    for (Index q = 0; q < n; q++)
+                        for (Index r = 0; r < n; r++)
+                            mK(p, q) -= 0.5 * ints.eri(p, r, r, q);
+            }
+
+            [[nodiscard]] Index NumStrings() const { return (Index) mSpace.strings.size(); }
+
+            MatrixXd operator()(const MatrixXd &vectors) const {
+                MatrixXd result(vectors.rows(), vectors.cols());
+                for (Index v = 0; v < vectors.cols(); v++)
+                    result.col(v) = Apply(vectors.col(v));
+                return result;
+            }
+
+        private:
+            VectorXd Apply(const VectorXd &c) const {
+                const Index nStr = NumStrings();
+                const Map<const MatrixXd> C(c.data(), nStr, nStr);
+                MatrixXd sigma = MatrixXd::Zero(nStr, nStr);
+
+                //Alpha-alpha (columns are the alpha strings) and beta-beta, which is the same on the transpose as the
+                //alpha and beta strings are the same for a closed-shell space
+                SameSpin(C, sigma);
+                const MatrixXd CT = C.transpose();
+                MatrixXd sigmaT = MatrixXd::Zero(nStr, nStr);
+                SameSpin(CT, sigmaT);
+                sigma += sigmaT.transpose();
+                OppositeSpin(C, sigma);
+
+                return Map<const VectorXd>(sigma.data(), sigma.size());
+            }
+
+            //out(:, I) += sum_J <J| sum_pq k_pq E_pq + 1/2 sum_pqrs (pq|rs) E_pq E_rs |I> in(:, J), the excitations
+            //acting on the strings of the columns
+            void SameSpin(const MatrixXd &in, MatrixXd &out) const {
+                const Index nStr = NumStrings();
+                std::vector<VectorXd> F(NumComputeThreads(), VectorXd::Zero(nStr));
+                std::vector<std::vector<uint32_t> > touched(NumComputeThreads());
+
+                ParallelForDynamic((size_t) nStr, [&](size_t I, int thread) {
+                    VectorXd &f = F[thread];
+                    std::vector<uint32_t> &t = touched[thread];
+                    auto Add = [&](uint32_t J, double value) {
+                        if (f(J) == 0.0)
+                            t.push_back(J);
+                        f(J) += value;
+                    };
+                    for (const StringReplacement &r1: mSpace.replacements[I]) {
+                        const Index p = r1.pq % mN, q = r1.pq / mN;
+                        Add(r1.target, r1.sign * mK(p, q));
+                        for (const StringReplacement &r2: mSpace.replacements[r1.target])
+                            Add(r2.target, 0.5 * r1.sign * r2.sign * mG(r1.pq, r2.pq));
+                    }
+                    for (uint32_t J: t) {
+                        if (f(J) != 0.0)
+                            out.col((Index) I) += f(J) * in.col(J);
+                        f(J) = 0.0;
+                    }
+                    t.clear();
+                });
+            }
+
+            //out(Ib, Ia) += sum (pq|rs) <Ia|E_pq|Ja> <Ib|E_rs|Jb> C(Jb, Ja)
+            void OppositeSpin(const Map<const MatrixXd> &C, MatrixXd &out) const {
+                const Index nStr = NumStrings();
+                ParallelForDynamic((size_t) nStr, [&](size_t Ia, int) {
+                    for (const StringReplacement &a: mSpace.replacements[Ia]) {
+                        const auto column = C.col(a.target);
+                        const auto g = mG.row(a.pq);
+                        for (Index Ib = 0; Ib < nStr; Ib++) {
+                            double value = 0.0;
+                            for (const StringReplacement &b: mSpace.replacements[Ib])
+                                value += b.sign * g(b.pq) * column(b.target);
+                            out(Ib, (Index) Ia) += a.sign * value;
+                        }
+                    }
+                });
+            }
+
+            StringSpace mSpace;
+            Index mN;
+            MatrixXd mG, mK;
+        };
+    }
+    //
     CI_Wfn CI(const HFWfn &rhfWfn,
               const Integrals::MolInts &mints,
               double Vnn,
               int excitorLevel,
               const DH::Thread *thread,
               std::stringstream *console) {
-        const MatrixXd &C = rhfWfn.C_Alpha;
-
         if (console)
-            *console <<
-                    "--- Configuration Interaction --- \n\n    Transforming and antisymmetrising ERI integrals...\n";
+            *console << "--- Configuration Interaction --- \n\n    Transforming the ERI integrals...\n";
 
-        // Transform tei tensor into MO basis in physicists' notation and
-        // integrate out spin functions
-        TEITensor moSpinTEI =
-                Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-                    Integrals::Transforms::TransformTEI(mints.eri, C));
-
+        //Spatial MO integrals; the spin-orbital elements are formed on demand
+        const SpinOrbitalIntegrals ints = MakeSpinOrbitalIntegrals(rhfWfn, mints);
         if (console)
             *console << "   Transformation of integrals completed!\n";
 
-
-        // Transform the one-electron Hamiltonian matrix into the MO basis set
-        // and integrate out spin functions
-        auto h = mints.T + mints.V;
-        MatrixXd HSpin = GenerateHCoreSpinTransform(h, rhfWfn.C_Alpha);
-
         //Must be the same number of alpha and beta spin electrons for a closed-shell RHF determinant
-        uint32_t nElectrons = std::distance(rhfWfn.Occ_Alpha.begin(),
-                                            std::ranges::find(rhfWfn.Occ_Alpha, 0)) * 2;
-        uint32_t nSpatialOrbitals = rhfWfn.Occ_Alpha.size();
-        uint32_t nSpinOrbs = nSpatialOrbitals * 2;
-
+        const uint32_t nElectrons = std::distance(rhfWfn.Occ_Alpha.begin(),
+                                                  std::ranges::find(rhfWfn.Occ_Alpha, 0)) * 2;
+        const uint32_t nSpatialOrbitals = rhfWfn.Occ_Alpha.size();
+        const uint32_t nSpinOrbs = nSpatialOrbitals * 2;
+        const bool fullCI = excitorLevel < 0;
 
         if (console)
-            *console << "   Generating all Slater determinants in Hilbert space...\n";
+            *console << "   Generating the Slater determinants...\n";
         auto genDetTime1 = std::chrono::high_resolution_clock::now();
         //Only the M_s = 0 determinants can couple to the closed-shell ground state
-        std::vector<SlaterDet> determinants =
-                excitorLevel < 0
+        const std::vector<SlaterDet> determinants =
+                fullCI
                     ? EnumerateAllDet(nSpinOrbs, nElectrons / 2, nElectrons / 2)
                     : EnumerateDet(nSpinOrbs, nElectrons / 2, nElectrons / 2, static_cast<uint32_t>(excitorLevel));
         auto genDetTime2 = std::chrono::high_resolution_clock::now();
+        const Index nDet = (Index) determinants.size();
         if (console)
-            *console << "   Generated " << determinants.size() << " determinants in " << std::chrono::duration_cast<
+            *console << "   Generated " << nDet << " determinants in " << std::chrono::duration_cast<
                 std::chrono::milliseconds>(genDetTime2 - genDetTime1).count() << " milliseconds\n";
 
+        if (thread && thread->ShouldStop())
+            return {};
 
-        if (console) {
-            *console << "   Forming CI Hamiltonian Matrix\n";
-            *console << "   !!! No symmetry specified; will have to evaluate all " << determinants.size() <<
-                    " matrix elements !!!\n";
-        }
-        MatrixXd H = MatrixXd::Zero((Index) determinants.size(),
-                                    (Index) determinants.size());
+        auto Element = [&](SlaterDet I, SlaterDet J) {
+            return CalculateHamiltonianElement(I, J, nSpatialOrbitals, nSpatialOrbitals, ints);
+        };
 
-        if (thread)
-            if (thread->ShouldStop())
-                return {};
-
-        for (uint32_t i = 0; i < H.rows(); i++) {
-            //Poll for cancellation as building the matrix is the most expensive step
+        VectorXd energies;
+        MatrixXd wfns;
+        if ((size_t) nDet <= DENSE_CI_LIMIT) {
+            if (console)
+                *console << "   Forming and diagonalising the full CI Hamiltonian matrix\n";
+            MatrixXd H = MatrixXd::Zero(nDet, nDet);
+            ParallelForDynamic((size_t) nDet, [&](size_t i, int) {
+                for (Index j = (Index) i; j < nDet; j++)
+                    H(j, (Index) i) = Element(determinants[i], determinants[j]);
+            });
             if (thread && thread->ShouldStop())
                 return {};
-            for (uint32_t j = i; j < H.cols(); j++) {
-                H(i, j) = H(j, i) =
-                          CalculateHamiltonianElement(determinants[i], determinants[j],
-                                                      nSpatialOrbitals,
-                                                      nSpatialOrbitals, HSpin, moSpinTEI);
+
+            const SelfAdjointEigenSolver<MatrixXd> eigensolver(H.selfadjointView<Lower>());
+            energies = eigensolver.eigenvalues();
+            wfns = eigensolver.eigenvectors();
+        } else {
+            //The diagonal preconditions Davidson's method; the reference is the initial guess
+            VectorXd diagonal(nDet);
+            ParallelForDynamic((size_t) nDet, [&](size_t i, int) {
+                diagonal((Index) i) = Element(determinants[i], determinants[i]);
+            });
+            MatrixXd guess = MatrixXd::Zero(nDet, 1);
+            guess(0, 0) = 1.0;
+
+            DavidsonResult davidson;
+            if (fullCI) {
+                if (console)
+                    *console << "   Davidson diagonalisation with string-driven Hamiltonian products\n";
+                const FCISigma sigma(ints, nSpatialOrbitals, nElectrons / 2);
+                davidson = Davidson(sigma, diagonal, guess, 1e-7, 200, thread);
+            } else {
+                if (console)
+                    *console << "   Davidson diagonalisation with a sparse Hamiltonian matrix\n";
+                //Every row from the single and double excitations of its determinant present in the space
+                const DeterminantIndex index(determinants);
+                std::vector<std::vector<Triplet<double> > > rows(nDet);
+                ParallelForDynamic((size_t) nDet, [&](size_t i, int) {
+                    rows[i].emplace_back((Index) i, (Index) i, diagonal((Index) i));
+                    for (const SlaterDet J: ConnectedDeterminants(determinants[i], nSpatialOrbitals)) {
+                        const uint32_t j = index.Find(J);
+                        if (j != index.Size())
+                            rows[i].emplace_back((Index) i, (Index) j, Element(determinants[i], J));
+                    }
+                });
+                std::vector<Triplet<double> > triplets;
+                for (auto &row: rows) {
+                    triplets.insert(triplets.end(), row.begin(), row.end());
+                    std::vector<Triplet<double> >().swap(row);
+                }
+                SparseMatrix<double> H(nDet, nDet);
+                H.setFromTriplets(triplets.begin(), triplets.end());
+                std::vector<Triplet<double> >().swap(triplets);
+
+                davidson = Davidson([&H](const MatrixXd &x) { return MatrixXd(H * x); },
+                                    diagonal, guess, 1e-7, 200, thread);
             }
+            if (thread && thread->ShouldStop())
+                return {};
+            if (!davidson.converged && console)
+                *console << "!!! Davidson diagonalisation failed to converge !!!\n";
+            energies = davidson.eigenvalues;
+            wfns = davidson.eigenvectors;
         }
 
-        if (console)
-            *console << "   Diagonalising FCI matrix...\n";
-
-        if (thread)
-            if (thread->ShouldStop())
-                return {};
-
-        //Diagonalise the Full CI matrix
-        SelfAdjointEigenSolver<MatrixXd> eigensolver(H);
-        VectorXd E_FCI = eigensolver.eigenvalues().real();
-
-        for (double &energy: E_FCI)
+        for (double &energy: energies)
             energy += Vnn;
 
-        MatrixXd wfns = eigensolver.eigenvectors().real();
-
         if (console) {
-            *console << "\n\n\n--- Full CI procedure completed! ---\n\n";
-            *console << "   E(FCI Correlation) = " << E_FCI(0) - rhfWfn.E_HF << " hartrees\n";
-            *console << "   E(Total) = E(Hartree Fock) + E(Correlation) = " << E_FCI(0) << " hartrees\n";
-            *console << "   Generated " << wfns.rows() << " FCI wavefunctions\n";
+            *console << "\n\n\n--- " << (fullCI ? "Full" : "Truncated") << " CI procedure completed! ---\n\n";
+            *console << "   E(CI Correlation) = " << energies(0) - rhfWfn.E_HF << " hartrees\n";
+            *console << "   E(Total) = E(Hartree Fock) + E(Correlation) = " << energies(0) << " hartrees\n";
+            *console << "   Found " << wfns.cols() << " CI wavefunctions\n";
         }
 
-        return CI_Wfn{E_FCI, wfns};
+        return CI_Wfn{energies, wfns};
     }
     //
     //

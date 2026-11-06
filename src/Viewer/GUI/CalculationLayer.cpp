@@ -450,13 +450,13 @@ namespace SCESS::Viewer {
                                                                        &mConsoleOutput);
                                 break;
                             case CorrelationMethod::CCSD: {
-                                mCCSDWfn = CC::CCSD_DIIS(
+                                mCCSDWfn = CC::RCCSD_DIIS(
                                     *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
                                 break;
                             }
 
                             case CorrelationMethod::CCSD_T: {
-                                mCCSD_TWfn = SCESS::CC::CCSD_T(
+                                mCCSD_TWfn = SCESS::CC::RCCSD_T(
                                     *mRHFWfn, mints, &mCalculationThread, &mConsoleOutput);
                                 break;
                             }

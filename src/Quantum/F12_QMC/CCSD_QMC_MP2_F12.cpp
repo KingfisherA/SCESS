@@ -110,7 +110,8 @@ namespace SCESS::F12_QMC {
     //
     double CCSD_QMC_MP2_F12(const HF::HF_Wfn &refWfn,
                             const F12::F12MOIntegrals &ints,
-                            F12::F12Idxs f12Idxs) {
+                            F12::F12Idxs f12Idxs,
+                            std::optional<uint64_t> seed) {
         using namespace QMC::CC;
 
         fmt::print("\n\n--- CCSD Quantum Monte Carlo MP2 F12; CCSD[MP2-F12] ---\n\n");
@@ -132,12 +133,16 @@ namespace SCESS::F12_QMC {
         constexpr uint32_t TRUNCATION_LEVEL = 2;
 
 
-        //The F12 integrals are in physicists' notation but the antisymmetrisation expects chemists' notation
-        TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::ConvertPhysicistsToChemists(ints.eriOBS));
-
-        MatrixXd h = ints.h.topLeftCorner(f12Idxs.nOBS, f12Idxs.nOBS);
-        MatrixXd HSpin = CI::GenerateHCoreSpin(h);
+        //Spatial OBS integrals (the F12 integrals are in physicists' notation); the spin-orbital elements are formed
+        //on demand
+        const CI::SpinOrbitalIntegrals soInts{
+            ints.h.topLeftCorner(f12Idxs.nOBS, f12Idxs.nOBS),
+            Integrals::Transforms::ConvertPhysicistsToChemists(ints.eriOBS)
+        };
+        auto Element = [&soInts, &refWfn](SlaterDet I, SlaterDet J) {
+            const auto n = (size_t) refWfn.Occ_Alpha.size();
+            return CI::CalculateHamiltonianElement(I, J, n, n, soInts);
+        };
 
         fmt::print("Evaluating F12 T2'(1) Intermediates...\n");
         Tensor2 F_pq;
@@ -159,7 +164,7 @@ namespace SCESS::F12_QMC {
         uint32_t nSpatialOrbitals = refWfn.Occ_Alpha.size();
         uint32_t nSpinOrbs = nSpatialOrbitals * 2;
 
-        mt19937 randGenerator(time(nullptr));
+        mt19937 randGenerator(seed ? (uint32_t) *seed : (uint32_t) time(nullptr));
         //Draw every random number from the same engine so that no two streams are correlated
         uniform_01<double> unitDist;
         auto randomNumber = [&randGenerator, &unitDist]() { return unitDist(randGenerator); };
@@ -171,19 +176,13 @@ namespace SCESS::F12_QMC {
         //Number of conventional excitors including the reference
         const uint32_t nConventional = excitors.size();
 
-        //Make the Hamiltonian matrix
-        MatrixXd H_CI = MatrixXd::Zero(excitors.size(), excitors.size());
-        for (uint32_t i = 0; i < H_CI.rows(); i++)
-            for (uint32_t j = i; j < H_CI.cols(); j++)
-                H_CI(i, j) = H_CI(j, i) = CI::CalculateHamiltonianElement(
-                                 excitors[i] ^ D0,
-                                 excitors[j] ^ D0,
-                                 nSpatialOrbitals,
-                                 nSpatialOrbitals,
-                                 HSpin,
-                                 spinERI);
+        //Index of the conventional excitors, and the elements <Di|H|Di> and <D0|H|Di> which are needed for every
+        //excitor; the other elements are evaluated as they are needed
+        const CI::DeterminantIndex excitorIndex(excitors);
+        VectorXd H_Diagonal, H_ReferenceRow;
+        EvaluateExcitorElements(excitors, D0, soInts, nSpatialOrbitals, H_Diagonal, H_ReferenceRow);
         //Electronic energy of the reference; the shift is a correlation energy relative to it
-        const double H00 = H_CI(0, 0);
+        const double H00 = H_Diagonal(0);
 
         //Add the geminal (MEG) excitors, one for each pair of an alpha and a beta occupied orbital
         uint32_t nGeminalExcitors = 0;
@@ -240,6 +239,8 @@ namespace SCESS::F12_QMC {
                 if (Na > 100000)
                     Na = 5000;
 
+                //Reused by every attempt so that the selection does not allocate
+                std::vector<uint32_t> selectedExcitorIndices;
                 for (int64_t attempt = 0; attempt < Na; attempt++) {
                     // -- Cluster selection --
                     // A cluster of size s is chosen with probability pSize. A MEG excitor may only be selected in a
@@ -249,7 +250,7 @@ namespace SCESS::F12_QMC {
 
                     //Probability of selecting given excitors
                     double pClust = 1.0;
-                    std::vector<uint32_t> selectedExcitorIndices;
+                    selectedExcitorIndices.clear();
                     if (s == 0) {
                         selectedExcitorIndices.push_back(0);
                     } else if (s == 1) {
@@ -335,7 +336,7 @@ namespace SCESS::F12_QMC {
                         continue;
 
                     //Clusters beyond the truncation level have no excitor but may still spawn into the excitor space
-                    const uint32_t DiIdx = FindExcitorIdx(Di ^ D0, excitors);
+                    const uint32_t DiIdx = excitorIndex.Find(Di ^ D0);
                     const bool isInExcitorSpace = DiIdx < nConventional;
 
                     //Signed contribution of this cluster to the coefficient of |Di>, in excips
@@ -343,7 +344,7 @@ namespace SCESS::F12_QMC {
 
                     //Update the projected energy
                     if (isInExcitorSpace && DiIdx != 0)
-                        EProjCluster += clusterSign * clusterAmplitude * H_CI(0, DiIdx) / pSelect;
+                        EProjCluster += clusterSign * clusterAmplitude * H_ReferenceRow(DiIdx) / pSelect;
 
                     // -- Spawning --
                     // A random single or double excitation of |Di> is performed to generate |Dj>. The excitor
@@ -353,14 +354,11 @@ namespace SCESS::F12_QMC {
                     SlaterDet Dj = randomNumber() < 0.5
                                        ? RandomSingleExcite(Di, randGenerator, nSpatialOrbitals, pExcit)
                                        : RandomDoubleExcite(Di, randGenerator, nSpatialOrbitals, pExcit);
-                    const uint32_t DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
+                    const uint32_t DjIdx = excitorIndex.Find(Dj ^ D0);
 
                     //Cannot spawn onto itself and check J is valid
                     if (!(Dj == Di) && DjIdx < nConventional) {
-                        const double Hji = isInExcitorSpace
-                                               ? H_CI(DjIdx, DiIdx)
-                                               : CI::CalculateHamiltonianElement(Dj, Di,
-                                                   nSpatialOrbitals, nSpatialOrbitals, HSpin, spinERI);
+                        const double Hji = Element(Dj, Di);
 
                         double pSpawn = tau * abs(clusterWeight * Hji) / (Na * pSelect * pExcit);
                         int64_t nSpawn = static_cast<int64_t>(pSpawn);
@@ -378,7 +376,7 @@ namespace SCESS::F12_QMC {
 
                     // -- Death --
                     // dN_i = -tau sign_i (H_ii - H_00 - S) weight
-                    const double Hii = H_CI(DiIdx, DiIdx) - H00;
+                    const double Hii = H_Diagonal(DiIdx) - H00;
 
                     double pCloneDeath = tau * abs(clusterWeight) * (Hii - shift) / (Na * pSelect);
                     int64_t nKill = static_cast<int64_t>(pCloneDeath);

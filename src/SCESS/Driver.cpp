@@ -188,7 +188,7 @@ namespace SCESS::Driver {
         fmt::print("{}\n", console.str());
         console.str("");
 
-        CC::CCSD_Wfn ccsdWfn = CC::CCSD(rhfWfn, mints, nullptr, &console);
+        CC::RCCSD_Wfn ccsdWfn = CC::RCCSD_DIIS(rhfWfn, mints, nullptr, &console);
 
         fmt::print("{}\n", console.str());
         console.str("");
@@ -218,7 +218,7 @@ namespace SCESS::Driver {
         fmt::print("{}\n", console.str());
         console.str("");
 
-        CC::CCSD_Wfn ccsdWfn = CC::CCSD_T(rhfWfn, mints, nullptr, &console);
+        CC::RCCSD_Wfn ccsdWfn = CC::RCCSD_T(rhfWfn, mints, nullptr, &console);
 
         fmt::print("{}\n", console.str());
         console.str("");

@@ -27,6 +27,11 @@ namespace SCESS::Integrals::Transforms {
      * @param C Wavefunction coefficients
      * @return Transformed TEI tensor (in chemist's notation)
      */
+    //Coulomb matrix J(mu, nu) = sum_{lam sig} (mu nu | lam sig) D(lam, sig) from chemists' notation ERIs
+    Eigen::MatrixXd CoulombMatrix(const TEITensor &eri, const Eigen::MatrixXd &D);
+    //Exchange matrix K(mu, nu) = sum_{lam sig} (mu lam | nu sig) D(lam, sig) from chemists' notation ERIs
+    Eigen::MatrixXd ExchangeMatrix(const TEITensor &eri, const Eigen::MatrixXd &D);
+    //
     TEITensor TransformTEI(const TEITensor &tei, const Eigen::MatrixXd &C, bool convertChemToPhys = false);
     //
     TEITensor TransformTEI(

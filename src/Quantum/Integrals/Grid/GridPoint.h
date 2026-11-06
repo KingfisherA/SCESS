@@ -51,6 +51,10 @@ namespace SCESS::Quadrature {
             mDensity *= s;
         }
 
+        void SetDensityValue(double density) {
+            mDensity = density;
+        }
+
         [[nodiscard]] const double &GetDensity() const {
             return mDensity;
         }

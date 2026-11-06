@@ -77,6 +77,13 @@ namespace SCESS::Quadrature {
         mDensityInvalidated = true;
     }
     //
+    void AtomicGrid::SetDensities(const Eigen::Ref<const Eigen::VectorXd> &densities) {
+        for (uint32_t i = 0; i < mGridPoints.size(); i++)
+            mGridPoints[i].SetDensityValue(densities(i));
+
+        mDensityInvalidated = true;
+    }
+    //
     VectorXd AtomicGrid::GetDensities() const {
         VectorXd densities = VectorXd::Zero(static_cast<Eigen::Index>(mGridPoints.size()));
 

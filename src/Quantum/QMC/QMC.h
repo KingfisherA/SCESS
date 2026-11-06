@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <optional>
 #include <boost/random/mersenne_twister.hpp>
 //
 #include "Quantum/CI/CI.h"
@@ -36,13 +37,16 @@ namespace SCESS::QMC {
     //
     //
     namespace FCI {
-        //Full CI quantum monte carlo
+        //Full CI quantum monte carlo. Every walker attempts one spawn per step onto a random single or double
+        //excitation; only the occupied determinants are stored and the Hamiltonian elements are evaluated from the
+        //spatial integrals as needed. seed defaults to the time.
         double FCIQMC(const HF_Wfn &rhfWfn,
                       const Integrals::MolInts &mints,
                       double Vnn,
                       const DH::Thread *thread = nullptr,
                       std::stringstream *console = nullptr,
-                      const ProjEnergyCallback &onReportCycle = {});
+                      const ProjEnergyCallback &onReportCycle = {},
+                      std::optional<uint64_t> seed = std::nullopt);
     }
 
     //
@@ -50,10 +54,12 @@ namespace SCESS::QMC {
     namespace CC {
         // Unlinked coupled-cluster quantum monte carlo. The similarity transformed Hamiltonian is not
         // applied here.
+        // The Hamiltonian elements are evaluated from the spatial integrals as needed. seed defaults to the time.
         double CCQMC(const HF_Wfn &rhfWfn,
                      const Integrals::MolInts &mints,
                      const DH::Thread *thread = nullptr,
-                     const ProjEnergyCallback &onReportCycle = {});
+                     const ProjEnergyCallback &onReportCycle = {},
+                     std::optional<uint64_t> seed = std::nullopt);
         //
         //
         uint32_t CountNumElecs(OrbBitStr bitStr, const uint32_t nSpatialOrbitals);
@@ -84,6 +90,14 @@ namespace SCESS::QMC {
         //
         uint32_t FindExcitorIdx(Excitor ex, const std::vector<Excitor> &excitors);
         //
+        // <Di|H|Di> and <D0|H|Di> for every excitor i (D_i = excitor ^ reference), evaluated on every hardware thread
+        void EvaluateExcitorElements(const std::vector<Excitor> &excitors,
+                                     SlaterDet reference,
+                                     const CI::SpinOrbitalIntegrals &ints,
+                                     uint32_t nSpatialOrbitals,
+                                     Eigen::VectorXd &diagonal,
+                                     Eigen::VectorXd &referenceRow);
+        //
         std::vector<Excitor> EnumerateExcitors(SlaterDet reference,
                                                uint32_t nSpinOrbs,
                                                uint32_t nAlphaElectrons,
@@ -107,9 +121,11 @@ namespace SCESS::QMC {
         //
         // Projected correlation energy sum_j <D0|H|Dj> c_j / N_0 where c_j collects the excitor amplitude and the
         // disconnected product of two singles amplitudes on every single and double excitation Dj
+        // referenceRow(j) = <D0|H|Dj> over the excitors, index from excitorIndex
         double CalculateProjectedEnergy(const std::vector<Excitor> &excitors,
                                         const std::vector<int64_t> &excitorWalkers,
-                                        const Eigen::MatrixXd &H,
+                                        const Eigen::VectorXd &referenceRow,
+                                        const CI::DeterminantIndex &excitorIndex,
                                         SlaterDet reference,
                                         uint32_t nSpatialOrbitals);
         //

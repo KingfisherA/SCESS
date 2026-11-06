@@ -75,11 +75,31 @@ namespace SCESS {
 
         template<typename Iterator>
         void AddCGFs(const Iterator begin, const Iterator end) {
+            //Hand-built functions have no shells so the basis set becomes CGF-only
+            mShells.clear();
+            mCartesianToSpherical.resize(0, 0);
             mBasisFuncs.insert(mBasisFuncs.end(), begin, end);
         }
 
-        void Clear() { mBasisFuncs.clear(); }
+        void Clear() {
+            mBasisFuncs.clear();
+            mShells.clear();
+            mCartesianToSpherical.resize(0, 0);
+        }
+        //Number of Cartesian contracted Gaussians (the functions evaluated on grids and rendered)
         size_t GetNoCGFs() const { return mBasisFuncs.size(); }
+        //Number of basis functions of the integrals and orbitals: the libint2 shells, which are solid harmonic
+        //unless the basis set file marks them as Cartesian. For CGF-only basis sets (built with AddCGF) this is the
+        //number of CGFs.
+        size_t GetNoFunctions() const {
+            return HasShells() ? (size_t) mCartesianToSpherical.cols() : mBasisFuncs.size();
+        }
+        //True if the basis set was loaded by name so that the libint2 shells (and the CGFs) describe it
+        bool HasShells() const { return !mShells.empty(); }
+        const std::vector<libint2::Shell> &GetShells() const { return mShells; }
+        //T (no. CGFs x no. functions) expresses every basis function in the Cartesian CGFs,
+        //phi_s(r) = sum_c T(c, s) phi_c(r). Use it to evaluate orbitals (C_CGF = T C) or basis functions on a grid.
+        const Eigen::MatrixXd &CartesianToSpherical() const { return mCartesianToSpherical; }
         size_t GetNoPrimitives() const;
 
         CGF &Get(size_t i) { return mBasisFuncs[i]; }
@@ -88,7 +108,11 @@ namespace SCESS {
         const std::vector<CGF> &GetCGFs() const { return mBasisFuncs; }
 
     private:
+        void BuildCartesianToSpherical();
+
         std::vector<CGF> mBasisFuncs;
+        std::vector<libint2::Shell> mShells;
+        Eigen::MatrixXd mCartesianToSpherical;
     };
     //
     //

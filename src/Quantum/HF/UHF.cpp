@@ -5,10 +5,12 @@
 #include <Dahlia/Tools/Threading.h>
 //
 #include "HF.h"
+#include "DIIS.h"
 #include "Quantum/Integrals/Integrals.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Molecule.h"
 #include "Utilities/Utilities.h"
+#include "Quantum/Integrals/IntegralTransforms.h"
 
 //
 //
@@ -114,9 +116,9 @@ namespace SCESS::HF {
             F_Beta = (F_Beta + F_Beta.transpose()) * 0.5;
         };
 
-        auto DiagonaliseFock = [&]() {
-            MatrixXd F_AlphaPrime = X.transpose() * F_Alpha * X;
-            MatrixXd F_BetaPrime = X.transpose() * F_Beta * X;
+        auto DiagonaliseFock = [&](const MatrixXd &fockAlpha, const MatrixXd &fockBeta) {
+            MatrixXd F_AlphaPrime = X.transpose() * fockAlpha * X;
+            MatrixXd F_BetaPrime = X.transpose() * fockBeta * X;
 
             SelfAdjointEigenSolver<MatrixXd> alphaEigen(F_AlphaPrime);
             SelfAdjointEigenSolver<MatrixXd> betaEigen(F_BetaPrime);
@@ -127,21 +129,11 @@ namespace SCESS::HF {
             C_Alpha = X * alphaEigen.eigenvectors().real();
             C_Beta = X * betaEigen.eigenvectors().real();
 
-            D_Alpha = MatrixXd::Zero(h.rows(), h.rows());
-            D_Beta = MatrixXd::Zero(h.rows(), h.rows());
-            for (Index i = 0; i < h.rows(); ++i) {
-                for (Index j = 0; j < h.cols(); ++j) {
-                    Index k = 0;
-                    for (k = 0; k < alphaElectrons; ++k) {
-                        D_Alpha(i, j) += C_Alpha(i, k) * C_Alpha(j, k);
-                    }
-
-                    for (k = 0; k < betaElectrons; ++k) {
-                        D_Beta(i, j) += C_Beta(i, k) * C_Beta(j, k);
-                    }
-                }
-            }
+            D_Alpha = C_Alpha.leftCols(alphaElectrons) * C_Alpha.leftCols(alphaElectrons).transpose();
+            D_Beta = C_Beta.leftCols(betaElectrons) * C_Beta.leftCols(betaElectrons).transpose();
         };
+
+        FockDIIS diis(8);
 
         while (delta > convergeLimit && scfCount < scfMaxIterations) {
             if (thread)
@@ -154,7 +146,19 @@ namespace SCESS::HF {
             D_AlphaOld = D_Alpha;
             D_BetaOld = D_Beta;
 
-            DiagonaliseFock();
+            //Pulay DIIS on both spins from the second iteration (the first density is the zero guess)
+            if (scfCount > 0) {
+                diis.Add({F_Alpha, F_Beta},
+                         {
+                             X.transpose() * (F_Alpha * D_Alpha * S - S * D_Alpha * F_Alpha) * X,
+                             X.transpose() * (F_Beta * D_Beta * S - S * D_Beta * F_Beta) * X
+                         });
+            }
+            if (diis.Size() >= 2) {
+                const std::vector<MatrixXd> extrapolated = diis.Extrapolate();
+                DiagonaliseFock(extrapolated[0], extrapolated[1]);
+            } else
+                DiagonaliseFock(F_Alpha, F_Beta);
 
             MatrixXd D_Delta = D_Alpha - D_AlphaOld;
             delta = D_Delta.cwiseProduct(D_Delta).sum();
@@ -177,7 +181,7 @@ namespace SCESS::HF {
                                    h,
                                    F_Alpha,
                                    F_Beta) + Vnn;
-        DiagonaliseFock();
+        DiagonaliseFock(F_Alpha, F_Beta);
 
         if (console) {
             if (converged)
@@ -218,18 +222,10 @@ namespace SCESS::HF {
                        const TEITensor &eri,
                        MatrixXd &G_Alpha,
                        MatrixXd &G_Beta) {
-        G_Alpha.setZero();
-        G_Beta.setZero();
-
-        for (Index i = 0; i < D_Alpha.rows(); i++)
-            for (Index j = 0; j < D_Alpha.rows(); j++)
-                for (Index k = 0; k < D_Alpha.rows(); k++)
-                    for (Index l = 0; l < D_Alpha.rows(); l++) {
-                        double J = eri(i, j, k, l);
-                        double K = eri(i, l, k, j);
-                        G_Alpha(i, j) += D_Alpha(k, l) * (J - K) + D_Beta(k, l) * J;
-                        G_Beta(i, j) += D_Beta(k, l) * (J - K) + D_Alpha(k, l) * J;
-                    }
+        using namespace Integrals::Transforms;
+        const MatrixXd J = CoulombMatrix(eri, D_Alpha + D_Beta);
+        G_Alpha = J - ExchangeMatrix(eri, D_Alpha);
+        G_Beta = J - ExchangeMatrix(eri, D_Beta);
     }
     //
     double CalculateEnergyUHF(

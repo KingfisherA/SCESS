@@ -8,6 +8,8 @@
 #include "Dahlia/Tools/Threading.h"
 //
 #include "IntegralTransforms.h"
+#include "IntegralsF12.h"
+#include "IntegralsLibInt.h"
 #include "Integrals.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/Basis/CGF.h"
@@ -26,39 +28,57 @@ using namespace Utils;
 MolInts EvaluateMolecularIntegrals(const BasisSet &basisSet,
                                    const std::vector<Atom> &atoms,
                                    const DH::Thread *thread) {
-  Eigen::MatrixXd S =
-      Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
-  Eigen::MatrixXd T =
-      Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
-  Eigen::MatrixXd V =
-      Eigen::MatrixXd::Zero(basisSet.GetNoCGFs(), basisSet.GetNoCGFs());
+  if (!basisSet.HasShells())
+    return EvaluateMolecularIntegralsCGF(basisSet, atoms, thread);
+
+  std::vector<libint2::Atom> libintAtoms(atoms.size());
+  for (size_t i = 0; i < atoms.size(); i++)
+    libintAtoms[i] = {atoms[i].GetCharge(), atoms[i].GetPos().x(),
+                      atoms[i].GetPos().y(), atoms[i].GetPos().z()};
+
+  const libint2::BasisSet shells(basisSet.GetShells());
+  MolInts mints;
+  mints.S = LibInt::CalculateOverlapMatrix(shells);
+  mints.T = LibInt::CalculateKineticMatrix(shells);
+  mints.V = LibInt::CalculateNuclearMatrix(shells, libintAtoms);
+  if (thread && thread->ShouldStop())
+    return {};
+
+  mints.eri = F12::AOTwoElectronTensor(basisSet.GetShells(),
+                                       basisSet.GetShells().size(),
+                                       F12::Operator2e::Coulomb, 1.0, thread);
+  if (thread && thread->ShouldStop())
+    return {};
+  return mints;
+}
+//
+MolInts EvaluateMolecularIntegralsCGF(const BasisSet &basisSet,
+                                      const std::vector<Atom> &atoms,
+                                      const DH::Thread *thread) {
+  const auto n = (Eigen::Index)basisSet.GetNoCGFs();
+  Eigen::MatrixXd S = Eigen::MatrixXd::Zero(n, n);
+  Eigen::MatrixXd T = Eigen::MatrixXd::Zero(n, n);
+  Eigen::MatrixXd V = Eigen::MatrixXd::Zero(n, n);
 
   AArray ax, ay, az;
-  for (Eigen::Index i = 0; i < basisSet.GetNoCGFs(); i++) {
-    if (thread)
-      if (thread->ShouldStop())
-        return {};
+  for (Eigen::Index i = 0; i < n; i++) {
+    if (thread && thread->ShouldStop())
+      return {};
 
-    for (Eigen::Index j = i; j < basisSet.GetNoCGFs(); j++) {
+    for (Eigen::Index j = i; j < n; j++) {
       const CGF &c1 = basisSet.Get(i);
       const CGF &c2 = basisSet.Get(j);
-
-      // Overlap Evaluation
       S(i, j) = S(j, i) = OverlapCGF(c1, c2);
-
-      // Kinetic Evaluation
       T(i, j) = T(j, i) = KineticCGF(c1, c2);
 
       double Vn = 0.0;
-      for (const Atom &a : atoms) {
+      for (const Atom &a : atoms)
         Vn += NuclearCGF(c1, c2, a.GetPos(), a.GetCharge(), ax, ay, az);
-      }
       V(i, j) = V(j, i) = Vn;
     }
   }
 
-  TEITensor tei = ERITensorMultithread(basisSet, thread);
-
+  TEITensor tei = EvaluateERITensor(basisSet, thread);
   return MolInts{S, T, V, tei};
 }
 
@@ -341,113 +361,6 @@ TEITensor EvaluateERITensor(const BasisSet &basisSet,
   }
 
   return returnTensor;
-}
-
-TEITensor ERITensorMultithread(const BasisSet &basisSet,
-                               const DH::Thread *parentThread) {
-  using IdxTuple = Eigen::Vector4<uint32_t>;
-  using YoshMap_T = std::unordered_map<size_t, std::vector<IdxTuple>>;
-
-  YoshMap_T yoshIdxMap;
-  yoshIdxMap.reserve(basisSet.GetNoCGFs() * basisSet.GetNoCGFs());
-
-  for (int i = 0; i < basisSet.GetNoCGFs(); i++)
-    for (int j = 0; j < basisSet.GetNoCGFs(); j++)
-      for (int k = 0; k < basisSet.GetNoCGFs(); k++)
-        for (int l = 0; l < basisSet.GetNoCGFs(); l++) {
-          size_t yoshIdx = TEIYoshimineIdx(i, j, k, l);
-
-          auto itPair = yoshIdxMap.find(yoshIdx);
-          std::vector<IdxTuple> *indxArray = nullptr;
-          if (itPair == yoshIdxMap.end()) {
-            indxArray = &yoshIdxMap.emplace(yoshIdx, std::vector<IdxTuple>{})
-                             .first->second;
-            indxArray->reserve(8);
-          } else {
-            indxArray = &itPair->second;
-          }
-
-          indxArray->emplace_back((uint32_t)i, (uint32_t)j, (uint32_t)k,
-                                  (uint32_t)l);
-        }
-
-  if (parentThread)
-    if (parentThread->ShouldStop())
-      return {};
-
-  constexpr size_t NUM_THREADS = 7;
-  DH::Thread threads[NUM_THREADS];
-
-  using IntResultMap_T = std::unordered_map<size_t, double>;
-  IntResultMap_T integralResultMaps[NUM_THREADS + 1];
-
-  auto threadWorker = [](const DH::Thread *thread, const YoshMap_T &yoshIdxMap,
-                         const BasisSet &basisSet,
-                         IntResultMap_T &integralResult, size_t startingIdx,
-                         size_t chunkSize) {
-    auto it = yoshIdxMap.begin();
-    for (size_t i = 0; i < startingIdx; i++)
-      ++it;
-
-    std::vector<double> bx;
-    std::vector<double> by;
-    std::vector<double> bz;
-
-    for (size_t i = startingIdx; i < startingIdx + chunkSize; i++) {
-      if (thread)
-        if (thread->ShouldStop())
-          return;
-
-      const auto &indices = it->second[0];
-      integralResult[it->first] = ERI_CGF(
-          basisSet.Get(indices.x()), basisSet.Get(indices.y()),
-          basisSet.Get(indices.z()), basisSet.Get(indices.w()), bx, by, bz);
-      ++it;
-    }
-  };
-
-  size_t chunkSize = yoshIdxMap.size() / (NUM_THREADS + 1);
-  for (uint32_t i = 0; i < NUM_THREADS; i++)
-    integralResultMaps[i].reserve(chunkSize + 1);
-
-  if (chunkSize >= 20) {
-    for (uint32_t i = 0; i < NUM_THREADS; i++)
-      threads[i].Start(threadWorker, &threads[i], std::ref(yoshIdxMap),
-                       std::ref(basisSet), std::ref(integralResultMaps[i + 1]),
-                       i * chunkSize, chunkSize);
-
-    // Dispatch work on current thread as well
-    threadWorker(parentThread, yoshIdxMap, basisSet, integralResultMaps[0],
-                 NUM_THREADS * chunkSize,
-                 yoshIdxMap.size() - NUM_THREADS * chunkSize);
-
-    for (auto &thread : threads)
-      thread.Join();
-  } else
-    threadWorker(parentThread, yoshIdxMap, basisSet, integralResultMaps[0], 0,
-                 yoshIdxMap.size());
-
-  if (parentThread)
-    if (parentThread->ShouldStop())
-      return {};
-
-  TEITensor teiTensor(
-      (Eigen::Index)basisSet.GetNoCGFs(), (Eigen::Index)basisSet.GetNoCGFs(),
-      (Eigen::Index)basisSet.GetNoCGFs(), (Eigen::Index)basisSet.GetNoCGFs());
-
-  for (auto &[yoshIdx, indices] : yoshIdxMap) {
-    double integralResult = [&yoshIdx, &integralResultMaps, NUM_THREADS]() {
-      for (auto &integralResultMap : integralResultMaps)
-        if (integralResultMap.contains(yoshIdx))
-          return integralResultMap.at(yoshIdx);
-      return 0.0;
-    }();
-
-    for (const auto &idxVec : indices)
-      teiTensor(idxVec[0], idxVec[1], idxVec[2], idxVec[3]) = integralResult;
-  }
-
-  return teiTensor;
 }
 
 double ERI_CGF(const CGF &c1, const CGF &c2, const CGF &c3, const CGF &c4,

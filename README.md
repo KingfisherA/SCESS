@@ -24,9 +24,9 @@ viewer to explore the solutions. It is made up of:
         - Kohn-Sham DFT
     - Correlation methods:
         - MP2 and MP2-F12 (fixed and optimised amplitudes)
-        - Full-CI
-        - CCSD (with DIIS)
-        - CCSD(T)
+        - Full-CI and truncated CI (Davidson diagonalisation; string-driven Hamiltonian products for full CI)
+        - CCSD (closed-shell, spatial orbitals, with DIIS)
+        - CCSD(T) (closed-shell triples over the unique virtual triples)
         - CCSD-F12b (3C(FIX) ansatz with the CABS approximation, closed-shell spatial-orbital CCSD)
         - CCQMC and FCIQMC
         - CCSD-QMC[MP2-F12]
@@ -125,8 +125,10 @@ The new sets cover H–Kr where the family defines them (no ECPs are used). F12 
 basis set: pass `--CABS` to the command line driver, or choose one in the viewer when an F12 method is selected. By
 default the matching OptRI set is used (`cc-pVXZ-F12` → `cc-pVXZ-F12-OptRI`, `cc-pVXZ` and `aug-cc-pVXZ` →
 `aug-cc-pVXZ-OptRI`). Any basis set can be used as the CABS; the OBS is projected out of the union of the two.
-F12 integrals are evaluated with Libint2, so their basis sets are limited to its maximum angular momentum (4 for a
-default build), which excludes cc-pV5Z and the QZ OptRI sets.
+All integrals are evaluated with Libint2 on every hardware thread, so basis sets are limited to its maximum angular
+momentum (4 for a default build), which excludes cc-pV5Z and the QZ OptRI sets. Shells use solid harmonic (spherical)
+functions unless the basis set file marks them as Cartesian (`gto_cartesian`, as for the Pople sets' d shells), as in
+PySCF; Scripts/verification/spherical_check.py gives the PySCF references used by the regression tests.
 
 To add a basis set, download it from the Basis Set Exchange in JSON format and put it in one of these folders (or a
 new one).
@@ -174,6 +176,6 @@ Installed separately: Boost, fmt, LAPACK/LAPACKE, Libxc, Libint2, GLFW, GLEW, GL
 - This software is missing references to some of the modified code it uses. This will be fixed soon.
 - The basis set assets do not have individual references, but all of them are derived from the
   [Basis Set Exchange](https://www.basissetexchange.org/).
-- This software is unstable and may crash. The coupled cluster methods in particular can use large
-  amounts of memory. Use at your own risk! (The F12 methods only store the integrals with an occupied
-  pair and the OBS integrals, so H₂O/cc-pVTZ-F12 CCSD-F12b needs about 2.5 GB.)
+- This software is unstable and may crash. Every method stores the AO two-electron integrals (N⁴ doubles, 1.4 GB for
+  N = 115), and full CI scales factorially with the number of orbitals. Use at your own risk! (H₂O/cc-pVTZ CCSD(T)
+  needs about 650 MB, H₂O/6-31G full CI about 730 MB, and H₂O/cc-pVTZ-F12 CCSD-F12b about 2.5 GB.)

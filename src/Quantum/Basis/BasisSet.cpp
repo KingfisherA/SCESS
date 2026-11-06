@@ -5,10 +5,13 @@
 #include "Resources/AssetFolder.h"
 #include <libint2/basis.h>
 #include <libint2/config.h>
+#include <libint2/engine.h>
+#include <libint2/cgshell_ordering.h>
 //
 #include "Quantum/Molecule.h"
 #include "Quantum/Basis/BasisSet.h"
 #include "Quantum/HF/HF.h"
+#include "Quantum/Integrals/Integrals.h"
 #include "Utilities/Utilities.h"
 
 //
@@ -201,6 +204,8 @@ namespace SCESS
     void BasisSet::LoadAndAddBasisSet(const std::string &basisSetName, const Molecule &mol)
     {
         const nlohmann::json basisSet = BasisLibrary::LoadJSON(basisSetName);
+        //The shells only describe the basis set if every function so far came from a named basis set
+        const bool trackShells = mBasisFuncs.empty() || HasShells();
 
         std::vector<Eigen::Vector3i> angularMomenta;
         auto GenerateAngularMomenta = [&angularMomenta](uint32_t angMom)
@@ -258,11 +263,93 @@ namespace SCESS
                 }
             }
         }
+
+        if (trackShells)
+        {
+            const std::vector<libint2::Shell> shells = BasisLibrary::LoadShells(basisSetName, mol.GetAtomsLibInt());
+            mShells.insert(mShells.end(), shells.begin(), shells.end());
+            BuildCartesianToSpherical();
+        }
     }
     //
     void BasisSet::AddCGF(const CGF &cgf)
     {
+        //Hand-built functions have no shells so the basis set becomes CGF-only
+        mShells.clear();
+        mCartesianToSpherical.resize(0, 0);
         mBasisFuncs.push_back(cgf);
+    }
+    //
+    void BasisSet::BuildCartesianToSpherical()
+    {
+        //(2n - 1)!!, with (-1)!! = 1
+        auto DoubleFactorial = [](int n) {
+            double result = 1.0;
+            for (int k = 2 * n - 1; k > 1; k -= 2)
+                result *= k;
+            return result;
+        };
+
+        size_t nFunctions = 0, maxPrim = 0;
+        int maxL = 0;
+        for (const libint2::Shell &shell : mShells)
+        {
+            nFunctions += shell.size();
+            maxPrim = std::max(maxPrim, shell.nprim());
+            maxL = std::max(maxL, shell.contr[0].l);
+        }
+
+        mCartesianToSpherical = Eigen::MatrixXd::Zero((Eigen::Index) mBasisFuncs.size(), (Eigen::Index) nFunctions);
+        libint2::Engine engine(libint2::Operator::overlap, maxPrim, maxL, 0);
+        const auto &results = engine.results();
+
+        Eigen::Index cgf0 = 0, f0 = 0;
+        for (const libint2::Shell &shell : mShells)
+        {
+            const int l = shell.contr[0].l;
+            libint2::Shell cartesian = shell;
+            cartesian.contr[0].pure = false;
+            const Eigen::Index nCart = (Eigen::Index) cartesian.size(), nFunc = (Eigen::Index) shell.size();
+
+            //Express the shell's functions in libint2's Cartesian functions of the same contraction,
+            //phi_s = sum_c B(c, s) phi_c, from S_cc B = S_cs
+            using RowMatrix = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+            engine.compute(cartesian, cartesian);
+            const RowMatrix S_cc = Eigen::Map<const RowMatrix>(results[0], nCart, nCart);
+            engine.compute(cartesian, shell);
+            const RowMatrix S_cs = Eigen::Map<const RowMatrix>(results[0], nCart, nFunc);
+            const Eigen::MatrixXd B = S_cc.ldlt().solve(Eigen::MatrixXd(S_cs));
+
+            //CGF order of the Cartesian components, as in LoadAndAddBasisSet
+            auto CGFIndex = [l](int a, int b) {
+                Eigen::Index idx = 0;
+                for (int x = 0; x <= l; x++)
+                    for (int y = 0; y <= l - x; y++)
+                    {
+                        if (x == a && y == b)
+                            return idx;
+                        idx++;
+                    }
+                throw std::logic_error("Invalid Cartesian component");
+            };
+
+            //libint2 normalises the contraction of x^l and gives every component the coefficients of x^l, whereas
+            //every CGF component has normalised primitives (and the contraction is as in the file):
+            //  phi_abc(libint2) = R sqrt((2a-1)!!(2b-1)!!(2c-1)!! / (2l-1)!!) phi_abc(CGF)
+            const double R = 1.0 / std::sqrt(Integrals::OverlapCGF(mBasisFuncs[cgf0 + CGFIndex(l, 0)],
+                                                                    mBasisFuncs[cgf0 + CGFIndex(l, 0)]));
+            Eigen::Index c = 0;
+            int a, b, cz;
+            FOR_CART(a, b, cz, l)
+                const double scale = R * std::sqrt(DoubleFactorial(a) * DoubleFactorial(b) * DoubleFactorial(cz) /
+                                                   DoubleFactorial(l));
+                mCartesianToSpherical.row(cgf0 + CGFIndex(a, b)).segment(f0, nFunc) = scale * B.row(c);
+                c++;
+            END_FOR_CART
+
+            cgf0 += nCart;
+            f0 += nFunc;
+        }
     }
     //
     size_t BasisSet::GetNoPrimitives() const

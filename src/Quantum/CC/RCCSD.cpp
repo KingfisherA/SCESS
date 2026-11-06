@@ -131,8 +131,8 @@ namespace SCESS::CC {
             t1new += 2.0 * Einsum<Indices<K, C, A, I>, Indices<K, C>, Indices<I, A> >(ints.ovvo, t1);
             t1new -= Einsum<Indices<K, I, A, C>, Indices<K, C>, Indices<I, A> >(ints.oovv, t1);
             //2 kdac,ikcd->ia - kcad,ikcd->ia (and the kdac,kd,ic / kcad,kd,ic terms through tau)
-            t1new += 2.0 * Einsum<Indices<K, D, A, C>, Indices<I, K, C, D>, Indices<I, A> >(ints.ovvv, tau);
-            t1new -= Einsum<Indices<K, C, A, D>, Indices<I, K, C, D>, Indices<I, A> >(ints.ovvv, tau);
+            Parallel(t1new) += 2.0 * Einsum<Indices<K, D, A, C>, Indices<I, K, C, D>, Indices<I, A> >(ints.ovvv, tau);
+            Parallel(t1new) -= Einsum<Indices<K, C, A, D>, Indices<I, K, C, D>, Indices<I, A> >(ints.ovvv, tau);
             //-2 lcki,klac->ia + kcli,klac->ia (and the lcki,lc,ka / kcli,lc,ka terms through tau)
             t1new -= 2.0 * Einsum<Indices<L, C, K, I>, Indices<K, L, A, C>, Indices<I, A> >(ints.ovoo, tau);
             t1new += Einsum<Indices<K, C, L, I>, Indices<K, L, A, C>, Indices<I, A> >(ints.ovoo, tau);
@@ -141,10 +141,11 @@ namespace SCESS::CC {
             Tensor4 t2new;
             {
                 //kibc,ka->abic with -t1, plus (ia|cb) indexed (a, b, i, c)
-                Tensor4 tmp2 = -Einsum<Indices<K, I, B, C>, Indices<K, A>, Indices<A, B, I, C> >(ints.oovv, t1);
+                Tensor4 tmp2 = Evaluate(-Einsum<Indices<K, I, B, C>, Indices<K, A>, Indices<A, B, I, C> >(ints.oovv, t1));
                 tmp2 += Einsum<Indices<I, A, C, B>, Indices<A, B, I, C> >(ints.ovvv);
                 //abic,jc->ijab
-                t2new = PlusTranspose(Einsum<Indices<A, B, I, C>, Indices<J, C>, Indices<I, J, A, B> >(tmp2, t1));
+                t2new = PlusTranspose(Evaluate(
+                    Einsum<Indices<A, B, I, C>, Indices<J, C>, Indices<I, J, A, B> >(tmp2, t1)));
             }
             {
                 //kcai,jc->akij plus (ia|jk) indexed (a, k, i, j)
@@ -181,7 +182,7 @@ namespace SCESS::CC {
             //Wvoov(a, k, i, c)
             Tensor4 Wvoov = Einsum<Indices<K, C, A, I>, Indices<A, K, I, C> >(ints.ovvo);
             //kcad,id->akic - kcli,la->akic
-            Wvoov += Einsum<Indices<K, C, A, D>, Indices<I, D>, Indices<A, K, I, C> >(ints.ovvv, t1);
+            Parallel(Wvoov) += Einsum<Indices<K, C, A, D>, Indices<I, D>, Indices<A, K, I, C> >(ints.ovvv, t1);
             Wvoov -= Einsum<Indices<K, C, L, I>, Indices<L, A>, Indices<A, K, I, C> >(ints.ovoo, t1);
             //-1/2 ldkc,ilda->akic - 1/2 lckd,ilad->akic + ldkc,ilad->akic
             Parallel(Wvoov) -= 0.5 * Einsum<Indices<L, D, K, C>, Indices<I, L, D, A>, Indices<A, K, I, C> >(
@@ -198,7 +199,7 @@ namespace SCESS::CC {
             //Wvovo(a, k, c, i)
             Tensor4 Wvovo = Einsum<Indices<K, I, A, C>, Indices<A, K, C, I> >(ints.oovv);
             //kdac,id->akci - lcki,la->akci
-            Wvovo += Einsum<Indices<K, D, A, C>, Indices<I, D>, Indices<A, K, C, I> >(ints.ovvv, t1);
+            Parallel(Wvovo) += Einsum<Indices<K, D, A, C>, Indices<I, D>, Indices<A, K, C, I> >(ints.ovvv, t1);
             Wvovo -= Einsum<Indices<L, C, K, I>, Indices<L, A>, Indices<A, K, C, I> >(ints.ovoo, t1);
             //-1/2 lckd,ilda->akci
             Parallel(Wvovo) -= 0.5 * Einsum<Indices<L, C, K, D>, Indices<I, L, D, A>, Indices<A, K, C, I> >(
@@ -214,7 +215,7 @@ namespace SCESS::CC {
             //abcd,ijcd->ijab: the particle-particle ladder, the most expensive term
             Parallel(t2new) += Einsum<Indices<A, B, C, D>, Indices<I, J, C, D>, Indices<I, J, A, B> >(Wvvvv, tau);
             //ac,ijcb->ijab
-            t2new += PlusTranspose(Einsum<Indices<A, C>, Indices<I, J, C, B>, Indices<I, J, A, B> >(Lvv, t2));
+            t2new += PlusTranspose(Evaluate(Einsum<Indices<A, C>, Indices<I, J, C, B>, Indices<I, J, A, B> >(Lvv, t2)));
             //ki,kjab->ijab
             t2new -= PlusTranspose(Einsum<Indices<K, I>, Indices<K, J, A, B>, Indices<I, J, A, B> >(Loo, t2));
             {

@@ -65,19 +65,21 @@ namespace SCESS::Quadrature {
 
             mAtomicGrids[i].SetBeckeWeights(beckeWeightCoeffs);
         }
-    }
-    //
-    VectorXd MolGrid::GetWeights() const {
-        VectorXd weights = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
-        uint32_t idx = 0;
 
+        //Gather the weights and the CGF values of every point once, then express the CGFs in the basis functions
+        mWeights = VectorXd::Zero(static_cast<Eigen::Index>(mGridSize));
+        MatrixXd cgfAmplitudes(static_cast<Eigen::Index>(mGridSize),
+                               static_cast<Eigen::Index>(mBasisSet->GetNoCGFs()));
+        Eigen::Index idx = 0;
         for (const AtomicGrid &grid: mAtomicGrids) {
-            VectorXd atomicWeights = grid.GetWeights();
-            for (const double &weight: atomicWeights)
-                weights(idx++) = weight;
+            const Eigen::Index n = (Eigen::Index) grid.GetNoOfGridPoints();
+            mWeights.segment(idx, n) = grid.GetWeights();
+            cgfAmplitudes.middleRows(idx, n) = grid.GetAmplitudes().transpose();
+            idx += n;
         }
-
-        return weights;
+        mAmplitudes = mBasisSet->HasShells()
+                          ? MatrixXd(cgfAmplitudes * mBasisSet->CartesianToSpherical())
+                          : std::move(cgfAmplitudes);
     }
     //
     VectorXd MolGrid::GetDensities() const {
@@ -91,25 +93,6 @@ namespace SCESS::Quadrature {
         }
 
         return densities;
-    }
-    //
-    MatrixXd MolGrid::GetAmplitudes() const {
-        MatrixXd amplitudes = MatrixXd::Zero(
-            static_cast<Eigen::Index>(mBasisSet->GetNoCGFs()),
-            static_cast<Eigen::Index>(mGridSize));
-        uint32_t idx = 0;
-
-        for (const AtomicGrid &grid: mAtomicGrids) {
-            MatrixXd atomicAmplitudes = grid.GetAmplitudes();
-
-            for (uint32_t k = 0; k < mBasisSet->GetNoCGFs(); k++)
-                for (uint32_t j = 0; j < grid.GetNoOfGridPoints(); j++)
-                    amplitudes(k, idx + j) = atomicAmplitudes(k, j);
-
-            idx += grid.GetNoOfGridPoints();
-        }
-
-        return amplitudes;
     }
     //
     void MolGrid::CorrectDensities() {
@@ -128,8 +111,15 @@ namespace SCESS::Quadrature {
     }
     //
     void MolGrid::SetDensity(const Eigen::MatrixXd &D) {
-        for (AtomicGrid &grid: mAtomicGrids)
-            grid.SetDensity(D);
+        //rho_p = 2 sum_{mu nu} phi_mu(p) D(mu, nu) phi_nu(p) for every point p in one product
+        const VectorXd densities = 2.0 * (mAmplitudes * D).cwiseProduct(mAmplitudes).rowwise().sum();
+
+        Eigen::Index idx = 0;
+        for (AtomicGrid &grid: mAtomicGrids) {
+            const Eigen::Index n = (Eigen::Index) grid.GetNoOfGridPoints();
+            grid.SetDensities(densities.segment(idx, n));
+            idx += n;
+        }
     }
     //
     double MolGrid::CalculateDensity() const {

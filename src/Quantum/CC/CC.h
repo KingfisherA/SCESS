@@ -42,6 +42,12 @@ using TEITensor = Eigen::Tensor<double, 4>;
 using TauTensor = Eigen::Tensor<double, 4>;
 using FockTensor = Eigen::Tensor<double, 2>;
 //
+//-- Spin-orbital CCSD and CCSD(T) --
+//
+// Reference implementations in spin orbitals, kept to test the closed-shell
+// solvers below (RCCSD_DIIS and RCCSD_T), which the drivers use. They hold
+// (2n)^4 integrals and, for (T), several o^3 v^3 spin-orbital tensors.
+//
 /**
  * An implementation to solve the coupled cluster equations
  * to single and double excitations for a closed shell molecule starting from a
@@ -101,6 +107,8 @@ struct RCCSD_Wfn {
   // Energy of the coupling between the conventional doubles and the explicitly
   // correlated geminals (CCSD-F12 methods only, already included in E_CCSD)
   double E_F12_Coupling = 0.0;
+  // Perturbative triples correction (RCCSD_T only)
+  double E_T = 0.0;
   bool converged = false;
   T1Tensor t1;
   T2Tensor t2;
@@ -136,4 +144,22 @@ RCCSD_Wfn SolveRCCSD_DIIS(const TEITensor &eri,
 RCCSD_Wfn RCCSD_DIIS(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
                      const DH::Thread *thread = nullptr,
                      std::stringstream *console = nullptr);
+//
+/**
+ * Closed-shell (T) correction (as in PySCF's ccsd_t_slow) from converged
+ * closed-shell CCSD amplitudes, evaluated over the unique virtual triples
+ * a >= b >= c on every hardware thread with o^3 work arrays.
+ * @param eri <pq|rs> over the canonical spatial orbitals, occupied first
+ */
+double RCCSD_TriplesCorrection(const TEITensor &eri,
+                               const Eigen::VectorXd &orbitalEnergies,
+                               Eigen::Index nOcc, const T1Tensor &t1,
+                               const T2Tensor &t2,
+                               const DH::Thread *thread = nullptr);
+//
+// Closed-shell CCSD(T) from a RHF determinant; E_T holds the triples
+// correction
+RCCSD_Wfn RCCSD_T(const HFWfn &rhfWfn, const Integrals::MolInts &mints,
+                  const DH::Thread *thread = nullptr,
+                  std::stringstream *console = nullptr);
 } // namespace SCESS::CC

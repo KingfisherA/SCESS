@@ -7,6 +7,7 @@
 #include "Quantum/Basis/BasisSet.h"
 #include "Tensor/TensorEinsum.h"
 #include "Tensor/TensorOperations.h"
+#include "Dahlia/Tools/Threading.h"
 
 //
 //
@@ -18,38 +19,6 @@ namespace SCESS::Integrals::F12 {
     //
     //
     namespace {
-        //Calls fn(item, threadIndex) for every item in [0, nItems), handing the items out to the threads in order
-        template<class Fn>
-        void ParallelForDynamic(size_t nItems, Fn &&fn) {
-            const int nThreads = (int) std::min<size_t>(NumComputeThreads(), std::max<size_t>(nItems, 1));
-            std::atomic<size_t> next{0};
-            std::exception_ptr error;
-            std::mutex errorMutex;
-
-            auto worker = [&](int thread) {
-                try {
-                    for (size_t item; (item = next.fetch_add(1)) < nItems;)
-                        fn(item, thread);
-                } catch (...) {
-                    std::lock_guard lock(errorMutex);
-                    if (!error)
-                        error = std::current_exception();
-                    next = nItems;
-                }
-            };
-
-            std::vector<std::thread> threads;
-            threads.reserve(nThreads - 1);
-            for (int t = 1; t < nThreads; t++)
-                threads.emplace_back(worker, t);
-            worker(0);
-            for (auto &thread: threads)
-                thread.join();
-
-            if (error)
-                std::rethrow_exception(error);
-        }
-        //
         //Index of the first function of each shell, and the total number of functions, over the first nShells shells
         std::vector<Index> FirstFunctions(const std::vector<Shell> &shells, size_t nShells, Index *nFuncs = nullptr) {
             std::vector<Index> first(nShells);
@@ -103,7 +72,8 @@ namespace SCESS::Integrals::F12 {
     }
     //
     //
-    TEITensor AOTwoElectronTensor(const std::vector<Shell> &shells, size_t nShells, Operator2e op, double gamma) {
+    TEITensor AOTwoElectronTensor(const std::vector<Shell> &shells, size_t nShells, Operator2e op, double gamma,
+                                  const DH::Thread *thread) {
         Index nbf = 0;
         const std::vector<Index> first = FirstFunctions(shells, nShells, &nbf);
 
@@ -116,9 +86,11 @@ namespace SCESS::Integrals::F12 {
         //Unique shell quartets s1 >= s2, s1 >= s3 >= s4 and (s1 s2) >= (s3 s4). Every quartet is written by the item
         //of its largest shell alone, so the threads never write to the same elements. The largest (most expensive)
         //items are handed out first.
-        ParallelForDynamic(nShells, [&](size_t item, int thread) {
+        ParallelForDynamic(nShells, [&](size_t item, int threadIdx) {
+            if (thread && thread->ShouldStop())
+                return;
             const size_t s1 = nShells - 1 - item;
-            libint2::Engine &engine = engines[thread];
+            libint2::Engine &engine = engines[threadIdx];
             const auto &results = engine.results();
 
             const Index n1 = (Index) shells[s1].size(), bf1 = first[s1];
@@ -155,6 +127,8 @@ namespace SCESS::Integrals::F12 {
             }
         });
 
+        if (thread && thread->ShouldStop())
+            return {};
         return tei;
     }
     //

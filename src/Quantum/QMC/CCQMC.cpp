@@ -8,6 +8,7 @@
 #include "Quantum/CI/CI.h"
 #include "Dahlia/Tools/Threading.h"
 #include "Quantum/Integrals/IntegralTransforms.h"
+#include "Tensor/TensorParallel.h"
 
 //
 //
@@ -262,9 +263,26 @@ namespace SCESS::QMC::CC {
         return s;
     }
     //
+    void EvaluateExcitorElements(const std::vector<Excitor> &excitors,
+                                 const SlaterDet reference,
+                                 const CI::SpinOrbitalIntegrals &ints,
+                                 const uint32_t nSpatialOrbitals,
+                                 VectorXd &diagonal,
+                                 VectorXd &referenceRow) {
+        diagonal.resize((Index) excitors.size());
+        referenceRow.resize((Index) excitors.size());
+        ParallelForDynamic(excitors.size(), [&](size_t i, int) {
+            const SlaterDet det = excitors[i] ^ reference;
+            diagonal((Index) i) = CI::CalculateHamiltonianElement(det, det, nSpatialOrbitals, nSpatialOrbitals, ints);
+            referenceRow((Index) i) = CI::CalculateHamiltonianElement(reference, det, nSpatialOrbitals,
+                                                                      nSpatialOrbitals, ints);
+        });
+    }
+    //
     double CalculateProjectedEnergy(const std::vector<Excitor> &excitors,
                                     const std::vector<int64_t> &excitorWalkers,
-                                    const MatrixXd &H,
+                                    const VectorXd &referenceRow,
+                                    const CI::DeterminantIndex &excitorIndex,
                                     SlaterDet reference,
                                     uint32_t nSpatialOrbitals) {
         const double N0 = (double) excitorWalkers[0];
@@ -290,7 +308,7 @@ namespace SCESS::QMC::CC {
             SlaterDet det = reference;
             int sign = 1;
             ApplyExcitor(excitors[I], reference, det, sign, nSpatialOrbitals);
-            E_Proj += H(0, I) * sign * double(excitorWalkers[I]) / N0;
+            E_Proj += referenceRow(I) * sign * double(excitorWalkers[I]) / N0;
         }
 
         //Disconnected contributions of the T1^2 / 2 term onto the doubles
@@ -305,11 +323,11 @@ namespace SCESS::QMC::CC {
                     !ApplyExcitor(excitors[singles[k]], reference, det, sign, nSpatialOrbitals))
                     continue;
 
-                const uint32_t J = FindExcitorIdx(det ^ reference, excitors);
+                const uint32_t J = excitorIndex.Find(det ^ reference);
                 if (J == excitors.size())
                     continue;
 
-                E_Proj += H(0, J) * sign * (double(excitorWalkers[singles[i]]) / N0) *
+                E_Proj += referenceRow(J) * sign * (double(excitorWalkers[singles[i]]) / N0) *
                         (double(excitorWalkers[singles[k]]) / N0);
             }
 
@@ -338,7 +356,8 @@ namespace SCESS::QMC::CC {
     double CCQMC(const HF_Wfn &rhfWfn,
                  const Integrals::MolInts &mints,
                  const DH::Thread *thread,
-                 const ProjEnergyCallback &onReportCycle) {
+                 const ProjEnergyCallback &onReportCycle,
+                 std::optional<uint64_t> seed) {
         constexpr size_t NUM_CYCLES = 100;
         constexpr size_t NUM_REPORT_CYCLES = 2000;
         //Number of report cycles after the shift starts varying before averaging the projected energy
@@ -351,11 +370,8 @@ namespace SCESS::QMC::CC {
 
         std::cout << "--- Coupled Cluster Quantum Monte Carlo ---\n";
 
-        TEITensor spinERI = Integrals::Transforms::AntisymmetriseIntegrateOutSpinClosedShell(
-            Integrals::Transforms::TransformTEI(mints.eri, rhfWfn.C_Alpha));
-
-        auto h = mints.T + mints.V;
-        MatrixXd hSpin = CI::GenerateHCoreSpinTransform(h, rhfWfn.C_Alpha);
+        //Spatial MO integrals; the spin-orbital elements are formed on demand
+        const CI::SpinOrbitalIntegrals ints = CI::MakeSpinOrbitalIntegrals(rhfWfn, mints);
 
         //The number of doubly occupied orbitals
         //Given we are starting with a RHF determinant, the number of alpha=beta which will equal this
@@ -366,7 +382,7 @@ namespace SCESS::QMC::CC {
         uint32_t nSpatialOrbitals = rhfWfn.Occ_Alpha.size();
         uint32_t nSpinOrbs = nSpatialOrbitals * 2;
 
-        mt19937 randGenerator(time(nullptr));
+        mt19937 randGenerator(seed ? (uint32_t) *seed : (uint32_t) time(nullptr));
         //Draw every random number from the same engine so that no two streams are correlated
         uniform_01<double> unitDist;
         auto randomNumber = [&randGenerator, &unitDist]() { return unitDist(randGenerator); };
@@ -381,19 +397,15 @@ namespace SCESS::QMC::CC {
         excitorWalkers[0] = INITIAL_REFERENCE_POPULATION;
         std::vector<int64_t> excitorSpawn(excitors.size(), 0);
 
-        //Make the FCI Hamiltonian matrix
-        MatrixXd H_FCI = MatrixXd::Zero(excitors.size(), excitors.size());
-        for (uint32_t i = 0; i < H_FCI.rows(); i++) {
-            if (thread && thread->ShouldStop())
-                return 0.0;
-            for (uint32_t j = i; j < H_FCI.cols(); j++)
-                H_FCI(i, j) = H_FCI(j, i) =
-                              CI::CalculateHamiltonianElement(
-                                  excitors[i] ^ D0, excitors[j] ^ D0, nSpatialOrbitals,
-                                  nSpatialOrbitals, hSpin, spinERI);
-        }
+        //Index of every excitor, and the elements <Di|H|Di> and <D0|H|Di> which are needed for every excitor; the
+        //other elements are evaluated as they are needed
+        const CI::DeterminantIndex excitorIndex(excitors);
+        VectorXd H_Diagonal, H_ReferenceRow;
+        EvaluateExcitorElements(excitors, D0, ints, nSpatialOrbitals, H_Diagonal, H_ReferenceRow);
+        if (thread && thread->ShouldStop())
+            return 0.0;
         //Electronic energy of the reference; the shift is a correlation energy relative to it
-        const double H00 = H_FCI(0, 0);
+        const double H00 = H_Diagonal(0);
 
         //The cumulative 1/2^(s+1) probability distribution, the largest cluster has every electron excited
         std::vector<double> cumulativeClusterProb = GenerateCumulativeClusterProb(nElectrons);
@@ -424,6 +436,8 @@ namespace SCESS::QMC::CC {
                 //Number of cluster selection attempts this cycle
                 const int64_t Na = std::max<int64_t>(nExcips, 1);
 
+                //Reused by every attempt so that the selection does not allocate
+                std::vector<uint32_t> selectedExcitorIndices;
                 for (int64_t attempt = 0; attempt < Na; attempt++) {
                     // -- Cluster selection --
                     // A cluster of size s is chosen with probability pSize and s distinct excitors are
@@ -436,7 +450,7 @@ namespace SCESS::QMC::CC {
 
                     //Probability of selecting given excitors
                     double pClust = 1.0;
-                    std::vector<uint32_t> selectedExcitorIndices;
+                    selectedExcitorIndices.clear();
                     if (s == 0) {
                         selectedExcitorIndices.push_back(0);
                     } else {
@@ -471,7 +485,7 @@ namespace SCESS::QMC::CC {
                     if (!isValidCluster || clusterAmplitude == 0.0)
                         continue;
 
-                    const uint32_t DiIdx = FindExcitorIdx(Di ^ D0, excitors);
+                    const uint32_t DiIdx = excitorIndex.Find(Di ^ D0);
                     if (DiIdx == excitors.size())
                         continue;
 
@@ -487,11 +501,12 @@ namespace SCESS::QMC::CC {
                     SlaterDet Dj = randomNumber() < 0.5
                                        ? RandomSingleExcite(Di, randGenerator, nSpatialOrbitals, pExcit)
                                        : RandomDoubleExcite(Di, randGenerator, nSpatialOrbitals, pExcit);
-                    const uint32_t DjIdx = FindExcitorIdx(Dj ^ D0, excitors);
+                    const uint32_t DjIdx = excitorIndex.Find(Dj ^ D0);
 
                     //Cannot spawn onto itself and check J is valid
                     if (DiIdx != DjIdx && DjIdx != excitors.size()) {
-                        const double Hji = H_FCI(DjIdx, DiIdx);
+                        const double Hji = CI::CalculateHamiltonianElement(Dj, Di, nSpatialOrbitals,
+                                                                           nSpatialOrbitals, ints);
 
                         double pSpawn = tau * abs(clusterWeight * Hji) / (Na * pSelect * pExcit);
                         auto nSpawn = static_cast<int64_t>(pSpawn);
@@ -506,7 +521,7 @@ namespace SCESS::QMC::CC {
 
                     // -- Death --
                     // dN_i = -tau sign_i (H_ii - H_00 - S) weight
-                    const double Hii = H_FCI(DiIdx, DiIdx) - H00;
+                    const double Hii = H_Diagonal(DiIdx) - H00;
 
                     double pCloneDeath = tau * abs(clusterWeight) * (Hii - shift) / (Na * pSelect);
                     auto nKill = static_cast<int64_t>(pCloneDeath);
@@ -532,8 +547,8 @@ namespace SCESS::QMC::CC {
 
             nExcips = CountExcips(excitorWalkers);
 
-            double EProj = rhfWfn.E_HF + CalculateProjectedEnergy(excitors, excitorWalkers, H_FCI, D0,
-                                                                  nSpatialOrbitals);
+            double EProj = rhfWfn.E_HF + CalculateProjectedEnergy(excitors, excitorWalkers, H_ReferenceRow,
+                                                                  excitorIndex, D0, nSpatialOrbitals);
 
             if (onReportCycle)
                 onReportCycle(reportCycle, EProj);
@@ -565,7 +580,8 @@ namespace SCESS::QMC::CC {
 
         if (nAveraged == 0) {
             std::cout << "!!! CCQMC population never reached the target; returning the final projected energy !!!\n";
-            return rhfWfn.E_HF + CalculateProjectedEnergy(excitors, excitorWalkers, H_FCI, D0, nSpatialOrbitals);
+            return rhfWfn.E_HF + CalculateProjectedEnergy(excitors, excitorWalkers, H_ReferenceRow, excitorIndex, D0,
+                                                         nSpatialOrbitals);
         }
 
         return EProjAverage / double(nAveraged);
